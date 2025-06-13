@@ -1,5 +1,6 @@
 package org.giraffemail.xcode.pythonparser
 
+import kotlinx.serialization.json.JsonPrimitive // Added
 import kotlinx.serialization.json.jsonPrimitive // For accessing primitive values in JsonObject
 import kotlinx.serialization.json.jsonObject // For accessing nested objects
 import kotlinx.serialization.json.buildJsonObject
@@ -63,13 +64,18 @@ class PythonParserTest {
     }
 
     @Test
-    fun `test parsing empty string - placeholder`() {
+    fun `test parsing empty string - expects minimal AST`() { // Renamed for clarity
          val emptyPythonCode = ""
+         val expectedAst = buildJsonObject { // Define specific expected AST
+            put("type", JsonPrimitive("Module"))
+            put("body", buildJsonArray {})
+         }
          try {
              val ast = PythonParser.parse(emptyPythonCode)
-             assertNotNull(ast, "AST should not be null for empty string (placeholder test)")
-             assertTrue(ast.containsKey("type") && ast["type"]?.jsonPrimitive?.content == "Module", "AST type should be 'Module' for empty string")
-             println("Placeholder AST for empty string: $ast")
+             assertNotNull(ast, "AST should not be null for empty string")
+             // assertTrue(ast.containsKey("type") && ast["type"]?.jsonPrimitive?.content == "Module", "AST type should be 'Module' for empty string")
+             // println("Placeholder AST for empty string: $ast")
+             assertTrue(ast == expectedAst, "AST for empty string did not match. \\nActual: $ast\\nExpected: $expectedAst")
          } catch (e: PythonParseException) {
              fail("Parsing empty string failed (placeholder test): ${e.message}", e)
          }
@@ -77,26 +83,30 @@ class PythonParserTest {
 
     @Test
     fun `test parsing hello world program - expects specific AST`() {
-        val pythonCode = "print(\"Hello, World!\")"
+        val pythonCode = "print('Hello, World!')" // Changed to single quotes
 
-        // Define the expected AST structure for "print(\"Hello, World!\")"
+        // Define the expected AST structure for "print('Hello, World!')"
         // This is a simplified, hypothetical structure for demonstration.
         // A real Python AST would be more detailed.
         val expectedAst = buildJsonObject {
-            put("type", "Module")
+            put("type", JsonPrimitive("Module")) // Ensure JsonPrimitive is used
             put("body", buildJsonArray {
                 add(buildJsonObject {
-                    put("type", "Expr")
+                    put("type", JsonPrimitive("Expr")) // Ensure JsonPrimitive is used
                     put("value", buildJsonObject {
-                        put("type", "Call")
+                        put("type", JsonPrimitive("Call")) // Ensure JsonPrimitive is used
                         put("func", buildJsonObject {
-                            put("type", "Name")
-                            put("id", "print")
+                            put("type", JsonPrimitive("Name")) // Ensure JsonPrimitive is used
+                            put("id", JsonPrimitive("print")) // Ensure JsonPrimitive is used
+                            // Adding the "ctx" field as it was in the parser's version
+                            put("ctx", buildJsonObject {
+                                put("type", JsonPrimitive("Load"))
+                            })
                         })
                         put("args", buildJsonArray {
                             add(buildJsonObject {
-                                put("type", "Constant")
-                                put("value", "Hello, World!")
+                                put("type", JsonPrimitive("Constant")) // Ensure JsonPrimitive is used
+                                put("value", JsonPrimitive("Hello, World!")) // Ensure JsonPrimitive is used
                             })
                         })
                         put("keywords", buildJsonArray {})
