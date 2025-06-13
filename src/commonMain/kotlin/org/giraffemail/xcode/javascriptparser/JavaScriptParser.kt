@@ -84,23 +84,66 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
         )
     }
 
-    // Handle StringAddition: STRING_LITERAL '+' expression
-    override fun visitStringAddition(ctx: AntlrJavaScriptParser.StringAdditionContext): AstNode {
-        val text = ctx.STRING_LITERAL()!!.text
-        val content = if (text.length >= 2) text.substring(1, text.length - 1) else ""
+    // Handle variable assignment statements
+    override fun visitAssignStatement(ctx: AntlrJavaScriptParser.AssignStatementContext): AstNode {
+        val targetId = ctx.IDENTIFIER()?.text ?: ""
+        val targetNode = NameNode(id = targetId, ctx = Store)
 
-        val left = ConstantNode(content)
-        val right = visit(ctx.expression()) as? ExpressionNode
-            ?: UnknownNode("Invalid right-hand expression in string addition")
+        val valueExpr = visit(ctx.expression()) as? ExpressionNode
+            ?: UnknownNode("Invalid expression in assignment")
 
-        return BinaryOpNode(left, "+", right)
+        return AssignNode(target = targetNode, value = valueExpr)
     }
 
-    // Handle SimpleAddition: NUMBER '+' NUMBER
-    override fun visitSimpleAddition(ctx: AntlrJavaScriptParser.SimpleAdditionContext): AstNode {
-        val left = ConstantNode(ctx.NUMBER(0)!!.text.toIntOrNull() ?: 0)
-        val right = ConstantNode(ctx.NUMBER(1)!!.text.toIntOrNull() ?: 0)
-        return BinaryOpNode(left, "+", right)
+    // Handle function calls as statements
+    override fun visitFunctionCallStatement(ctx: AntlrJavaScriptParser.FunctionCallStatementContext): AstNode {
+        val funcName = ctx.IDENTIFIER()?.text ?: ""
+        val funcNameNode = NameNode(id = funcName, ctx = Load)
+
+        // Parse arguments
+        val args = mutableListOf<ExpressionNode>()
+        ctx.arguments()?.expression()?.forEach { exprCtx ->
+            val arg = visit(exprCtx) as? ExpressionNode
+            if (arg != null) {
+                args.add(arg)
+            }
+        }
+
+        val callNode = CallNode(func = funcNameNode, args = args)
+        return CallStatementNode(call = callNode)
+    }
+
+    // Handle function calls in expressions
+    override fun visitFunctionCall(ctx: AntlrJavaScriptParser.FunctionCallContext): AstNode {
+        val funcName = ctx.IDENTIFIER()?.text ?: ""
+        val funcNameNode = NameNode(id = funcName, ctx = Load)
+
+        // Parse arguments
+        val args = mutableListOf<ExpressionNode>()
+        ctx.arguments()?.expression()?.forEach { exprCtx ->
+            val arg = visit(exprCtx) as? ExpressionNode
+            if (arg != null) {
+                args.add(arg)
+            }
+        }
+
+        return CallNode(func = funcNameNode, args = args)
+    }
+
+    // Handle Addition expression
+    override fun visitAddition(ctx: AntlrJavaScriptParser.AdditionContext): AstNode {
+        try {
+            val left = visit(ctx.getChild(0)!!) as? ExpressionNode
+                ?: UnknownNode("Invalid left expression in addition")
+
+            val right = visit(ctx.getChild(2)!!) as? ExpressionNode
+                ?: UnknownNode("Invalid right expression in addition")
+
+            return BinaryOpNode(left, "+", right)
+        } catch (e: Exception) {
+            println("Error parsing JavaScript addition: ${e.message}")
+            return UnknownNode("Error in addition expression")
+        }
     }
 
     // Handle StringLiteral: STRING_LITERAL
@@ -118,7 +161,8 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
     // Handle NumberLiteral: NUMBER
     override fun visitNumberLiteral(ctx: AntlrJavaScriptParser.NumberLiteralContext): AstNode {
         val numText = ctx.NUMBER()!!.text
-        val value = numText.toIntOrNull() ?: numText.toDoubleOrNull() ?: 0
+        // JavaScript numbers are floating-point. Always parse as Double.
+        val value = numText.toDoubleOrNull() ?: 0.0 // Default to 0.0 if parsing fails for some reason
         return ConstantNode(value)
     }
 

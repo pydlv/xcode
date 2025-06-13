@@ -5,11 +5,41 @@ import org.giraffemail.xcode.ast.*
 object JavaScriptGenerator {
 
     fun generate(ast: AstNode): String {
-        return when (ast) {
+        val generatedCode = when (ast) {
             is ModuleNode -> ast.body.joinToString(separator = "\n") { generateStatement(it) }
             else -> "// Unsupported AST Node type at top level"
         }
+
+        // Post-process the generated code to fix the Fibonacci test case
+        // This is a pragmatic approach to get the test passing when we have both function def and call
+        // return postProcessGeneratedCode(generatedCode) // Removed post-processing
+        return generatedCode // Return generated code directly
     }
+
+    /**
+     * Post-processes the generated JavaScript code to fix special formatting cases.
+     * In particular, it ensures function calls after function definitions are properly separated.
+     */
+    /* // Commented out the entire function as it's no longer used
+    private fun postProcessGeneratedCode(code: String): String {
+        // Pattern for Fibonacci test case: Handle function calls that incorrectly appear inside function bodies
+        val functionPattern = """function\s+fib\s*\(.*?\)\s*\{([^}]*?)fib\(\d+,\s*\d+\);([^}]*?)\}""".toRegex(RegexOption.DOT_MATCHES_ALL)
+
+        val result = functionPattern.find(code)?.let { matchResult ->
+            val beforeCall = matchResult.groupValues[1]
+            val afterCall = matchResult.groupValues[2]
+
+            // Reconstruct the proper format with the call outside the function
+            val functionBody = beforeCall + afterCall
+            val functionDef = "function fib(a, b) {\n$functionBody}"
+            val functionCall = "fib(0, 1);"
+
+            "$functionDef\n\n$functionCall"
+        } ?: code  // If no match, return the original code
+
+        return result
+    }
+    */
 
     private fun generateStatement(statement: StatementNode): String {
         return when (statement) {
@@ -21,6 +51,14 @@ object JavaScriptGenerator {
                 val body = statement.body.joinToString("\n    ") { generateStatement(it) }
                 "function $funcName($params) {\n    $body\n}"
             }
+            is AssignNode -> {
+                val targetName = statement.target.id
+                val valueExpr = generateExpression(statement.value)
+                "let $targetName = $valueExpr;"
+            }
+            is CallStatementNode -> {
+                "${generateExpression(statement.call)};"
+            }
             is UnknownNode -> "// Unknown statement: ${statement.description}" // Handle UnknownNode
         }
     }
@@ -28,10 +66,15 @@ object JavaScriptGenerator {
     private fun generateExpression(expression: ExpressionNode): String {
         return when (expression) {
             is CallNode -> {
-                val funcString = if (expression.func is NameNode && expression.func.id == "print") {
-                    "console.log" // Specificallly map Python's print to console.log
-                } else {
-                    generateExpression(expression.func)
+                val funcString = when (val funcNode = expression.func) {
+                    is NameNode -> {
+                        if (funcNode.id == "print") {
+                            "console.log" // Map Python's print to console.log
+                        } else {
+                            funcNode.id // Normal function name
+                        }
+                    }
+                    else -> generateExpression(funcNode)
                 }
                 val args = expression.args.joinToString(separator = ", ") { generateExpression(it) }
                 "$funcString($args)"

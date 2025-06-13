@@ -106,4 +106,30 @@ class PythonParserTest {
             fail("Parsing failed for print with addition: ${e.message}", e)
         }
     }
+
+    @Test
+    fun `test parsing fibonacci call with integer arguments`() {
+        val pythonCode = "fib(0, 1)"
+        val expectedAst = ModuleNode(
+            body = listOf(
+                CallStatementNode(
+                    call = CallNode(
+                        func = NameNode(id = "fib", ctx = Load),
+                        args = listOf(
+                            ConstantNode(value = 0),
+                            ConstantNode(value = 1)
+                        ),
+                        keywords = emptyList()
+                    )
+                )
+            )
+        )
+
+        try {
+            val ast = PythonParser.parse(pythonCode)
+            assertEquals(expectedAst, ast, "AST for fib(0, 1) did not match expected.")
+        } catch (e: AstParseException) {
+            fail("Parsing failed for fib(0, 1): ${e.message}", e)
+        }
+    }
 }

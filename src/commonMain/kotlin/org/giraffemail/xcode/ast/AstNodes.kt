@@ -7,7 +7,8 @@ sealed interface ExpressionNode : AstNode
 
 sealed interface NameContext
 data object Load : NameContext // Using data object for singleton, idiomatic for fixed contexts
-// Potentially others like Store, Del could be added if needed for more complex parsing
+data object Store : NameContext // For variable assignment targets
+// Potentially others like Del could be added if needed for more complex parsing
 
 data class ModuleNode(val body: List<StatementNode>) : AstNode // Can represent the whole program
 data class ExprNode(val value: ExpressionNode) : StatementNode // In Python, an expression statement. JS also has expression statements.
@@ -18,6 +19,17 @@ data class FunctionDefNode(
     val args: List<NameNode>,
     val body: List<StatementNode>,
     val decorator_list: List<ExpressionNode> = emptyList()
+) : StatementNode
+
+// Assignment statement node (x = y)
+data class AssignNode(
+    val target: NameNode, // Target of assignment (left side)
+    val value: ExpressionNode  // Value being assigned (right side)
+) : StatementNode
+
+// Call statement (when a function call is its own statement)
+data class CallStatementNode(
+    val call: CallNode
 ) : StatementNode
 
 data class PrintNode(val expression: ExpressionNode) : StatementNode // For print and console.log statements

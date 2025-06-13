@@ -61,9 +61,9 @@ class JavaScriptParserTest {
             body = listOf(
                 PrintNode( // ANTLR parser creates PrintNode directly
                     expression = BinaryOpNode( // This will require grammar change for JS
-                        left = ConstantNode(value = 1),
+                        left = ConstantNode(value = 1.0), // Changed to 1.0
                         op = "+",
-                        right = ConstantNode(value = 2)
+                        right = ConstantNode(value = 2.0) // Changed to 2.0
                     )
                 )
             )
@@ -74,6 +74,32 @@ class JavaScriptParserTest {
             assertEquals(expectedAst, ast, "AST for console.log with addition did not match expected.")
         } catch (e: AstParseException) {
             fail("Parsing failed for console.log with addition: ${e.message}", e)
+        }
+    }
+
+    @Test
+    fun `test parsing fibonacci call with numeric arguments`() {
+        val jsCode = "fib(0, 1);"
+        val expectedAst = ModuleNode(
+            body = listOf(
+                CallStatementNode(
+                    call = CallNode(
+                        func = NameNode(id = "fib", ctx = Load),
+                        args = listOf(
+                            ConstantNode(value = 0.0), // JavaScript numbers are floating-point
+                            ConstantNode(value = 1.0)  // JavaScript numbers are floating-point
+                        ),
+                        keywords = emptyList()
+                    )
+                )
+            )
+        )
+
+        try {
+            val ast = JavaScriptParser.parse(jsCode)
+            assertEquals(expectedAst, ast, "AST for fib(0, 1) did not match expected.")
+        } catch (e: AstParseException) {
+            fail("Parsing failed for fib(0, 1): ${e.message}", e)
         }
     }
 }

@@ -2,9 +2,12 @@ grammar JavaScript;
 
 program: statement* EOF;
 
-statement: consoleLogStatement
-         | functionDeclaration
-         ;
+statement
+    : consoleLogStatement
+    | functionDeclaration
+    | assignStatement
+    | functionCallStatement
+    ;
 
 consoleLogStatement: 'console' '.' 'log' '(' expression ')' ';'? ;
 
@@ -15,12 +18,18 @@ parameterList: IDENTIFIER (',' IDENTIFIER)* ;
 
 functionBody: statement* ;
 
+assignStatement: 'let'? IDENTIFIER '=' expression ';'? ;
+
+functionCallStatement: IDENTIFIER '(' arguments? ')' ';'? ;
+
+arguments: expression (',' expression)* ;
+
 expression
-    : STRING_LITERAL '+' expression  # StringAddition
-    | NUMBER '+' NUMBER               # SimpleAddition
-    | STRING_LITERAL                 # StringLiteral
-    | IDENTIFIER                     # Identifier
-    | NUMBER                         # NumberLiteral
+    : expression '+' expression  # Addition
+    | IDENTIFIER '(' arguments? ')'  # FunctionCall
+    | STRING_LITERAL            # StringLiteral
+    | IDENTIFIER                # Identifier
+    | NUMBER                    # NumberLiteral
     ;
 
 STRING_LITERAL: '\'' ( '\\' . | ~['\\] )* '\'' | '"' ( '\\' . | ~["\\] )* '"' ;

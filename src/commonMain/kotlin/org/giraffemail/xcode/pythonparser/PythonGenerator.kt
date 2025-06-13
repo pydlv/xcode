@@ -21,9 +21,16 @@ object PythonGenerator {
                 val body = statement.body.joinToString("\n    ") { generateStatement(it) }
                 "def $funcName($params):\n    $body"
             }
+            is AssignNode -> {
+                val targetName = statement.target.id
+                val valueExpr = generateExpression(statement.value)
+                "$targetName = $valueExpr"
+            }
+            is CallStatementNode -> {
+                generateExpression(statement.call)
+            }
             is UnknownNode -> "# Unknown statement: ${statement.description}" // Handle UnknownNode
             // Add other statement types here if needed
-            // else -> "# Unhandled StatementNode type" // Not strictly needed if all sealed subtypes are covered
         }
     }
 
@@ -53,6 +60,8 @@ object PythonGenerator {
             is ConstantNode -> {
                 when (val value = expression.value) {
                     is String -> "'${value.replace("'", "\\'")}'" // Basic string escaping
+                    is Double -> if (value == value.toInt().toDouble()) value.toInt().toString() else value.toString()
+                    is Float -> if (value == value.toInt().toFloat()) value.toInt().toString() else value.toString()
                     // Add other constant types (Int, Boolean etc.) here if needed
                     else -> value.toString()
                 }
