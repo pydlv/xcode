@@ -17,123 +17,127 @@ import kotlin.test.fail
  */
 class TranspilationTest {
 
-    @Test
-    fun `test python to javascript and back to python for print statement`() {
-        val originalPythonCode = "print('cookies')"
-        val expectedIntermediateJsCode = "console.log('cookies');"
-
+    private fun assertRoundTripTranspilation(
+        originalCode: String,
+        expectedIntermediateCode: String,
+        parseLang1: (String) -> AstNode,
+        generateLang1: (AstNode) -> String,
+        parseLang2: (String) -> AstNode,
+        generateLang2: (AstNode) -> String,
+        lang1Name: String,
+        lang2Name: String,
+        expectedInitialAst: AstNode? = null,      // Expected AST from original code (lang1)
+        expectedIntermediateAst: AstNode? = null  // Expected AST from intermediate code (lang2) after generation and re-parsing
+    ) {
         try {
-            // 1. Python to AST
-            val astFromPython = PythonParser.parse(originalPythonCode)
+            // 1. Lang1 to AST
+            val astFromLang1 = parseLang1(originalCode)
+            expectedInitialAst?.let {
+                assertEquals(it, astFromLang1, "Initial AST from $lang1Name parser is not as expected for code: '$originalCode'.")
+            }
 
-            // 2. AST to JavaScript
-            val generatedJsCode = JavaScriptGenerator.generate(astFromPython)
-            assertEquals(expectedIntermediateJsCode, generatedJsCode, "Python AST to JS code generation failed.")
+            // 2. AST to Lang2
+            val generatedIntermediateCode = generateLang2(astFromLang1)
+            assertEquals(expectedIntermediateCode, generatedIntermediateCode, "$lang1Name AST to $lang2Name code generation failed.")
 
-            // 3. JavaScript to AST
-            val astFromJs = JavaScriptParser.parse(generatedJsCode)
+            // 3. Lang2 to AST
+            val astFromLang2 = parseLang2(generatedIntermediateCode)
+            expectedIntermediateAst?.let {
+                assertEquals(it, astFromLang2, "AST from $lang2Name parser is not as expected for code: '$generatedIntermediateCode'.")
+            }
 
-            // 4. AST to Python (back to original)
-            val finalPythonCode = PythonGenerator.generate(astFromJs)
-            assertEquals(originalPythonCode, finalPythonCode, "JS AST to Python code generation failed (round trip).")
+            // 4. AST to Lang1 (back to original)
+            val finalOriginalCode = generateLang1(astFromLang2)
+            assertEquals(originalCode, finalOriginalCode, "$lang2Name AST to $lang1Name code generation failed (round trip).")
 
         } catch (e: AstParseException) {
-            fail("Transpilation test failed due to parsing error: ${e.message}", e)
+            fail("Transpilation test ($lang1Name to $lang2Name to $lang1Name for code '$originalCode') failed due to parsing error: ${e.message}", e)
         } catch (e: Exception) {
-            fail("Transpilation test failed due to an unexpected error: ${e.message}", e)
+            fail("Transpilation test ($lang1Name to $lang2Name to $lang1Name for code '$originalCode') failed due to an unexpected error: ${e.message}", e)
         }
     }
 
     @Test
+    fun `test python to javascript and back to python for print statement`() {
+        val originalPythonCode = "print('cookies')"
+        val expectedIntermediateJsCode = "console.log('cookies');"
+        val expectedPyAst = ModuleNode(body=listOf(ExprNode(value=CallNode(func=NameNode("print", Load), args=listOf(ConstantNode("cookies"))))))
+        val expectedJsAstAfterRoundtrip = ModuleNode(body=listOf(ExprNode(value=CallNode(func=MemberExpressionNode(NameNode("console", Load), NameNode("log", Load)), args=listOf(ConstantNode("cookies"))))))
+
+        assertRoundTripTranspilation(
+            originalCode = originalPythonCode,
+            expectedIntermediateCode = expectedIntermediateJsCode,
+            parseLang1 = PythonParser::parse,
+            generateLang1 = PythonGenerator::generate,
+            parseLang2 = JavaScriptParser::parse,
+            generateLang2 = JavaScriptGenerator::generate,
+            lang1Name = "Python",
+            lang2Name = "JavaScript",
+            expectedInitialAst = expectedPyAst,
+            expectedIntermediateAst = expectedJsAstAfterRoundtrip
+        )
+    }
+
+    @Test
     fun `test javascript to python and back to javascript for console log statement`() {
-        val originalJsCode = "console.log('more_cookies');" // Using a different string to ensure no test interference
+        val originalJsCode = "console.log('more_cookies');"
         val expectedIntermediatePythonCode = "print('more_cookies')"
+        val expectedJsAst = ModuleNode(body=listOf(ExprNode(value=CallNode(func=MemberExpressionNode(NameNode("console", Load), NameNode("log", Load)), args=listOf(ConstantNode("more_cookies"))))))
+        val expectedPyAstAfterRoundtrip = ModuleNode(body=listOf(ExprNode(value=CallNode(func=NameNode("print", Load), args=listOf(ConstantNode("more_cookies"))))))
 
-        try {
-            // 1. JavaScript to AST
-            val astFromJs = JavaScriptParser.parse(originalJsCode)
-
-            // 2. AST to Python
-            val generatedPythonCode = PythonGenerator.generate(astFromJs)
-            assertEquals(expectedIntermediatePythonCode, generatedPythonCode, "JS AST to Python code generation failed.")
-
-            // 3. Python to AST
-            val astFromPython = PythonParser.parse(generatedPythonCode)
-
-            // 4. AST to JavaScript (back to original)
-            val finalJsCode = JavaScriptGenerator.generate(astFromPython)
-            assertEquals(originalJsCode, finalJsCode, "Python AST to JS code generation failed (round trip).")
-
-        } catch (e: AstParseException) {
-            fail("Transpilation test (JS to Python) failed due to parsing error: ${e.message}", e)
-        } catch (e: Exception) {
-            fail("Transpilation test (JS to Python) failed due to an unexpected error: ${e.message}", e)
-        }
+        assertRoundTripTranspilation(
+            originalCode = originalJsCode,
+            expectedIntermediateCode = expectedIntermediatePythonCode,
+            parseLang1 = JavaScriptParser::parse,
+            generateLang1 = JavaScriptGenerator::generate,
+            parseLang2 = PythonParser::parse,
+            generateLang2 = PythonGenerator::generate,
+            lang1Name = "JavaScript",
+            lang2Name = "Python",
+            expectedInitialAst = expectedJsAst,
+            expectedIntermediateAst = expectedPyAstAfterRoundtrip
+        )
     }
 
     @Test
     fun `test python to javascript and back to python for print with addition`() {
         val originalPythonCode = "print(1 + 2)"
         val expectedIntermediateJsCode = "console.log(1 + 2);"
+        val expectedPyAst = ModuleNode(body=listOf(ExprNode(value=CallNode(func=NameNode("print", Load), args=listOf(BinaryOpNode(ConstantNode(1), "+", ConstantNode(2)))))))
+        val expectedJsAstAfterRoundtrip = ModuleNode(body=listOf(ExprNode(value=CallNode(func=MemberExpressionNode(NameNode("console", Load), NameNode("log", Load)), args=listOf(BinaryOpNode(ConstantNode(1), "+", ConstantNode(2)))))))
 
-        try {
-            // 1. Python to AST
-            val astFromPython = PythonParser.parse(originalPythonCode)
-            // Verify the AST from Python is what we expect (optional, but good for debugging)
-            val expectedPyAst = ModuleNode(body=listOf(ExprNode(value=CallNode(func=NameNode("print", Load), args=listOf(BinaryOpNode(ConstantNode(1), "+", ConstantNode(2)))))))
-            assertEquals(expectedPyAst, astFromPython, "Initial AST from Python parser is not as expected.")
-
-            // 2. AST to JavaScript
-            val generatedJsCode = JavaScriptGenerator.generate(astFromPython)
-            assertEquals(expectedIntermediateJsCode, generatedJsCode, "Python AST to JS code generation failed for addition.")
-
-            // 3. JavaScript to AST
-            val astFromJs = JavaScriptParser.parse(generatedJsCode)
-            // Verify the AST from JS is what we expect (optional)
-            val expectedJsAst = ModuleNode(body=listOf(ExprNode(value=CallNode(func=MemberExpressionNode(NameNode("console", Load), NameNode("log", Load)), args=listOf(BinaryOpNode(ConstantNode(1), "+", ConstantNode(2)))))))
-            assertEquals(expectedJsAst, astFromJs, "AST from JavaScript parser is not as expected after JS generation.")
-
-            // 4. AST to Python (back to original)
-            val finalPythonCode = PythonGenerator.generate(astFromJs)
-            assertEquals(originalPythonCode, finalPythonCode, "JS AST to Python code generation failed for addition (round trip).")
-
-        } catch (e: AstParseException) {
-            fail("Transpilation test (Python to JS for addition) failed due to parsing error: ${e.message}", e)
-        } catch (e: Exception) {
-            fail("Transpilation test (Python to JS for addition) failed due to an unexpected error: ${e.message}", e)
-        }
+        assertRoundTripTranspilation(
+            originalCode = originalPythonCode,
+            expectedIntermediateCode = expectedIntermediateJsCode,
+            parseLang1 = PythonParser::parse,
+            generateLang1 = PythonGenerator::generate,
+            parseLang2 = JavaScriptParser::parse,
+            generateLang2 = JavaScriptGenerator::generate,
+            lang1Name = "Python",
+            lang2Name = "JavaScript",
+            expectedInitialAst = expectedPyAst,
+            expectedIntermediateAst = expectedJsAstAfterRoundtrip
+        )
     }
 
     @Test
     fun `test javascript to python and back to javascript for console log with addition`() {
         val originalJsCode = "console.log(1 + 2);"
         val expectedIntermediatePythonCode = "print(1 + 2)"
+        val expectedInitialJsAst = ModuleNode(body=listOf(ExprNode(value=CallNode(func=MemberExpressionNode(NameNode("console", Load), NameNode("log", Load)), args=listOf(BinaryOpNode(ConstantNode(1), "+", ConstantNode(2)))))))
+        val expectedPyAstAfterRoundtrip = ModuleNode(body=listOf(ExprNode(value=CallNode(func=NameNode("print", Load), args=listOf(BinaryOpNode(ConstantNode(1), "+", ConstantNode(2)))))))
 
-        try {
-            // 1. JavaScript to AST
-            val astFromJs = JavaScriptParser.parse(originalJsCode)
-            // Verify the AST from JS is what we expect (optional, but good for debugging)
-            val expectedInitialJsAst = ModuleNode(body=listOf(ExprNode(value=CallNode(func=MemberExpressionNode(NameNode("console", Load), NameNode("log", Load)), args=listOf(BinaryOpNode(ConstantNode(1), "+", ConstantNode(2)))))))
-            assertEquals(expectedInitialJsAst, astFromJs, "Initial AST from JavaScript parser is not as expected.")
-
-            // 2. AST to Python
-            val generatedPythonCode = PythonGenerator.generate(astFromJs)
-            assertEquals(expectedIntermediatePythonCode, generatedPythonCode, "JS AST to Python code generation failed for addition.")
-
-            // 3. Python to AST
-            val astFromPython = PythonParser.parse(generatedPythonCode)
-            // Verify the AST from Python is what we expect (optional)
-            val expectedPyAst = ModuleNode(body=listOf(ExprNode(value=CallNode(func=NameNode("print", Load), args=listOf(BinaryOpNode(ConstantNode(1), "+", ConstantNode(2)))))))
-            assertEquals(expectedPyAst, astFromPython, "AST from Python parser is not as expected after Python generation.")
-
-            // 4. AST to JavaScript (back to original)
-            val finalJsCode = JavaScriptGenerator.generate(astFromPython)
-            assertEquals(originalJsCode, finalJsCode, "Python AST to JS code generation failed for addition (round trip).")
-
-        } catch (e: AstParseException) {
-            fail("Transpilation test (JS to Python for addition) failed due to parsing error: ${e.message}", e)
-        } catch (e: Exception) {
-            fail("Transpilation test (JS to Python for addition) failed due to an unexpected error: ${e.message}", e)
-        }
+        assertRoundTripTranspilation(
+            originalCode = originalJsCode,
+            expectedIntermediateCode = expectedIntermediatePythonCode,
+            parseLang1 = JavaScriptParser::parse,
+            generateLang1 = JavaScriptGenerator::generate,
+            parseLang2 = PythonParser::parse,
+            generateLang2 = PythonGenerator::generate,
+            lang1Name = "JavaScript",
+            lang2Name = "Python",
+            expectedInitialAst = expectedInitialJsAst,
+            expectedIntermediateAst = expectedPyAstAfterRoundtrip
+        )
     }
 }
