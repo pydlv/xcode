@@ -1,6 +1,5 @@
 plugins {
     kotlin("multiplatform") version "1.9.23" // Ensure this is a recent KMP plugin version
-    kotlin("plugin.serialization") version "1.9.23"
 }
 
 group = "org.giraffemail.xcode"
@@ -37,7 +36,6 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation(kotlin("stdlib-common"))
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
             }
         }
         val commonTest by getting {
