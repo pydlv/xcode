@@ -54,10 +54,46 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
 
     override fun visitConsoleLogStatement(ctx: AntlrJavaScriptParser.ConsoleLogStatementContext): AstNode {
         val expression = visit(ctx.expression()) as? ExpressionNode
-            ?: UnknownNode("Invalid expression in console.log statement: ${ctx.expression()?.text}")
-        // Using PrintNode for simplicity, as it takes an expression.
-        // You might want a more specific ConsoleLogNode(expression) in your AST.
+            ?: UnknownNode("Invalid expression in console.log statement")
+
+        // Here for console.log, we create a PrintNode instead of CallNode directly
+        // In the AST we're using PrintNode as a common abstraction for print/console.log
         return PrintNode(expression)
+    }
+
+    override fun visitFunctionDeclaration(ctx: AntlrJavaScriptParser.FunctionDeclarationContext): AstNode {
+        val funcName = ctx.IDENTIFIER()?.text ?: ""
+
+        // Parse parameters
+        val parameters = mutableListOf<NameNode>()
+        ctx.parameterList()?.IDENTIFIER()?.forEach { paramIdent ->
+            val paramName = paramIdent.text
+            parameters.add(NameNode(id = paramName, ctx = Load))
+        }
+
+        // Parse function body statements
+        val body = ctx.functionBody().statement().mapNotNull { stmtCtx ->
+            visit(stmtCtx) as? StatementNode
+        }
+
+        return FunctionDefNode(
+            name = funcName,
+            args = parameters,
+            body = body,
+            decorator_list = emptyList()
+        )
+    }
+
+    // Handle StringAddition: STRING_LITERAL '+' expression
+    override fun visitStringAddition(ctx: AntlrJavaScriptParser.StringAdditionContext): AstNode {
+        val text = ctx.STRING_LITERAL()!!.text
+        val content = if (text.length >= 2) text.substring(1, text.length - 1) else ""
+
+        val left = ConstantNode(content)
+        val right = visit(ctx.expression()) as? ExpressionNode
+            ?: UnknownNode("Invalid right-hand expression in string addition")
+
+        return BinaryOpNode(left, "+", right)
     }
 
     // Handle SimpleAddition: NUMBER '+' NUMBER

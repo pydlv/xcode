@@ -15,6 +15,12 @@ object JavaScriptGenerator {
         return when (statement) {
             is ExprNode -> "${generateExpression(statement.value)};" // JS statements often end with a semicolon
             is PrintNode -> "console.log(${generateExpression(statement.expression)});" // Handle PrintNode
+            is FunctionDefNode -> {
+                val funcName = statement.name
+                val params = statement.args.joinToString(", ") { it.id }
+                val body = statement.body.joinToString("\n    ") { generateStatement(it) }
+                "function $funcName($params) {\n    $body\n}"
+            }
             is UnknownNode -> "// Unknown statement: ${statement.description}" // Handle UnknownNode
         }
     }

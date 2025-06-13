@@ -59,12 +59,48 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
         return PrintNode(expression)
     }
 
-    // Handle SimpleAddition: NUMBER '+' NUMBER
-    override fun visitSimpleAddition(ctx: AntlrPythonParser.SimpleAdditionContext): AstNode {
-        // NUMBER tokens are at index 0 and 2 (child 1 is '+')
-        val left = ConstantNode(ctx.NUMBER(0)!!.text.toIntOrNull() ?: 0)
-        val right = ConstantNode(ctx.NUMBER(1)!!.text.toIntOrNull() ?: 0)
-        return BinaryOpNode(left, "+", right)
+    // Handle Addition expression
+    override fun visitAddition(ctx: AntlrPythonParser.AdditionContext): AstNode {
+        // Create default nodes just in case
+        val leftNode = UnknownNode("Missing left operand in addition")
+        val rightNode = UnknownNode("Missing right operand in addition")
+
+        try {
+            // Use non-null assertion (!!) since these should exist in a valid Addition context
+            val left = visit(ctx.getChild(0)!!) as? ExpressionNode ?: leftNode
+            val right = visit(ctx.getChild(2)!!) as? ExpressionNode ?: rightNode
+
+            return BinaryOpNode(left, "+", right)
+        } catch (e: Exception) {
+            // Handle any exceptions that might occur during parsing
+            println("Error parsing addition expression: ${e.message}")
+            return BinaryOpNode(leftNode, "+", rightNode)
+        }
+    }
+
+    override fun visitFunctionDef(ctx: AntlrPythonParser.FunctionDefContext): AstNode {
+        val name = ctx.IDENTIFIER()!!.text
+
+        // Parse parameters
+        val parameters = mutableListOf<NameNode>()
+        ctx.parameters()?.parameter()?.forEach { paramCtx ->
+            val paramId = paramCtx.IDENTIFIER()!!.text
+            parameters.add(NameNode(id = paramId, ctx = Load))
+        }
+
+        // Parse function body - in our simplified grammar, just visit the printStatement
+        val bodyStmts = mutableListOf<StatementNode>()
+        val printNode = visit(ctx.functionBody().printStatement()) as? PrintNode
+        if (printNode != null) {
+            bodyStmts.add(printNode)
+        }
+
+        return FunctionDefNode(
+            name = name,
+            args = parameters,
+            body = bodyStmts,
+            decorator_list = emptyList()
+        )
     }
 
     // Handle StringLiteral: STRING_LITERAL

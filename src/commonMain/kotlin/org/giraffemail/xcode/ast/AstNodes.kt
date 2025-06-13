@@ -12,6 +12,14 @@ data object Load : NameContext // Using data object for singleton, idiomatic for
 data class ModuleNode(val body: List<StatementNode>) : AstNode // Can represent the whole program
 data class ExprNode(val value: ExpressionNode) : StatementNode // In Python, an expression statement. JS also has expression statements.
 
+// Function definition node for both Python and JavaScript
+data class FunctionDefNode(
+    val name: String,
+    val args: List<NameNode>,
+    val body: List<StatementNode>,
+    val decorator_list: List<ExpressionNode> = emptyList()
+) : StatementNode
+
 data class PrintNode(val expression: ExpressionNode) : StatementNode // For print and console.log statements
 
 data class CallNode(

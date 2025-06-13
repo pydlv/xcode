@@ -15,6 +15,12 @@ object PythonGenerator {
         return when (statement) {
             is ExprNode -> generateExpression(statement.value)
             is PrintNode -> "print(${generateExpression(statement.expression)})" // Handle PrintNode
+            is FunctionDefNode -> {
+                val funcName = statement.name
+                val params = statement.args.joinToString(", ") { it.id }
+                val body = statement.body.joinToString("\n    ") { generateStatement(it) }
+                "def $funcName($params):\n    $body"
+            }
             is UnknownNode -> "# Unknown statement: ${statement.description}" // Handle UnknownNode
             // Add other statement types here if needed
             // else -> "# Unhandled StatementNode type" // Not strictly needed if all sealed subtypes are covered

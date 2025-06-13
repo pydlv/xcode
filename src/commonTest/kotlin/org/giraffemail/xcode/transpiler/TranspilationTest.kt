@@ -137,4 +137,62 @@ class TranspilationTest {
             expectedIntermediateAst = expectedPyAstAfterRoundtrip
         )
     }
+
+    @Test
+    fun `test bidirectional function with print statement transpilation`() {
+        // Python code and expected JavaScript transpilation
+        val pythonCode = """
+            def greet(name):
+                print('Hello, ' + name)
+        """.trimIndent()
+
+        val javascriptCode = """
+            function greet(name) {
+                console.log('Hello, ' + name);
+            }
+        """.trimIndent()
+
+        // Define expected function body for both languages
+        val functionBody = listOf<StatementNode>(
+            PrintNode(
+                expression = BinaryOpNode(
+                    left = ConstantNode("Hello, "),
+                    op = "+",
+                    right = NameNode(id = "name", ctx = Load)
+                )
+            )
+        )
+
+        // Define expected AST structure (same for both Python and JS in this case)
+        val expectedAst = ModuleNode(
+            body = listOf(
+                FunctionDefNode(
+                    name = "greet",
+                    args = listOf(NameNode(id = "name", ctx = Load)),
+                    body = functionBody,
+                    decorator_list = emptyList()
+                )
+            )
+        )
+
+        // Test Python to JavaScript transpilation
+        assertRoundTripTranspilation(
+            originalCode = pythonCode,
+            expectedIntermediateCode = javascriptCode,
+            lang1Config = pythonConfig,
+            lang2Config = javaScriptConfig,
+            expectedInitialAst = expectedAst,
+            expectedIntermediateAst = expectedAst
+        )
+
+        // Test JavaScript to Python transpilation
+        assertRoundTripTranspilation(
+            originalCode = javascriptCode,
+            expectedIntermediateCode = pythonCode,
+            lang1Config = javaScriptConfig,
+            lang2Config = pythonConfig,
+            expectedInitialAst = expectedAst,
+            expectedIntermediateAst = expectedAst
+        )
+    }
 }
