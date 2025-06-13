@@ -1,3 +1,5 @@
+package org.giraffemail.xcode
+
 import org.giraffemail.xcode.getHelloWorldMessage
 
 fun main() {
