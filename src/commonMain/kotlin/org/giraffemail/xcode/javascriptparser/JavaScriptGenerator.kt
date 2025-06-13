@@ -20,9 +20,13 @@ object JavaScriptGenerator {
     private fun generateExpression(expression: ExpressionNode): String {
         return when (expression) {
             is CallNode -> {
-                val func = generateExpression(expression.func)
+                val funcString = if (expression.func is NameNode && expression.func.id == "print") {
+                    "console.log" // Specificallly map Python's print to console.log
+                } else {
+                    generateExpression(expression.func)
+                }
                 val args = expression.args.joinToString(separator = ", ") { generateExpression(it) }
-                "$func($args)"
+                "$funcString($args)"
             }
             is MemberExpressionNode -> {
                 val obj = generateExpression(expression.obj)
