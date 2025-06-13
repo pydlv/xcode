@@ -12,16 +12,24 @@ repositories {
 
 kotlin {
     linuxX64("nativeLinux") {
-        binaries.executable()
+        binaries.executable {
+            entryPoint = "org.giraffemail.xcode.main"
+        }
     }
     macosX64("nativeMacos") { // For Intel Macs
-        binaries.executable()
+        binaries.executable {
+            entryPoint = "org.giraffemail.xcode.main"
+        }
     }
     // macosArm64("nativeMacosArm") { // For Apple Silicon Macs, uncomment if needed
-    //     binaries.executable()
+    //     binaries.executable {
+    //         entryPoint = "org.giraffemail.xcode.main"
+    //     }
     // }
     mingwX64("nativeWindows") {
-        binaries.executable()
+        binaries.executable {
+            entryPoint = "org.giraffemail.xcode.main"
+        }
     }
 
     sourceSets {
