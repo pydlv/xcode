@@ -16,7 +16,7 @@ class PythonParserTest {
             assertNotNull(ast, "AST should not be null (placeholder test)")
             // Check against the default AST structure returned by the placeholder
             assertTrue(ast is ModuleNode, "AST should be a ModuleNode")
-            assertTrue((ast as ModuleNode).body.isEmpty(), "ModuleNode body should be empty for placeholder")
+            assertTrue(ast.body.isEmpty(), "ModuleNode body should be empty for placeholder") // Removed cast
             println("Placeholder AST Output for simple expression: $ast")
         } catch (e: PythonParseException) {
             fail("Parsing failed (placeholder test): ${e.message}", e)
@@ -33,7 +33,7 @@ class PythonParserTest {
             val ast = PythonParser.parse(pythonCode)
             assertNotNull(ast, "AST should not be null (placeholder test)")
             assertTrue(ast is ModuleNode, "AST should be a ModuleNode")
-            assertTrue((ast as ModuleNode).body.isEmpty(), "ModuleNode body should be empty for placeholder")
+            assertTrue(ast.body.isEmpty(), "ModuleNode body should be empty for placeholder") // Removed cast
             println("Placeholder AST Output for function: $ast")
         } catch (e: PythonParseException) {
             fail("Parsing failed for function definition (placeholder test): ${e.message}", e)
