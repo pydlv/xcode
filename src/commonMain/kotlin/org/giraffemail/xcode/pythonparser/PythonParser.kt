@@ -1,11 +1,9 @@
 package org.giraffemail.xcode.pythonparser
 
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.JsonPrimitive // Added
+import kotlinx.serialization.json.buildJsonObject
 
 // Placeholder for the AST representation.
 // You might want to define a more structured data class or use a library for this.

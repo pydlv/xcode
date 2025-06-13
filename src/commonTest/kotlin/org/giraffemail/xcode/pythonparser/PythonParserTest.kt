@@ -1,13 +1,10 @@
 package org.giraffemail.xcode.pythonparser
 
-import kotlinx.serialization.json.JsonPrimitive // Added
-import kotlinx.serialization.json.jsonPrimitive // For accessing primitive values in JsonObject
-import kotlinx.serialization.json.jsonObject // For accessing nested objects
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.add
-import kotlinx.serialization.json.buildJsonArray
 // kotlinx.coroutines.test.runTest can be removed if parse() is no longer suspend
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
