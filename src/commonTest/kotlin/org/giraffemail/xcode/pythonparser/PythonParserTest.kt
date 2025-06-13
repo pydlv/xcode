@@ -1,14 +1,10 @@
 package org.giraffemail.xcode.pythonparser
 
-// kotlinx.coroutines.test.runTest can be removed if parse() is no longer suspend
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
+import kotlin.test.assertEquals // Added for comparing data class instances
 
 class PythonParserTest {
 
@@ -18,10 +14,9 @@ class PythonParserTest {
         try {
             val ast = PythonParser.parse(pythonCode)
             assertNotNull(ast, "AST should not be null (placeholder test)")
-            // Check against the dummy AST structure returned by the placeholder
-            assertTrue(ast.containsKey("type"), "AST should have a 'type' key")
-            assertTrue(ast["type"]?.jsonPrimitive?.content == "Module", "AST type should be 'Module'")
-            assertTrue(ast.containsKey("body"), "AST should have a 'body' key")
+            // Check against the default AST structure returned by the placeholder
+            assertTrue(ast is ModuleNode, "AST should be a ModuleNode")
+            assertTrue((ast as ModuleNode).body.isEmpty(), "ModuleNode body should be empty for placeholder")
             println("Placeholder AST Output for simple expression: $ast")
         } catch (e: PythonParseException) {
             fail("Parsing failed (placeholder test): ${e.message}", e)
@@ -37,7 +32,8 @@ class PythonParserTest {
         try {
             val ast = PythonParser.parse(pythonCode)
             assertNotNull(ast, "AST should not be null (placeholder test)")
-            assertTrue(ast.containsKey("type") && ast["type"]?.jsonPrimitive?.content == "Module", "AST type should be 'Module'")
+            assertTrue(ast is ModuleNode, "AST should be a ModuleNode")
+            assertTrue((ast as ModuleNode).body.isEmpty(), "ModuleNode body should be empty for placeholder")
             println("Placeholder AST Output for function: $ast")
         } catch (e: PythonParseException) {
             fail("Parsing failed for function definition (placeholder test): ${e.message}", e)
@@ -61,18 +57,13 @@ class PythonParserTest {
     }
 
     @Test
-    fun `test parsing empty string - expects minimal AST`() { // Renamed for clarity
+    fun `test parsing empty string - expects minimal AST`() {
          val emptyPythonCode = ""
-         val expectedAst = buildJsonObject { // Define specific expected AST
-            put("type", JsonPrimitive("Module"))
-            put("body", buildJsonArray {})
-         }
+         val expectedAst = ModuleNode(body = emptyList()) // Expected AST using data class
          try {
              val ast = PythonParser.parse(emptyPythonCode)
              assertNotNull(ast, "AST should not be null for empty string")
-             // assertTrue(ast.containsKey("type") && ast["type"]?.jsonPrimitive?.content == "Module", "AST type should be 'Module' for empty string")
-             // println("Placeholder AST for empty string: $ast")
-             assertTrue(ast == expectedAst, "AST for empty string did not match. \\nActual: $ast\\nExpected: $expectedAst")
+             assertEquals(expectedAst, ast, "AST for empty string did not match. \\nActual: $ast\\nExpected: $expectedAst")
          } catch (e: PythonParseException) {
              fail("Parsing empty string failed (placeholder test): ${e.message}", e)
          }
@@ -80,44 +71,27 @@ class PythonParserTest {
 
     @Test
     fun `test parsing hello world program - expects specific AST`() {
-        val pythonCode = "print('Hello, World!')" // Changed to single quotes
+        val pythonCode = "print('Hello, World!')"
 
-        // Define the expected AST structure for "print('Hello, World!')"
-        // This is a simplified, hypothetical structure for demonstration.
-        // A real Python AST would be more detailed.
-        val expectedAst = buildJsonObject {
-            put("type", JsonPrimitive("Module")) // Ensure JsonPrimitive is used
-            put("body", buildJsonArray {
-                add(buildJsonObject {
-                    put("type", JsonPrimitive("Expr")) // Ensure JsonPrimitive is used
-                    put("value", buildJsonObject {
-                        put("type", JsonPrimitive("Call")) // Ensure JsonPrimitive is used
-                        put("func", buildJsonObject {
-                            put("type", JsonPrimitive("Name")) // Ensure JsonPrimitive is used
-                            put("id", JsonPrimitive("print")) // Ensure JsonPrimitive is used
-                            // Adding the "ctx" field as it was in the parser's version
-                            put("ctx", buildJsonObject {
-                                put("type", JsonPrimitive("Load"))
-                            })
-                        })
-                        put("args", buildJsonArray {
-                            add(buildJsonObject {
-                                put("type", JsonPrimitive("Constant")) // Ensure JsonPrimitive is used
-                                put("value", JsonPrimitive("Hello, World!")) // Ensure JsonPrimitive is used
-                            })
-                        })
-                        put("keywords", buildJsonArray {})
-                    })
-                })
-            })
-        }
+        // Define the expected AST structure using data classes
+        val expectedAst = ModuleNode(
+            body = listOf(
+                ExprNode(
+                    value = CallNode(
+                        func = NameNode(id = "print", ctx = Load),
+                        args = listOf(
+                            ConstantNode(value = "Hello, World!")
+                        ),
+                        keywords = emptyList()
+                    )
+                )
+            )
+        )
 
         try {
             val ast = PythonParser.parse(pythonCode)
             assertNotNull(ast, "AST should not be null")
-            // The following assertion will likely fail with the current placeholder parser
-            // but it defines the TDD expectation.
-            assertTrue(ast == expectedAst, "AST did not match expected structure. \nActual: $ast\nExpected: $expectedAst")
+            assertEquals(expectedAst, ast, "AST did not match expected structure. \\nActual: $ast\\nExpected: $expectedAst")
         } catch (e: PythonParseException) {
             fail("Parsing failed for hello world: ${e.message}", e)
         }

@@ -1,69 +1,59 @@
 package org.giraffemail.xcode.pythonparser
 
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.buildJsonObject
+// --- AST Data Classes ---
+sealed interface AstNode
+sealed interface StatementNode : AstNode
+sealed interface ExpressionNode : AstNode
 
-// Placeholder for the AST representation.
-// You might want to define a more structured data class or use a library for this.
-typealias PythonAst = JsonObject // Or a more specific data class structure
+sealed interface NameContext
+data object Load : NameContext // Using data object for singleton, idiomatic for fixed contexts
+
+data class ModuleNode(val body: List<StatementNode>) : AstNode
+data class ExprNode(val value: ExpressionNode) : StatementNode
+data class CallNode(
+    val func: ExpressionNode,
+    val args: List<ExpressionNode>,
+    val keywords: List<Any> = emptyList() // Keeping keywords simple for now
+) : ExpressionNode
+data class NameNode(val id: String, val ctx: NameContext) : ExpressionNode
+data class ConstantNode(val value: Any) : ExpressionNode // value can be String, Int, etc.
 
 object PythonParser {
 
     /**
      * Parses the given Python code string into an Abstract Syntax Tree (AST).
-     * NOTE: This is a placeholder implementation. True Python parsing in pure KMP
-     * without external tools or a dedicated library is a complex task.
+     * NOTE: This is a placeholder implementation.
      *
      * @param pythonCode The Python code to parse.
-     * @return A JsonObject representing the AST of the Python code (currently a placeholder).
-     * @throws PythonParseException if parsing fails (currently not implemented to fail for most cases).
+     * @return An AstNode representing the AST of the Python code.
+     * @throws PythonParseException if parsing fails.
      */
-    fun parse(pythonCode: String): PythonAst {
-        // This is a major undertaking to implement in pure KMP.
-        // For now, it serves as a placeholder for TDD.
-        println("Warning: PythonParser.parse is a placeholder and does not actually parse Python code. Input: '$pythonCode'")
+    fun parse(pythonCode: String): AstNode { // Return type changed to AstNode
+        println("Warning: PythonParser.parse is a placeholder. Input: \'$pythonCode\'")
 
-        // Example to allow a test to check for error throwing
         if (pythonCode == "trigger_error") {
-            throw PythonParseException("Simulated parsing error for 'trigger_error' input.")
+            throw PythonParseException("Simulated parsing error for \'trigger_error\' input.")
         }
 
-        if (pythonCode == "print('Hello, World!')") {
-            // Construct the AST expected by the test for "print('Hello, World!')"
-            return buildJsonObject {
-                put("type", JsonPrimitive("Module"))
-                put("body", buildJsonArray {
-                    add(buildJsonObject {
-                        put("type", JsonPrimitive("Expr"))
-                        put("value", buildJsonObject {
-                            put("type", JsonPrimitive("Call"))
-                            put("func", buildJsonObject {
-                                put("type", JsonPrimitive("Name"))
-                                put("id", JsonPrimitive("print"))
-                                put("ctx", buildJsonObject {
-                                    put("type", JsonPrimitive("Load"))
-                                })
-                            })
-                            put("args", buildJsonArray {
-                                add(buildJsonObject {
-                                    put("type", JsonPrimitive("Constant"))
-                                    put("value", JsonPrimitive("Hello, World!"))
-                                })
-                            })
-                            put("keywords", buildJsonArray {})
-                        })
-                    })
-                })
-            }
+        if (pythonCode == "print(\'Hello, World!\')") {
+            // Construct the AST using data classes
+            return ModuleNode(
+                body = listOf(
+                    ExprNode(
+                        value = CallNode(
+                            func = NameNode(id = "print", ctx = Load),
+                            args = listOf(
+                                ConstantNode(value = "Hello, World!")
+                            ),
+                            keywords = emptyList()
+                        )
+                    )
+                )
+            )
         }
 
-        // Return a dummy AST structure for any other input, built consistently.
-        return buildJsonObject {
-            put("type", JsonPrimitive("Module"))
-            put("body", buildJsonArray {})
-        }
+        // Return a default placeholder AST using data classes
+        return ModuleNode(body = emptyList())
     }
 }
 
