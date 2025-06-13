@@ -1,52 +1,102 @@
 package org.giraffemail.xcode.pythonparser
 
 import org.giraffemail.xcode.ast.*
-import org.giraffemail.xcode.common.CommonArgumentParser // Import the common parser
+import org.giraffemail.xcode.generated.PythonLexer
+import org.giraffemail.xcode.generated.PythonParser as AntlrPythonParser
+import org.antlr.v4.kotlinruntime.CharStreams
+import org.antlr.v4.kotlinruntime.CommonTokenStream
+import org.giraffemail.xcode.generated.PythonBaseVisitor
 
 object PythonParser {
 
-    // Regex to capture the content inside print(...)
-    private val printArgRegex = Regex("""print\((.*)\)""")
-
     /**
      * Parses the given Python code string into an Abstract Syntax Tree (AST).
-     * NOTE: This is a placeholder implementation.
      *
      * @param pythonCode The Python code to parse.
      * @return An AstNode representing the AST of the Python code.
      * @throws AstParseException if parsing fails.
      */
     fun parse(pythonCode: String): AstNode {
-        println("PythonParser.parse attempting to parse: '$pythonCode'")
+        println("PythonParser.parse attempting to parse with ANTLR: '$pythonCode'")
 
         if (pythonCode == "trigger_error") {
             throw AstParseException("Simulated parsing error for 'trigger_error' input.")
         }
 
-        val printMatchResult = printArgRegex.matchEntire(pythonCode)
-        if (printMatchResult != null) {
-            val argContent = printMatchResult.groupValues[1]
-            println("Matched print with argument content: '$argContent'")
-            try {
-                // Use the common argument parser
-                val expressionNode = CommonArgumentParser.parseCommonExpressionArgument(argContent, "print argument")
-                return ModuleNode(
-                    body = listOf(
-                        ExprNode(
-                            value = CallNode(
-                                func = NameNode(id = "print", ctx = Load),
-                                args = listOf(expressionNode),
-                                keywords = emptyList()
-                            )
-                        )
-                    )
-                )
-            } catch (e: AstParseException) {
-                println("Failed to parse print argument '$argContent': ${e.message}")
-            }
-        }
+        try {
+            val lexer = PythonLexer(CharStreams.fromString(pythonCode))
 
-        println("No specific parsing rule matched, returning default ModuleNode for: '$pythonCode'")
-        return ModuleNode(body = emptyList())
+            val tokens = CommonTokenStream(lexer)
+            val parser = AntlrPythonParser(tokens)
+
+            val tree = parser.program() // Assuming 'program' is the entry rule in your Python.g4
+
+            // Convert ANTLR parse tree to your ASTNode structure
+            // This requires a visitor or listener
+            val astBuilder = PythonAstBuilder()
+            return astBuilder.visit(tree) ?: UnknownNode("Failed to build AST from parse tree, visit returned null.")
+        } catch (e: AstParseException) {
+            // Re-throw AstParseException as it's our expected exception type for parsing errors
+            throw e
+        } catch (e: Exception) {
+            // Wrap other exceptions (e.g., from ANTLR internals if not caught by listener)
+            println("ANTLR parsing failed with unexpected exception: ${e.message}")
+            throw AstParseException("Failed to parse Python code using ANTLR: ${e.message}", e)
+        }
+    }
+}
+
+// Visitor to convert ANTLR ParseTree to your custom AST
+class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
+    override fun visitProgram(ctx: AntlrPythonParser.ProgramContext): AstNode {
+        val statements = ctx.statement().mapNotNull { visit(it) as? StatementNode }
+        return ModuleNode(statements)
+    }
+
+    override fun visitPrintStatement(ctx: AntlrPythonParser.PrintStatementContext): AstNode {
+        val expression = visit(ctx.expression()) as? ExpressionNode
+            ?: UnknownNode("Invalid expression in print statement: ${ctx.expression()?.text}")
+        return PrintNode(expression)
+    }
+
+    // Handle SimpleAddition: NUMBER '+' NUMBER
+    override fun visitSimpleAddition(ctx: AntlrPythonParser.SimpleAdditionContext): AstNode {
+        // NUMBER tokens are at index 0 and 2 (child 1 is '+')
+        val left = ConstantNode(ctx.NUMBER(0)!!.text.toIntOrNull() ?: 0)
+        val right = ConstantNode(ctx.NUMBER(1)!!.text.toIntOrNull() ?: 0)
+        return BinaryOpNode(left, "+", right)
+    }
+
+    // Handle StringLiteral: STRING_LITERAL
+    override fun visitStringLiteral(ctx: AntlrPythonParser.StringLiteralContext): AstNode {
+        val text = ctx.STRING_LITERAL()!!.text
+        val content = if (text.length >= 2) text.substring(1, text.length - 1) else ""
+        return ConstantNode(content)
+    }
+
+    // Handle Identifier: IDENTIFIER
+    override fun visitIdentifier(ctx: AntlrPythonParser.IdentifierContext): AstNode {
+        return NameNode(ctx.IDENTIFIER()!!.text, Load)
+    }
+
+    // Handle NumberLiteral: NUMBER
+    override fun visitNumberLiteral(ctx: AntlrPythonParser.NumberLiteralContext): AstNode {
+        val numText = ctx.NUMBER()!!.text
+        // Attempt to parse as Int, then Double, then fallback to 0
+        val value = numText.toIntOrNull() ?: numText.toDoubleOrNull() ?: 0
+        return ConstantNode(value)
+    }
+
+    override fun defaultResult(): AstNode {
+        return UnknownNode("Unhandled ANTLR node")
+    }
+
+    // Corrected signature to match the base class for non-nullable generic type T (AstNode)
+    override fun aggregateResult(aggregate: AstNode, nextResult: AstNode): AstNode {
+        // The typical behavior is to return the last result encountered,
+        // or the first if nextResult is somehow the initial one (though less common).
+        // If 'aggregate' is a collection being built, this logic would be different.
+        // For now, preferring nextResult if available, similar to default ANTLR behavior.
+        return nextResult
     }
 }

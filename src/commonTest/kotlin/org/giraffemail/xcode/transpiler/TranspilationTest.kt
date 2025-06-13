@@ -66,8 +66,10 @@ class TranspilationTest {
     fun `test python to javascript and back to python for print statement`() {
         val originalPythonCode = "print('cookies')"
         val expectedIntermediateJsCode = "console.log('cookies');"
-        val expectedPyAst = ModuleNode(body=listOf(ExprNode(value=CallNode(func=NameNode("print", Load), args=listOf(ConstantNode("cookies"))))))
-        val expectedJsAstAfterRoundtrip = ModuleNode(body=listOf(ExprNode(value=CallNode(func=MemberExpressionNode(NameNode("console", Load), NameNode("log", Load)), args=listOf(ConstantNode("cookies"))))))
+        // Adjusted expectedPyAst
+        val expectedPyAst = ModuleNode(body=listOf(PrintNode(expression=ConstantNode("cookies"))))
+        // Adjusted expectedJsAstAfterRoundtrip
+        val expectedJsAstAfterRoundtrip = ModuleNode(body=listOf(PrintNode(expression=ConstantNode("cookies"))))
 
         assertRoundTripTranspilation(
             originalCode = originalPythonCode,
@@ -83,8 +85,10 @@ class TranspilationTest {
     fun `test javascript to python and back to javascript for console log statement`() {
         val originalJsCode = "console.log('more_cookies');"
         val expectedIntermediatePythonCode = "print('more_cookies')"
-        val expectedJsAst = ModuleNode(body=listOf(ExprNode(value=CallNode(func=MemberExpressionNode(NameNode("console", Load), NameNode("log", Load)), args=listOf(ConstantNode("more_cookies"))))))
-        val expectedPyAstAfterRoundtrip = ModuleNode(body=listOf(ExprNode(value=CallNode(func=NameNode("print", Load), args=listOf(ConstantNode("more_cookies"))))))
+        // Adjusted expectedJsAst (expectedInitialAst)
+        val expectedJsAst = ModuleNode(body=listOf(PrintNode(expression=ConstantNode("more_cookies"))))
+        // Adjusted expectedPyAstAfterRoundtrip
+        val expectedPyAstAfterRoundtrip = ModuleNode(body=listOf(PrintNode(expression=ConstantNode("more_cookies"))))
 
         assertRoundTripTranspilation(
             originalCode = originalJsCode,
@@ -100,8 +104,10 @@ class TranspilationTest {
     fun `test python to javascript and back to python for print with addition`() {
         val originalPythonCode = "print(1 + 2)"
         val expectedIntermediateJsCode = "console.log(1 + 2);"
-        val expectedPyAst = ModuleNode(body=listOf(ExprNode(value=CallNode(func=NameNode("print", Load), args=listOf(BinaryOpNode(ConstantNode(1), "+", ConstantNode(2)))))))
-        val expectedJsAstAfterRoundtrip = ModuleNode(body=listOf(ExprNode(value=CallNode(func=MemberExpressionNode(NameNode("console", Load), NameNode("log", Load)), args=listOf(BinaryOpNode(ConstantNode(1), "+", ConstantNode(2)))))))
+        // Adjusted expectedPyAst
+        val expectedPyAst = ModuleNode(body=listOf(PrintNode(expression=BinaryOpNode(ConstantNode(1), "+", ConstantNode(2)))))
+        // Adjusted expectedJsAstAfterRoundtrip
+        val expectedJsAstAfterRoundtrip = ModuleNode(body=listOf(PrintNode(expression=BinaryOpNode(ConstantNode(1), "+", ConstantNode(2)))))
 
         assertRoundTripTranspilation(
             originalCode = originalPythonCode,
@@ -117,8 +123,10 @@ class TranspilationTest {
     fun `test javascript to python and back to javascript for console log with addition`() {
         val originalJsCode = "console.log(1 + 2);"
         val expectedIntermediatePythonCode = "print(1 + 2)"
-        val expectedInitialJsAst = ModuleNode(body=listOf(ExprNode(value=CallNode(func=MemberExpressionNode(NameNode("console", Load), NameNode("log", Load)), args=listOf(BinaryOpNode(ConstantNode(1), "+", ConstantNode(2)))))))
-        val expectedPyAstAfterRoundtrip = ModuleNode(body=listOf(ExprNode(value=CallNode(func=NameNode("print", Load), args=listOf(BinaryOpNode(ConstantNode(1), "+", ConstantNode(2)))))))
+        // Adjusted expectedInitialJsAst
+        val expectedInitialJsAst = ModuleNode(body=listOf(PrintNode(expression=BinaryOpNode(ConstantNode(1), "+", ConstantNode(2)))))
+        // Adjusted expectedPyAstAfterRoundtrip
+        val expectedPyAstAfterRoundtrip = ModuleNode(body=listOf(PrintNode(expression=BinaryOpNode(ConstantNode(1), "+", ConstantNode(2)))))
 
         assertRoundTripTranspilation(
             originalCode = originalJsCode,

@@ -1,7 +1,7 @@
 import com.strumenta.antlrkotlin.gradle.AntlrKotlinTask
 
 plugins {
-    kotlin("multiplatform") version "1.9.23" // Ensure this is a recent KMP plugin version
+    kotlin("multiplatform") version "2.1.21" // Ensure this is a recent KMP plugin version
     id("com.strumenta.antlr-kotlin") version "1.0.5"
 }
 
@@ -21,12 +21,12 @@ val generateKotlinGrammarSource = tasks.register<AntlrKotlinTask>("generateKotli
     // ANTLR .g4 files are under {example-project}/antlr
     // Only include *.g4 files. This allows tools (e.g., IDE plugins)
     // to generate temporary files inside the base path
-    source = fileTree(layout.projectDirectory.dir("antlr")) {
+    source = fileTree(layout.projectDirectory.dir("src/commonMain/antlr")) {
         include("**/*.g4")
     }
 
     // We want the generated source files to have this package name
-    val pkgName = "com.strumenta.antlrkotlin.parsers.generated"
+    val pkgName = "org.giraffemail.xcode.generated"
     packageName = pkgName
 
     // We want visitors alongside listeners.

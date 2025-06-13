@@ -14,6 +14,8 @@ object JavaScriptGenerator {
     private fun generateStatement(statement: StatementNode): String {
         return when (statement) {
             is ExprNode -> "${generateExpression(statement.value)};" // JS statements often end with a semicolon
+            is PrintNode -> "console.log(${generateExpression(statement.expression)});" // Handle PrintNode
+            is UnknownNode -> "// Unknown statement: ${statement.description}" // Handle UnknownNode
         }
     }
 
@@ -43,10 +45,9 @@ object JavaScriptGenerator {
             is BinaryOpNode -> {
                 val leftStr = generateExpression(expression.left)
                 val rightStr = generateExpression(expression.right)
-                // Basic binary operation generation, assuming operator is directly usable
-                // and doesn't need different spacing/parenthesizing for JS vs Python for simple cases.
                 "$leftStr ${expression.op} $rightStr"
             }
+            is UnknownNode -> "/* Unknown expression: ${expression.description} */" // Handle UnknownNode
         }
     }
 }

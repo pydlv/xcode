@@ -14,7 +14,10 @@ object PythonGenerator {
     private fun generateStatement(statement: StatementNode): String {
         return when (statement) {
             is ExprNode -> generateExpression(statement.value)
+            is PrintNode -> "print(${generateExpression(statement.expression)})" // Handle PrintNode
+            is UnknownNode -> "# Unknown statement: ${statement.description}" // Handle UnknownNode
             // Add other statement types here if needed
+            // else -> "# Unhandled StatementNode type" // Not strictly needed if all sealed subtypes are covered
         }
     }
 
@@ -61,9 +64,10 @@ object PythonGenerator {
             is BinaryOpNode -> {
                 val leftStr = generateExpression(expression.left)
                 val rightStr = generateExpression(expression.right)
-                // Basic binary operation generation, assuming operator is directly usable
                 "$leftStr ${expression.op} $rightStr"
             }
+            is UnknownNode -> "# Unknown expression: ${expression.description}" // Handle UnknownNode
+            // else -> "# Unhandled ExpressionNode type" // Not strictly needed if all sealed subtypes are covered
         }
     }
 }
