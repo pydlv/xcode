@@ -28,6 +28,12 @@ data class MemberExpressionNode(
     val property: ExpressionNode  // The property (e.g., 'log' which could be a NameNode or another identifier type)
 ) : ExpressionNode
 
+// New node for binary operations like '1 + 2'
+data class BinaryOpNode(
+    val left: ExpressionNode,
+    val op: String, // e.g., "+", "-", "*", "/"
+    val right: ExpressionNode
+) : ExpressionNode
+
 // Exception class for parsing errors
 class AstParseException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
-

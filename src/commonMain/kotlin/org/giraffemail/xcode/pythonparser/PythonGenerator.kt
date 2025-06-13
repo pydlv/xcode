@@ -58,6 +58,12 @@ object PythonGenerator {
                 // For now, return a placeholder or a representation that makes sense.
                 "${objStr}.${propStr} # Python equivalent for member access might vary"
             }
+            is BinaryOpNode -> {
+                val leftStr = generateExpression(expression.left)
+                val rightStr = generateExpression(expression.right)
+                // Basic binary operation generation, assuming operator is directly usable
+                "$leftStr ${expression.op} $rightStr"
+            }
         }
     }
 }

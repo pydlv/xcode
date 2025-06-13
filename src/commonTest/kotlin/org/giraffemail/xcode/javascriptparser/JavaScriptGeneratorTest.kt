@@ -52,4 +52,18 @@ class JavaScriptGeneratorTest {
         val actualCode = JavaScriptGenerator.generate(ast)
         assertEquals(expectedCode, actualCode, "Generated JavaScript code with arbitrary string did not match expected.")
     }
+
+    @Test
+    fun `test generating simple addition expression`() {
+        val ast = BinaryOpNode(
+            left = ConstantNode(value = 1),
+            op = "+",
+            right = ConstantNode(value = 2)
+        )
+        val moduleAst = ModuleNode(body = listOf(ExprNode(value = ast)))
+        // For JavaScript, an expression statement ends with a semicolon.
+        val expectedCode = "1 + 2;"
+        val actualCode = JavaScriptGenerator.generate(moduleAst)
+        assertEquals(expectedCode, actualCode, "Generated JavaScript code for simple addition did not match expected.")
+    }
 }

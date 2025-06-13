@@ -125,4 +125,33 @@ class PythonParserTest {
             fail("Parsing failed for print with arbitrary string: ${e.message}", e)
         }
     }
+
+    @Test
+    fun `test parsing print with simple addition`() {
+        val pythonCode = "print(1 + 2)"
+        val expectedAst = ModuleNode(
+            body = listOf(
+                ExprNode(
+                    value = CallNode(
+                        func = NameNode(id = "print", ctx = Load),
+                        args = listOf(
+                            BinaryOpNode(
+                                left = ConstantNode(value = 1),
+                                op = "+",
+                                right = ConstantNode(value = 2)
+                            )
+                        ),
+                        keywords = emptyList()
+                    )
+                )
+            )
+        )
+
+        try {
+            val ast = PythonParser.parse(pythonCode)
+            assertEquals(expectedAst, ast, "AST for print with addition did not match expected.")
+        } catch (e: AstParseException) {
+            fail("Parsing failed for print with addition: ${e.message}", e)
+        }
+    }
 }

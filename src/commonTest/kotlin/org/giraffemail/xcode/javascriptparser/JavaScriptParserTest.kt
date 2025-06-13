@@ -68,4 +68,36 @@ class JavaScriptParserTest {
             fail("Parsing failed for console.log with arbitrary string: ${e.message}", e)
         }
     }
+
+    @Test
+    fun `test parsing console log with simple addition`() {
+        val jsCode = "console.log(1 + 2);"
+        val expectedAst = ModuleNode(
+            body = listOf(
+                ExprNode(
+                    value = CallNode(
+                        func = MemberExpressionNode(
+                            obj = NameNode(id = "console", ctx = Load),
+                            property = NameNode(id = "log", ctx = Load)
+                        ),
+                        args = listOf(
+                            BinaryOpNode(
+                                left = ConstantNode(value = 1),
+                                op = "+",
+                                right = ConstantNode(value = 2)
+                            )
+                        ),
+                        keywords = emptyList()
+                    )
+                )
+            )
+        )
+
+        try {
+            val ast = JavaScriptParser.parse(jsCode)
+            assertEquals(expectedAst, ast, "AST for console.log with addition did not match expected.")
+        } catch (e: AstParseException) {
+            fail("Parsing failed for console.log with addition: ${e.message}", e)
+        }
+    }
 }

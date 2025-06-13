@@ -40,6 +40,13 @@ object JavaScriptGenerator {
                     else -> value.toString()
                 }
             }
+            is BinaryOpNode -> {
+                val leftStr = generateExpression(expression.left)
+                val rightStr = generateExpression(expression.right)
+                // Basic binary operation generation, assuming operator is directly usable
+                // and doesn't need different spacing/parenthesizing for JS vs Python for simple cases.
+                "$leftStr ${expression.op} $rightStr"
+            }
         }
     }
 }
