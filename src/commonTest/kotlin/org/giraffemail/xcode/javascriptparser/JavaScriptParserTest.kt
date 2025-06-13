@@ -37,5 +37,35 @@ class JavaScriptParserTest {
             fail("Parsing failed for console.log: ${e.message}", e)
         }
     }
-}
 
+    @Test
+    fun `test parsing console log with arbitrary string`() {
+        val customString = "JavaScript is fun!"
+        val jsCode = "console.log('$customString');"
+
+        val expectedAst = ModuleNode(
+            body = listOf(
+                ExprNode(
+                    value = CallNode(
+                        func = MemberExpressionNode(
+                            obj = NameNode(id = "console", ctx = Load),
+                            property = NameNode(id = "log", ctx = Load)
+                        ),
+                        args = listOf(
+                            ConstantNode(value = customString)
+                        ),
+                        keywords = emptyList()
+                    )
+                )
+            )
+        )
+
+        try {
+            val ast = JavaScriptParser.parse(jsCode)
+            assertNotNull(ast, "AST should not be null")
+            assertEquals(expectedAst, ast, "AST did not match expected structure for arbitrary string. \nActual: $ast\nExpected: $expectedAst")
+        } catch (e: AstParseException) {
+            fail("Parsing failed for console.log with arbitrary string: ${e.message}", e)
+        }
+    }
+}
