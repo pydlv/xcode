@@ -97,4 +97,32 @@ class PythonParserTest {
             fail("Parsing failed for hello world: ${e.message}", e)
         }
     }
+
+    @Test
+    fun `test parsing print with arbitrary string`() {
+        val customString = "Python is powerful!"
+        val pythonCode = "print('$customString')"
+
+        val expectedAst = ModuleNode(
+            body = listOf(
+                ExprNode(
+                    value = CallNode(
+                        func = NameNode(id = "print", ctx = Load),
+                        args = listOf(
+                            ConstantNode(value = customString)
+                        ),
+                        keywords = emptyList()
+                    )
+                )
+            )
+        )
+
+        try {
+            val ast = PythonParser.parse(pythonCode)
+            assertNotNull(ast, "AST should not be null")
+            assertEquals(expectedAst, ast, "AST did not match expected structure for arbitrary string. \nActual: $ast\nExpected: $expectedAst")
+        } catch (e: AstParseException) {
+            fail("Parsing failed for print with arbitrary string: ${e.message}", e)
+        }
+    }
 }

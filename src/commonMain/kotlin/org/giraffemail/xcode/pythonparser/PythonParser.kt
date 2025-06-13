@@ -1,8 +1,11 @@
 package org.giraffemail.xcode.pythonparser
 
-import org.giraffemail.xcode.ast.* // Import common AST nodes
+import org.giraffemail.xcode.ast.*
 
 object PythonParser {
+
+    // Regex to capture the string inside print('...')
+    private val printRegex = Regex("""print\(\'([^\']*)\'\)""")
 
     /**
      * Parses the given Python code string into an Abstract Syntax Tree (AST).
@@ -10,16 +13,20 @@ object PythonParser {
      *
      * @param pythonCode The Python code to parse.
      * @return An AstNode representing the AST of the Python code.
-     * @throws AstParseException if parsing fails. // Changed from PythonParseException
+     * @throws AstParseException if parsing fails.
      */
-    fun parse(pythonCode: String): AstNode { // Return type is already AstNode from common def
-        println("Warning: PythonParser.parse is a placeholder. Input: '$pythonCode'")
+    fun parse(pythonCode: String): AstNode {
+        println("PythonParser.parse attempting to parse: '$pythonCode'")
 
         if (pythonCode == "trigger_error") {
-            throw AstParseException("Simulated parsing error for 'trigger_error' input.") // Changed
+            throw AstParseException("Simulated parsing error for 'trigger_error' input.")
         }
 
-        if (pythonCode == "print('Hello, World!')") {
+        val matchResult = printRegex.matchEntire(pythonCode)
+
+        if (matchResult != null) {
+            val loggedString = matchResult.groupValues[1] // groupValues[0] is the full match, [1] is the first capture group
+            println("Matched print with string: '$loggedString'")
             // Construct the AST using common data classes
             return ModuleNode(
                 body = listOf(
@@ -27,7 +34,7 @@ object PythonParser {
                         value = CallNode(
                             func = NameNode(id = "print", ctx = Load),
                             args = listOf(
-                                ConstantNode(value = "Hello, World!")
+                                ConstantNode(value = loggedString) // Use the extracted string
                             ),
                             keywords = emptyList()
                         )
@@ -37,6 +44,7 @@ object PythonParser {
         }
 
         // Return a default placeholder AST using common data classes
+        println("No specific match found, returning default ModuleNode for: '$pythonCode'")
         return ModuleNode(body = emptyList())
     }
 }
