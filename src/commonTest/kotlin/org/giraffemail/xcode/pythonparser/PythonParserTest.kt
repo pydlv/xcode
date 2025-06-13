@@ -1,10 +1,11 @@
 package org.giraffemail.xcode.pythonparser
 
+import org.giraffemail.xcode.ast.* // Import common AST nodes
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
-import kotlin.test.assertEquals // Added for comparing data class instances
+import kotlin.test.assertEquals
 
 class PythonParserTest {
 
@@ -14,11 +15,10 @@ class PythonParserTest {
         try {
             val ast = PythonParser.parse(pythonCode)
             assertNotNull(ast, "AST should not be null (placeholder test)")
-            // Check against the default AST structure returned by the placeholder
             assertTrue(ast is ModuleNode, "AST should be a ModuleNode")
-            assertTrue(ast.body.isEmpty(), "ModuleNode body should be empty for placeholder") // Removed cast
+            assertTrue(ast.body.isEmpty(), "ModuleNode body should be empty for placeholder")
             println("Placeholder AST Output for simple expression: $ast")
-        } catch (e: PythonParseException) {
+        } catch (e: AstParseException) { // Changed to AstParseException
             fail("Parsing failed (placeholder test): ${e.message}", e)
         }
     }
@@ -33,9 +33,9 @@ class PythonParserTest {
             val ast = PythonParser.parse(pythonCode)
             assertNotNull(ast, "AST should not be null (placeholder test)")
             assertTrue(ast is ModuleNode, "AST should be a ModuleNode")
-            assertTrue(ast.body.isEmpty(), "ModuleNode body should be empty for placeholder") // Removed cast
+            assertTrue(ast.body.isEmpty(), "ModuleNode body should be empty for placeholder")
             println("Placeholder AST Output for function: $ast")
-        } catch (e: PythonParseException) {
+        } catch (e: AstParseException) { // Changed to AstParseException
             fail("Parsing failed for function definition (placeholder test): ${e.message}", e)
         }
     }
@@ -45,8 +45,8 @@ class PythonParserTest {
         val invalidPythonCode = "trigger_error" // Specific string to trigger placeholder error
         try {
             PythonParser.parse(invalidPythonCode)
-            fail("Parsing 'trigger_error' should have thrown PythonParseException (placeholder test)")
-        } catch (e: PythonParseException) {
+            fail("Parsing 'trigger_error' should have thrown AstParseException (placeholder test)")
+        } catch (e: AstParseException) { // Changed to AstParseException
             // Expected exception from placeholder logic
             assertNotNull(e.message, "Exception message should not be null")
             assertTrue(e.message!!.contains("Simulated parsing error for 'trigger_error' input."), "Incorrect error message: ${e.message}")
@@ -59,12 +59,13 @@ class PythonParserTest {
     @Test
     fun `test parsing empty string - expects minimal AST`() {
          val emptyPythonCode = ""
-         val expectedAst = ModuleNode(body = emptyList()) // Expected AST using data class
+         // Expected AST uses common data classes (already correct from previous refactor)
+         val expectedAst = ModuleNode(body = emptyList())
          try {
              val ast = PythonParser.parse(emptyPythonCode)
              assertNotNull(ast, "AST should not be null for empty string")
              assertEquals(expectedAst, ast, "AST for empty string did not match. \\nActual: $ast\\nExpected: $expectedAst")
-         } catch (e: PythonParseException) {
+         } catch (e: AstParseException) { // Changed to AstParseException
              fail("Parsing empty string failed (placeholder test): ${e.message}", e)
          }
     }
@@ -73,7 +74,7 @@ class PythonParserTest {
     fun `test parsing hello world program - expects specific AST`() {
         val pythonCode = "print('Hello, World!')"
 
-        // Define the expected AST structure using data classes
+        // Define the expected AST structure using common data classes (already correct)
         val expectedAst = ModuleNode(
             body = listOf(
                 ExprNode(
@@ -92,7 +93,7 @@ class PythonParserTest {
             val ast = PythonParser.parse(pythonCode)
             assertNotNull(ast, "AST should not be null")
             assertEquals(expectedAst, ast, "AST did not match expected structure. \\nActual: $ast\\nExpected: $expectedAst")
-        } catch (e: PythonParseException) {
+        } catch (e: AstParseException) { // Changed to AstParseException
             fail("Parsing failed for hello world: ${e.message}", e)
         }
     }

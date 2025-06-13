@@ -1,22 +1,6 @@
 package org.giraffemail.xcode.pythonparser
 
-// --- AST Data Classes ---
-sealed interface AstNode
-sealed interface StatementNode : AstNode
-sealed interface ExpressionNode : AstNode
-
-sealed interface NameContext
-data object Load : NameContext // Using data object for singleton, idiomatic for fixed contexts
-
-data class ModuleNode(val body: List<StatementNode>) : AstNode
-data class ExprNode(val value: ExpressionNode) : StatementNode
-data class CallNode(
-    val func: ExpressionNode,
-    val args: List<ExpressionNode>,
-    val keywords: List<Any> = emptyList() // Keeping keywords simple for now
-) : ExpressionNode
-data class NameNode(val id: String, val ctx: NameContext) : ExpressionNode
-data class ConstantNode(val value: Any) : ExpressionNode // value can be String, Int, etc.
+import org.giraffemail.xcode.ast.* // Import common AST nodes
 
 object PythonParser {
 
@@ -26,17 +10,17 @@ object PythonParser {
      *
      * @param pythonCode The Python code to parse.
      * @return An AstNode representing the AST of the Python code.
-     * @throws PythonParseException if parsing fails.
+     * @throws AstParseException if parsing fails. // Changed from PythonParseException
      */
-    fun parse(pythonCode: String): AstNode { // Return type changed to AstNode
-        println("Warning: PythonParser.parse is a placeholder. Input: \'$pythonCode\'")
+    fun parse(pythonCode: String): AstNode { // Return type is already AstNode from common def
+        println("Warning: PythonParser.parse is a placeholder. Input: '$pythonCode'")
 
         if (pythonCode == "trigger_error") {
-            throw PythonParseException("Simulated parsing error for \'trigger_error\' input.")
+            throw AstParseException("Simulated parsing error for 'trigger_error' input.") // Changed
         }
 
-        if (pythonCode == "print(\'Hello, World!\')") {
-            // Construct the AST using data classes
+        if (pythonCode == "print('Hello, World!')") {
+            // Construct the AST using common data classes
             return ModuleNode(
                 body = listOf(
                     ExprNode(
@@ -52,9 +36,7 @@ object PythonParser {
             )
         }
 
-        // Return a default placeholder AST using data classes
+        // Return a default placeholder AST using common data classes
         return ModuleNode(body = emptyList())
     }
 }
-
-class PythonParseException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
