@@ -9,6 +9,12 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.fail
 
+data class LanguageConfig(
+    val name: String,
+    val parse: (String) -> AstNode,
+    val generate: (AstNode) -> String
+)
+
 /**
  * Test suite for verifying code transpilation between different supported languages.
  * These tests ensure that code can be parsed into a common Abstract Syntax Tree (AST)
@@ -20,40 +26,36 @@ class TranspilationTest {
     private fun assertRoundTripTranspilation(
         originalCode: String,
         expectedIntermediateCode: String,
-        parseLang1: (String) -> AstNode,
-        generateLang1: (AstNode) -> String,
-        parseLang2: (String) -> AstNode,
-        generateLang2: (AstNode) -> String,
-        lang1Name: String,
-        lang2Name: String,
+        lang1Config: LanguageConfig,
+        lang2Config: LanguageConfig,
         expectedInitialAst: AstNode? = null,      // Expected AST from original code (lang1)
         expectedIntermediateAst: AstNode? = null  // Expected AST from intermediate code (lang2) after generation and re-parsing
     ) {
         try {
             // 1. Lang1 to AST
-            val astFromLang1 = parseLang1(originalCode)
+            val astFromLang1 = lang1Config.parse(originalCode)
             expectedInitialAst?.let {
-                assertEquals(it, astFromLang1, "Initial AST from $lang1Name parser is not as expected for code: '$originalCode'.")
+                assertEquals(it, astFromLang1, "Initial AST from ${lang1Config.name} parser is not as expected for code: '$originalCode'.")
             }
 
             // 2. AST to Lang2
-            val generatedIntermediateCode = generateLang2(astFromLang1)
-            assertEquals(expectedIntermediateCode, generatedIntermediateCode, "$lang1Name AST to $lang2Name code generation failed.")
+            val generatedIntermediateCode = lang2Config.generate(astFromLang1)
+            assertEquals(expectedIntermediateCode, generatedIntermediateCode, "${lang1Config.name} AST to ${lang2Config.name} code generation failed.")
 
             // 3. Lang2 to AST
-            val astFromLang2 = parseLang2(generatedIntermediateCode)
+            val astFromLang2 = lang2Config.parse(generatedIntermediateCode)
             expectedIntermediateAst?.let {
-                assertEquals(it, astFromLang2, "AST from $lang2Name parser is not as expected for code: '$generatedIntermediateCode'.")
+                assertEquals(it, astFromLang2, "AST from ${lang2Config.name} parser is not as expected for code: '$generatedIntermediateCode'.")
             }
 
             // 4. AST to Lang1 (back to original)
-            val finalOriginalCode = generateLang1(astFromLang2)
-            assertEquals(originalCode, finalOriginalCode, "$lang2Name AST to $lang1Name code generation failed (round trip).")
+            val finalOriginalCode = lang1Config.generate(astFromLang2)
+            assertEquals(originalCode, finalOriginalCode, "${lang2Config.name} AST to ${lang1Config.name} code generation failed (round trip).")
 
         } catch (e: AstParseException) {
-            fail("Transpilation test ($lang1Name to $lang2Name to $lang1Name for code '$originalCode') failed due to parsing error: ${e.message}", e)
+            fail("Transpilation test (${lang1Config.name} to ${lang2Config.name} to ${lang1Config.name} for code '$originalCode') failed due to parsing error: ${e.message}", e)
         } catch (e: Exception) {
-            fail("Transpilation test ($lang1Name to $lang2Name to $lang1Name for code '$originalCode') failed due to an unexpected error: ${e.message}", e)
+            fail("Transpilation test (${lang1Config.name} to ${lang2Config.name} to ${lang1Config.name} for code '$originalCode') failed due to an unexpected error: ${e.message}", e)
         }
     }
 
@@ -67,12 +69,8 @@ class TranspilationTest {
         assertRoundTripTranspilation(
             originalCode = originalPythonCode,
             expectedIntermediateCode = expectedIntermediateJsCode,
-            parseLang1 = PythonParser::parse,
-            generateLang1 = PythonGenerator::generate,
-            parseLang2 = JavaScriptParser::parse,
-            generateLang2 = JavaScriptGenerator::generate,
-            lang1Name = "Python",
-            lang2Name = "JavaScript",
+            lang1Config = LanguageConfig("Python", PythonParser::parse, PythonGenerator::generate),
+            lang2Config = LanguageConfig("JavaScript", JavaScriptParser::parse, JavaScriptGenerator::generate),
             expectedInitialAst = expectedPyAst,
             expectedIntermediateAst = expectedJsAstAfterRoundtrip
         )
@@ -88,12 +86,8 @@ class TranspilationTest {
         assertRoundTripTranspilation(
             originalCode = originalJsCode,
             expectedIntermediateCode = expectedIntermediatePythonCode,
-            parseLang1 = JavaScriptParser::parse,
-            generateLang1 = JavaScriptGenerator::generate,
-            parseLang2 = PythonParser::parse,
-            generateLang2 = PythonGenerator::generate,
-            lang1Name = "JavaScript",
-            lang2Name = "Python",
+            lang1Config = LanguageConfig("JavaScript", JavaScriptParser::parse, JavaScriptGenerator::generate),
+            lang2Config = LanguageConfig("Python", PythonParser::parse, PythonGenerator::generate),
             expectedInitialAst = expectedJsAst,
             expectedIntermediateAst = expectedPyAstAfterRoundtrip
         )
@@ -109,12 +103,8 @@ class TranspilationTest {
         assertRoundTripTranspilation(
             originalCode = originalPythonCode,
             expectedIntermediateCode = expectedIntermediateJsCode,
-            parseLang1 = PythonParser::parse,
-            generateLang1 = PythonGenerator::generate,
-            parseLang2 = JavaScriptParser::parse,
-            generateLang2 = JavaScriptGenerator::generate,
-            lang1Name = "Python",
-            lang2Name = "JavaScript",
+            lang1Config = LanguageConfig("Python", PythonParser::parse, PythonGenerator::generate),
+            lang2Config = LanguageConfig("JavaScript", JavaScriptParser::parse, JavaScriptGenerator::generate),
             expectedInitialAst = expectedPyAst,
             expectedIntermediateAst = expectedJsAstAfterRoundtrip
         )
@@ -130,12 +120,8 @@ class TranspilationTest {
         assertRoundTripTranspilation(
             originalCode = originalJsCode,
             expectedIntermediateCode = expectedIntermediatePythonCode,
-            parseLang1 = JavaScriptParser::parse,
-            generateLang1 = JavaScriptGenerator::generate,
-            parseLang2 = PythonParser::parse,
-            generateLang2 = PythonGenerator::generate,
-            lang1Name = "JavaScript",
-            lang2Name = "Python",
+            lang1Config = LanguageConfig("JavaScript", JavaScriptParser::parse, JavaScriptGenerator::generate),
+            lang2Config = LanguageConfig("Python", PythonParser::parse, PythonGenerator::generate),
             expectedInitialAst = expectedInitialJsAst,
             expectedIntermediateAst = expectedPyAstAfterRoundtrip
         )
