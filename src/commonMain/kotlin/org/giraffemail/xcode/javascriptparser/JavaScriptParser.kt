@@ -1,32 +1,12 @@
 package org.giraffemail.xcode.javascriptparser
 
 import org.giraffemail.xcode.ast.*
+import org.giraffemail.xcode.common.CommonArgumentParser // Import the common parser
 
 object JavaScriptParser {
 
     // Regex to capture the content inside console.log(...);
     private val consoleLogArgRegex = Regex("""console\.log\((.*)\);""")
-    // Regex to parse a simple binary operation like "1 + 2" (very basic)
-    private val simpleAdditionRegex = Regex("""(\d+)\s*\+\s*(\d+)""")
-    // Regex to parse a simple string literal like "'text'"
-    private val stringLiteralRegex = Regex("""\'([^\']*)\'""")
-
-    // Helper function to parse the argument of a console.log statement
-    private fun parseJsExpressionArgument(argString: String): ExpressionNode {
-        simpleAdditionRegex.matchEntire(argString)?.let { matchResult ->
-            val leftVal = matchResult.groupValues[1].toIntOrNull()
-            val rightVal = matchResult.groupValues[2].toIntOrNull()
-            if (leftVal != null && rightVal != null) {
-                return BinaryOpNode(ConstantNode(leftVal), "+", ConstantNode(rightVal))
-            }
-        }
-        stringLiteralRegex.matchEntire(argString)?.let { matchResult ->
-            val strContent = matchResult.groupValues[1]
-            return ConstantNode(strContent)
-        }
-        // Fallback or error for unrecognised argument format
-        throw AstParseException("Unsupported console.log argument format: $argString")
-    }
 
     /**
      * Parses the given JavaScript code string into an Abstract Syntax Tree (AST).
@@ -44,7 +24,8 @@ object JavaScriptParser {
             val argContent = consoleLogMatchResult.groupValues[1]
             println("Matched console.log with argument content: '$argContent'")
             try {
-                val expressionNode = parseJsExpressionArgument(argContent)
+                // Use the common argument parser
+                val expressionNode = CommonArgumentParser.parseCommonExpressionArgument(argContent, "console.log argument")
                 return ModuleNode(
                     body = listOf(
                         ExprNode(
@@ -61,11 +42,9 @@ object JavaScriptParser {
                 )
             } catch (e: AstParseException) {
                 println("Failed to parse console.log argument '$argContent': ${e.message}")
-                // Fall through to default for now if arg parsing fails
             }
         }
 
-        // Default placeholder for other inputs
         println("No specific parsing rule matched, returning default ModuleNode for: '$jsCode'")
         return ModuleNode(body = emptyList())
     }
