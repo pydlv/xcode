@@ -23,6 +23,9 @@ data class LanguageConfig(
  */
 class TranspilationTest {
 
+    private val pythonConfig = LanguageConfig("Python", PythonParser::parse, PythonGenerator::generate)
+    private val javaScriptConfig = LanguageConfig("JavaScript", JavaScriptParser::parse, JavaScriptGenerator::generate)
+
     private fun assertRoundTripTranspilation(
         originalCode: String,
         expectedIntermediateCode: String,
@@ -69,8 +72,8 @@ class TranspilationTest {
         assertRoundTripTranspilation(
             originalCode = originalPythonCode,
             expectedIntermediateCode = expectedIntermediateJsCode,
-            lang1Config = LanguageConfig("Python", PythonParser::parse, PythonGenerator::generate),
-            lang2Config = LanguageConfig("JavaScript", JavaScriptParser::parse, JavaScriptGenerator::generate),
+            lang1Config = pythonConfig,
+            lang2Config = javaScriptConfig,
             expectedInitialAst = expectedPyAst,
             expectedIntermediateAst = expectedJsAstAfterRoundtrip
         )
@@ -86,8 +89,8 @@ class TranspilationTest {
         assertRoundTripTranspilation(
             originalCode = originalJsCode,
             expectedIntermediateCode = expectedIntermediatePythonCode,
-            lang1Config = LanguageConfig("JavaScript", JavaScriptParser::parse, JavaScriptGenerator::generate),
-            lang2Config = LanguageConfig("Python", PythonParser::parse, PythonGenerator::generate),
+            lang1Config = javaScriptConfig,
+            lang2Config = pythonConfig,
             expectedInitialAst = expectedJsAst,
             expectedIntermediateAst = expectedPyAstAfterRoundtrip
         )
@@ -103,8 +106,8 @@ class TranspilationTest {
         assertRoundTripTranspilation(
             originalCode = originalPythonCode,
             expectedIntermediateCode = expectedIntermediateJsCode,
-            lang1Config = LanguageConfig("Python", PythonParser::parse, PythonGenerator::generate),
-            lang2Config = LanguageConfig("JavaScript", JavaScriptParser::parse, JavaScriptGenerator::generate),
+            lang1Config = pythonConfig,
+            lang2Config = javaScriptConfig,
             expectedInitialAst = expectedPyAst,
             expectedIntermediateAst = expectedJsAstAfterRoundtrip
         )
@@ -120,8 +123,8 @@ class TranspilationTest {
         assertRoundTripTranspilation(
             originalCode = originalJsCode,
             expectedIntermediateCode = expectedIntermediatePythonCode,
-            lang1Config = LanguageConfig("JavaScript", JavaScriptParser::parse, JavaScriptGenerator::generate),
-            lang2Config = LanguageConfig("Python", PythonParser::parse, PythonGenerator::generate),
+            lang1Config = javaScriptConfig,
+            lang2Config = pythonConfig,
             expectedInitialAst = expectedInitialJsAst,
             expectedIntermediateAst = expectedPyAstAfterRoundtrip
         )
