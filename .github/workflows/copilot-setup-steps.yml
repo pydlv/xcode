@@ -16,6 +16,9 @@ jobs:
   copilot-setup-steps:
     runs-on: ubuntu-latest
 
+    env:
+      COPILOT_AGENT_FIREWALL_ALLOW_LIST_ADDITIONS: download.jetbrains.com
+
     # Set the permissions to the lowest permissions possible needed for your steps.
     # Copilot will be given its own token for its operations.
     permissions:
@@ -32,14 +35,14 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin' # You can choose other distributions like 'zulu', 'adopt'
-          java-version: '17'   # Or your project's required Java version (e.g., '11', '21')
+          java-version: '21'   # Or your project's required Java version (e.g., '11', '21')
           cache: 'gradle'      # This enables caching for Gradle dependencies
 
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
       - name: Install KMP dependencies
-        run: ./gradlew dependencies --refresh-dependencies
+        run: ./gradlew build --refresh-dependencies
         # This command will build the project and download/cache dependencies.
         # Alternatively, you could use a more specific task like `./gradlew resolveDependencies`
         # or `./gradlew :shared:dependencies` if you have a specific module and task.
