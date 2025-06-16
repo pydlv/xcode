@@ -28,6 +28,33 @@ class HaskellParserTest {
     }
 
     @Test
+    fun `test print with addition`() {
+        val haskellCode = "putStrLn (1 + 2)"
+        
+        try {
+            val ast = HaskellParser.parse(haskellCode)
+            assertNotNull(ast, "AST should not be null")
+            println("Parsed AST: $ast")
+            
+            val expectedAst = ModuleNode(
+                body = listOf(
+                    PrintNode(
+                        expression = BinaryOpNode(
+                            left = ConstantNode(1),
+                            op = "+",
+                            right = ConstantNode(2)
+                        )
+                    )
+                )
+            )
+            
+            assertEquals(expectedAst, ast, "AST did not match expected structure")
+        } catch (e: Exception) {
+            fail("Parsing failed: ${e.message}")
+        }
+    }
+
+    @Test
     fun `test simple generation`() {
         val ast = ModuleNode(
             body = listOf(PrintNode(expression = ConstantNode("hello")))

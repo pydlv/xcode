@@ -20,7 +20,11 @@ class HaskellGenerator : AbstractAstGenerator() {
     }
 
     override fun visitPrintNode(node: PrintNode): String {
-        return "${formatFunctionName("print")} ${generateExpression(node.expression)}"
+        val exprStr = generateExpression(node.expression)
+        // Add parentheses if the expression is complex (contains operators)
+        val needsParens = node.expression is BinaryOpNode || node.expression is CompareNode
+        val arg = if (needsParens) "($exprStr)" else exprStr
+        return "${formatFunctionName("print")} $arg"
     }
 
     override fun visitFunctionDefNode(node: FunctionDefNode): String {

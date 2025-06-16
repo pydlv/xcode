@@ -107,16 +107,25 @@ class HaskellAstBuilder : HaskellBaseVisitor<AstNode>() {
         }
         
         val thenExpr = if (expressions.size > 1) {
-            visit(expressions[1]) as? ExpressionNode
+            visit(expressions[1])
         } else null
         
         val elseExpr = if (expressions.size > 2) {
-            visit(expressions[2]) as? ExpressionNode
+            visit(expressions[2])
         } else null
         
-        // Convert expressions to statements
-        val thenStmt = if (thenExpr != null) listOf(ExpressionStatementNode(thenExpr)) else emptyList()
-        val elseStmt = if (elseExpr != null) listOf(ExpressionStatementNode(elseExpr)) else emptyList()
+        // Convert expressions to statements, handling PrintNode specially
+        val thenStmt = when (thenExpr) {
+            is PrintNode -> listOf(thenExpr)
+            is ExpressionNode -> listOf(ExpressionStatementNode(thenExpr))
+            else -> emptyList()
+        }
+        
+        val elseStmt = when (elseExpr) {
+            is PrintNode -> listOf(elseExpr)
+            is ExpressionNode -> listOf(ExpressionStatementNode(elseExpr))
+            else -> emptyList()
+        }
         
         return IfNode(test = test, body = thenStmt, orelse = elseStmt)
     }
@@ -158,10 +167,20 @@ class HaskellAstBuilder : HaskellBaseVisitor<AstNode>() {
         return CompareNode(left = left, op = op, right = right)
     }
 
-    override fun visitFunctionCall(ctx: AntlrHaskellParser.FunctionCallContext): AstNode {
-        val funcName = NameNode(id = ctx.IDENTIFIER().text, ctx = Load)
-        val args = ctx.arguments()?.expression()?.mapNotNull { visit(it) as? ExpressionNode } ?: emptyList()
-        return CallNode(func = funcName, args = args, keywords = emptyList())
+    override fun visitFunctionCallWithArgs(ctx: AntlrHaskellParser.FunctionCallWithArgsContext): AstNode {
+        val funcName = ctx.IDENTIFIER().text
+        val args = ctx.arguments().expression().mapNotNull { visit(it) as? ExpressionNode }
+        
+        // Special handling for print functions
+        return if (funcName == "putStrLn" || funcName == "print") {
+            if (args.isNotEmpty()) {
+                PrintNode(args.first())
+            } else {
+                CallNode(func = NameNode(id = funcName, ctx = Load), args = args, keywords = emptyList())
+            }
+        } else {
+            CallNode(func = NameNode(id = funcName, ctx = Load), args = args, keywords = emptyList())
+        }
     }
 
     override fun visitStringLiteral(ctx: AntlrHaskellParser.StringLiteralContext): AstNode {

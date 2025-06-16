@@ -36,13 +36,13 @@ ifStatement: 'if' expression 'then' expression 'else' expression ;
 arguments: expression+ ;
 
 expression
-    : expression '+' expression          # Addition
+    : '(' expression ')'                 # ParenthesizedExpression
+    | IDENTIFIER arguments               # FunctionCallWithArgs  
+    | expression '+' expression          # Addition
     | expression ('==' | '/=' | '<' | '>' | '<=' | '>=') expression # Comparison
-    | IDENTIFIER arguments?              # FunctionCall
     | STRING_LITERAL                     # StringLiteral
     | IDENTIFIER                         # Identifier
     | NUMBER                            # NumberLiteral
-    | '(' expression ')'                # ParenthesizedExpression
     ;
 
 // Additional Haskell-specific lexer rules
