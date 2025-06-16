@@ -239,23 +239,6 @@ class TranspilationTest {
             )
         )
 
-        // JavaScript-specific AST if its parser produces floats for numbers, but generator should handle conversion if needed.
-        // For simplicity in this test, we might assume the generators can handle a common AST form (e.g. integer constants)
-        // or we adjust the common AST to use a more generic number type if the AST definition supports it.
-        // Here, we'll assume the common AST uses integers and JS generator/parser handles it.
-        // If JS strictly uses floats, the jsAstAdd would be:
-        val jsSpecificAstAdd = ModuleNode(
-            body = listOf(
-                PrintNode(
-                    expression = BinaryOpNode(
-                        left = ConstantNode(1.0),
-                        op = "+",
-                        right = ConstantNode(2.0)
-                    )
-                )
-            )
-        )
-
         // Define code snippets
         val pythonCodeAdd = "print(1 + 2)"
         val jsCodeAdd = "console.log(1 + 2);"
@@ -293,6 +276,14 @@ class TranspilationTest {
             fib(0, 1);
         """.trimIndent().trim()
 
+        // Java code for recursive fibonacci
+        val javaCode = """public static void fib(Object a, Object b) {
+        c = a + b;
+        System.out.println(c);
+        fib(b, c);
+    }
+fib(0, 1);"""
+
         // Define expected function body for both languages
         val functionBody = listOf(
             AssignNode(
@@ -319,7 +310,7 @@ class TranspilationTest {
         )
 
         // Define expected AST structure for Python (integers for constants)
-        val expectedPyAst = ModuleNode(
+        val expectedCommonAst = ModuleNode(
             body = listOf(
                 FunctionDefNode(
                     name = "fib",
@@ -339,63 +330,6 @@ class TranspilationTest {
                 )
             )
         )
-
-        // Define expected AST structure for JavaScript (floats for constants)
-        val expectedJsAst = ModuleNode(
-            body = listOf(
-                FunctionDefNode(
-                    name = "fib",
-                    args = listOf(NameNode(id = "a", ctx = Param), NameNode(id = "b", ctx = Param)),
-                    body = functionBody // functionBody is the same
-                    , decorator_list = emptyList()
-                ),
-                CallStatementNode(
-                    call = CallNode(
-                        func = NameNode(id = "fib", ctx = Load),
-                        args = listOf(
-                            ConstantNode(0), // JavaScript uses Integer now due to normalization
-                            ConstantNode(1)  // JavaScript uses Integer now due to normalization
-                        ),
-                        keywords = emptyList()
-                    )
-                )
-            )
-        )
-
-        // Java code for recursive fibonacci
-        val javaCode = """public static void fib(Object a, Object b) {
-        c = a + b;
-        System.out.println(c);
-        fib(b, c);
-    }
-fib(0, 1);"""
-
-        // Define expected AST structure for Java (integers for constants)
-        // This assumes the Java parser/generator can map the class structure to/from this common AST form
-        // for the purpose of this test, to align with Python/JS ASTs.
-        val expectedJavaAst = ModuleNode(
-            body = listOf(
-                FunctionDefNode(
-                    name = "fib",
-                    args = listOf(NameNode(id = "a", ctx = Param), NameNode(id = "b", ctx = Param)),
-                    body = functionBody, // functionBody is the same
-                    decorator_list = emptyList()
-                ),
-                CallStatementNode(
-                    call = CallNode(
-                        func = NameNode(id = "fib", ctx = Load),
-                        args = listOf(
-                            ConstantNode(0), // Java uses Integer
-                            ConstantNode(1)  // Java uses Integer
-                        ),
-                        keywords = emptyList()
-                    )
-                )
-            )
-        )
-
-        // Use Python AST as the common AST (with integers) since all should normalize to this
-        val expectedCommonAst = expectedPyAst
 
         val allLanguageSetupsForFibonacciTest = listOf(
             Pair(pythonConfig, pythonCode),
@@ -441,25 +375,6 @@ fib(0, 1);"""
                         left = NameNode(id = "x", ctx = Load),
                         op = ">",
                         right = ConstantNode(5)
-                    ),
-                    body = listOf(
-                        PrintNode(expression = ConstantNode("greater"))
-                    ),
-                    orelse = listOf(
-                        PrintNode(expression = ConstantNode("lesser"))
-                    )
-                )
-            )
-        )
-
-        // JavaScript-specific AST (uses doubles for numbers)
-        val expectedJavaScriptAst = ModuleNode(
-            body = listOf(
-                IfNode(
-                    test = CompareNode(
-                        left = NameNode(id = "x", ctx = Load),
-                        op = ">",
-                        right = ConstantNode(5.0)
                     ),
                     body = listOf(
                         PrintNode(expression = ConstantNode("greater"))
