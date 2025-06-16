@@ -135,6 +135,25 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         return CallStatementNode(call = call)
     }
 
+    override fun visitIfStatement(ctx: AntlrJavaParser.IfStatementContext): IfNode {
+        val condition = ctx.expression().accept(this) as? ExpressionNode
+            ?: throw IllegalStateException("If condition is null or not an ExpressionNode for: ${ctx.text}")
+
+        // Get the if body (first set of statements)
+        val ifBody = ctx.statement().take(ctx.statement().size / (if (ctx.ELSE() != null) 2 else 1))
+            .mapNotNull { it.accept(this) as? StatementNode }
+
+        // Get the else body if present
+        val elseBody = if (ctx.ELSE() != null) {
+            ctx.statement().drop(ctx.statement().size / 2)
+                .mapNotNull { it.accept(this) as? StatementNode }
+        } else {
+            emptyList()
+        }
+
+        return IfNode(test = condition, body = ifBody, orelse = elseBody)
+    }
+
     // Helper for CallExpression and CallStatement to build CallNode
     private fun visitCallExpression(functionName: String, argsCtx: AntlrJavaParser.ArgumentListContext?): CallNode {
         val args = argsCtx?.expression()?.mapNotNull {
@@ -177,6 +196,26 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
             else -> throw IllegalArgumentException("Unknown operator type '${opToken.text}' in AdditiveExpression for: ${ctx.text}")
         }
         return BinaryOpNode(left = left, op = op, right = right)
+    }
+
+    override fun visitComparisonExpression(ctx: AntlrJavaParser.ComparisonExpressionContext): CompareNode {
+        val left = ctx.expression(0)?.accept(this) as? ExpressionNode
+            ?: throw IllegalStateException("Left operand of comparison expression is null or not an ExpressionNode for: ${ctx.expression(0)?.text}")
+        val right = ctx.expression(1)?.accept(this) as? ExpressionNode
+            ?: throw IllegalStateException("Right operand of comparison expression is null or not an ExpressionNode for: ${ctx.expression(1)?.text}")
+
+        // Get the comparison operator from the context
+        val operator = when {
+            ctx.text.contains("==") -> "=="
+            ctx.text.contains("!=") -> "!="
+            ctx.text.contains("<=") -> "<="
+            ctx.text.contains(">=") -> ">="
+            ctx.text.contains("<") -> "<"
+            ctx.text.contains(">") -> ">"
+            else -> "=="
+        }
+
+        return CompareNode(left = left, op = operator, right = right)
     }
 
     // Handles the 'PrimaryExpression' labeled alternative in the 'expression' rule

@@ -10,6 +10,7 @@ statement:
     | callStatement
     | assignmentStatement
     | expressionStatement
+    | ifStatement
     ;
 
 expressionStatement: expression SEMI; // Changed from ';' to SEMI
@@ -37,6 +38,11 @@ callStatement:
     IDENTIFIER LPAREN argumentList RPAREN SEMI
     ;
 
+    // If Statement
+ifStatement:
+    IF LPAREN expression RPAREN LBRACE statement* RBRACE (ELSE LBRACE statement* RBRACE)?
+    ;
+
 argumentList:
     (expression (COMMA expression)*)?
     ;
@@ -44,6 +50,7 @@ argumentList:
 expression:
       primary                                         # PrimaryExpression
     | expression ADD expression                       # AdditiveExpression
+    | expression ('==' | '!=' | '<' | '>' | '<=' | '>=') expression # ComparisonExpression
     | SYSTEM '.' OUT '.' PRINTLN LPAREN expression RPAREN # PrintlnExpression
     | IDENTIFIER                                      # IdentifierAccessExpression // Added for variables like a, b, c
     | IDENTIFIER LPAREN argumentList RPAREN           # CallExpression // Added for calls within expressions (if needed, though callStatement covers current use)
@@ -64,6 +71,8 @@ literal:
 PUBLIC: 'public';
 STATIC: 'static';
 VOID: 'void';
+IF: 'if';
+ELSE: 'else';
 // INT: 'int'; // Example, not strictly needed if types are treated as IDENTIFIER
 
 SYSTEM: 'System';

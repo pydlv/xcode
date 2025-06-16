@@ -21,6 +21,7 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
             is FunctionDefNode -> visitFunctionDefNode(statement)
             is AssignNode -> visitAssignNode(statement)
             is CallStatementNode -> visitCallStatementNode(statement)
+            is IfNode -> visitIfNode(statement)
             is UnknownNode -> visitUnknownNode(statement)
         }
     }
@@ -33,6 +34,7 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
             is ConstantNode -> visitConstantNode(expression)
             is MemberExpressionNode -> visitMemberExpressionNode(expression)
             is BinaryOpNode -> visitBinaryOpNode(expression)
+            is CompareNode -> visitCompareNode(expression)
             is UnknownNode -> visitUnknownNode(expression)
         }
     }
@@ -66,6 +68,12 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
         return "$leftStr ${node.op} $rightStr"
     }
 
+    override fun visitCompareNode(node: CompareNode): String {
+        val leftStr = generateExpression(node.left)
+        val rightStr = generateExpression(node.right)
+        return "$leftStr ${node.op} $rightStr"
+    }
+
     override fun visitUnknownNode(node: UnknownNode): String {
         return "// Unknown node: ${node.description}"
     }
@@ -76,6 +84,7 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
     abstract override fun visitCallStatementNode(node: CallStatementNode): String
     abstract override fun visitCallNode(node: CallNode): String
     abstract override fun visitMemberExpressionNode(node: MemberExpressionNode): String
+    abstract override fun visitIfNode(node: IfNode): String
 
     protected open fun generateArgumentList(args: List<ExpressionNode>): String {
         return args.joinToString(", ") { generateExpression(it) }

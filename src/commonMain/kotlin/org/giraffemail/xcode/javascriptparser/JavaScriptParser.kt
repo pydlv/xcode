@@ -100,6 +100,24 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
         return createCallNode(funcName, ctx.arguments())
     }
 
+    // Handle if statements
+    override fun visitIfStatement(ctx: AntlrJavaScriptParser.IfStatementContext): AstNode {
+        val condition = visit(ctx.expression()) as? ExpressionNode
+            ?: UnknownNode("Invalid condition in if statement")
+
+        // Get the if body (first functionBody)
+        val ifBody = ctx.functionBody(0).let { visit(it) as? ModuleNode }?.body ?: emptyList()
+
+        // Get the else body if present (second functionBody)
+        val elseBody = if (ctx.functionBody().size > 1) {
+            ctx.functionBody(1).let { visit(it) as? ModuleNode }?.body ?: emptyList()
+        } else {
+            emptyList()
+        }
+
+        return IfNode(test = condition, body = ifBody, orelse = elseBody)
+    }
+
     private fun createCallNode(funcName: String, argumentsCtx: AntlrJavaScriptParser.ArgumentsContext?): CallNode {
         val funcNameNode = NameNode(id = funcName, ctx = Load)
         val args = mutableListOf<ExpressionNode>()
@@ -127,6 +145,25 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
         } catch (e: Exception) {
             println("Error parsing JavaScript addition: ${e.message}")
             return UnknownNode("Error in addition expression")
+        }
+    }
+
+    // Handle Comparison expression
+    override fun visitComparison(ctx: AntlrJavaScriptParser.ComparisonContext): AstNode {
+        try {
+            val left = visit(ctx.getChild(0)!!) as? ExpressionNode
+                ?: UnknownNode("Invalid left expression in comparison")
+
+            val right = visit(ctx.getChild(2)!!) as? ExpressionNode
+                ?: UnknownNode("Invalid right expression in comparison")
+
+            // Get the comparison operator from the context
+            val operator = ctx.getChild(1)!!.text
+
+            return CompareNode(left, operator, right)
+        } catch (e: Exception) {
+            println("Error parsing JavaScript comparison: ${e.message}")
+            return UnknownNode("Error in comparison expression")
         }
     }
 

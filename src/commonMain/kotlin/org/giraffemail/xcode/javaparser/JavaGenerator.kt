@@ -92,6 +92,18 @@ class JavaGenerator : AbstractAstGenerator() {
         return "$objStr.$propStr"
     }
 
+    override fun visitIfNode(node: IfNode): String {
+        val condition = generateExpression(node.test)
+        val ifBody = node.body.joinToString("\n") { "        " + generateStatement(it) }
+        
+        return if (node.orelse.isNotEmpty()) {
+            val elseBody = node.orelse.joinToString("\n") { "        " + generateStatement(it) }
+            "if ($condition) {\n$ifBody\n    } else {\n$elseBody\n    }"
+        } else {
+            "if ($condition) {\n$ifBody\n    }"
+        }
+    }
+
     // Other visit methods (visitNameNode, visitUnknownNode, visitExprNode, visitModuleNode)
     // will use the open implementations from AbstractAstGenerator if not overridden here.
 }

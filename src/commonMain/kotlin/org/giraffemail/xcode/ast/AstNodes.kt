@@ -35,6 +35,13 @@ data class CallStatementNode(
 
 data class PrintNode(val expression: ExpressionNode) : StatementNode // For print and console.log statements
 
+// If statement node for conditional execution
+data class IfNode(
+    val test: ExpressionNode,           // The condition to test
+    val body: List<StatementNode>,      // Statements to execute if condition is true
+    val orelse: List<StatementNode> = emptyList()  // Statements to execute if condition is false (else clause)
+) : StatementNode
+
 data class CallNode(
     val func: ExpressionNode,
     val args: List<ExpressionNode>,
@@ -56,6 +63,13 @@ data class MemberExpressionNode(
 data class BinaryOpNode(
     val left: ExpressionNode,
     val op: String, // e.g., "+", "-", "*", "/"
+    val right: ExpressionNode
+) : ExpressionNode
+
+// New node for comparison operations like 'x > 5', 'a == b'
+data class CompareNode(
+    val left: ExpressionNode,
+    val op: String, // e.g., "==", "!=", "<", ">", "<=", ">="
     val right: ExpressionNode
 ) : ExpressionNode
 

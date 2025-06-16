@@ -78,6 +78,19 @@ class PythonGenerator : AbstractAstGenerator() {
             else -> super.visitConstantNode(node)
         }
     }
+
+    override fun visitIfNode(node: IfNode): String {
+        val condition = generateExpression(node.test)
+        val ifBody = node.body.joinToString("\n") { "    " + generateStatement(it) }
+        
+        return if (node.orelse.isNotEmpty()) {
+            val elseBody = node.orelse.joinToString("\n") { "    " + generateStatement(it) }
+            "if $condition:\n$ifBody\nelse:\n$elseBody"
+        } else {
+            "if $condition:\n$ifBody"
+        }
+    }
+
     // visitNameNode, visitBinaryOpNode, visitUnknownNode, visitExprNode, visitModuleNode
     // will use the open implementations from AbstractAstGenerator.
 }

@@ -14,6 +14,8 @@ interface AstGeneratorVisitor {
     fun visitConstantNode(node: ConstantNode): String
     fun visitMemberExpressionNode(node: MemberExpressionNode): String
     fun visitBinaryOpNode(node: BinaryOpNode): String
+    fun visitCompareNode(node: CompareNode): String
+    fun visitIfNode(node: IfNode): String
     fun visitUnknownNode(node: UnknownNode): String
 }
 
