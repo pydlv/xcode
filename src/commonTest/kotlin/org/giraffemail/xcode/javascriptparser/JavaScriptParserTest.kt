@@ -56,14 +56,14 @@ class JavaScriptParserTest {
     @Test
     fun `test parsing console log with simple addition`() {
         val jsCode = "console.log(1 + 2);"
-        // Adjusted expected AST structure
+        // Expected AST structure - normalized to integers for common AST
         val expectedAst = ModuleNode(
             body = listOf(
                 PrintNode( // ANTLR parser creates PrintNode directly
                     expression = BinaryOpNode( // This will require grammar change for JS
-                        left = ConstantNode(value = 1.0), // Changed to 1.0
+                        left = ConstantNode(value = 1), // Normalized to integer
                         op = "+",
-                        right = ConstantNode(value = 2.0) // Changed to 2.0
+                        right = ConstantNode(value = 2) // Normalized to integer
                     )
                 )
             )
@@ -86,8 +86,8 @@ class JavaScriptParserTest {
                     call = CallNode(
                         func = NameNode(id = "fib", ctx = Load),
                         args = listOf(
-                            ConstantNode(value = 0.0), // JavaScript numbers are floating-point
-                            ConstantNode(value = 1.0)  // JavaScript numbers are floating-point
+                            ConstantNode(value = 0), // Normalized to integer
+                            ConstantNode(value = 1)  // Normalized to integer
                         ),
                         keywords = emptyList()
                     )

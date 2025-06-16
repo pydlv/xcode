@@ -107,13 +107,8 @@ class JavaGenerator : AbstractAstGenerator() {
     override fun visitCompareNode(node: CompareNode): String {
         val leftStr = generateExpression(node.left)
         val rightStr = generateExpression(node.right)
-        // Convert JavaScript-style operators back to Java-style
-        val javaOp = when (node.op) {
-            "===" -> "=="
-            "!==" -> "!="
-            else -> node.op
-        }
-        return "$leftStr $javaOp $rightStr"
+        // AST now uses canonical operators, no conversion needed
+        return "$leftStr ${node.op} $rightStr"
     }
 
     // Other visit methods (visitNameNode, visitUnknownNode, visitExprNode, visitModuleNode)

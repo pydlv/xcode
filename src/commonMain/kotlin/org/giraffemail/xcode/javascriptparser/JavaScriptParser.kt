@@ -165,10 +165,15 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
             val right = visit(ctx.getChild(2)!!) as? ExpressionNode
                 ?: UnknownNode("Invalid right expression in comparison")
 
-            // Get the comparison operator from the context
-            val operator = ctx.getChild(1)!!.text
+            // Get the comparison operator from the context and normalize to canonical form
+            val rawOperator = ctx.getChild(1)!!.text
+            val canonicalOperator = when (rawOperator) {
+                "===" -> "==" // Normalize JavaScript strict equality to canonical equality
+                "!==" -> "!=" // Normalize JavaScript strict inequality to canonical inequality
+                else -> rawOperator // Keep other operators as-is
+            }
 
-            return CompareNode(left, operator, right)
+            return CompareNode(left, canonicalOperator, right)
         } catch (e: Exception) {
             println("Error parsing JavaScript comparison: ${e.message}")
             return UnknownNode("Error in comparison expression")
@@ -190,9 +195,17 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
     // Handle NumberLiteral: NUMBER
     override fun visitNumberLiteral(ctx: AntlrJavaScriptParser.NumberLiteralContext): AstNode {
         val numText = ctx.NUMBER().text // Removed !! as it's not nullable
-        // JavaScript numbers are floating-point. Always parse as Double.
-        val value = numText.toDoubleOrNull() ?: 0.0 // Default to 0.0 if parsing fails for some reason
-        return ConstantNode(value)
+        // JavaScript numbers are floating-point, but normalize to integers when possible for common AST
+        val doubleValue = numText.toDoubleOrNull() ?: 0.0 // Default to 0.0 if parsing fails for some reason
+        
+        // If the double represents a whole number, use an integer for common AST consistency
+        val normalizedValue = if (doubleValue == doubleValue.toInt().toDouble()) {
+            doubleValue.toInt()
+        } else {
+            doubleValue
+        }
+        
+        return ConstantNode(normalizedValue)
     }
 
     override fun defaultResult(): AstNode {

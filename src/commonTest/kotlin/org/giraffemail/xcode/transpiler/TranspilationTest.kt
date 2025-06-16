@@ -271,15 +271,10 @@ class TranspilationTest {
         val jsCodeAdd = "console.log(1 + 2);"
         val javaCodeAdd = "System.out.println(1 + 2);"
 
-        // Create language setups list
+        // Create language setups list - all use common AST now due to normalization
         val allLanguageSetupsForPrintAddTest = listOf(
             Triple(pythonConfig, pythonCodeAdd, commonAstAdd),
-            // For JavaScript, if its parser *always* creates float ConstantNodes for numbers,
-            // then its specific AST (jsSpecificAstAdd) should be used here.
-            // However, if the goal is a common intermediate AST, then commonAstAdd is preferred,
-            // and the JS parser/generator must align.
-            // Assuming JS parser produces floats, and we want to test that specific behavior:
-            Triple(javaScriptConfig, jsCodeAdd, jsSpecificAstAdd),
+            Triple(javaScriptConfig, jsCodeAdd, commonAstAdd), // Now uses common AST due to normalization
             Triple(javaConfig, javaCodeAdd, commonAstAdd) // Java uses the common AST with Integers
             // To add a new language for the print with addition test, add its Triple here
         )
@@ -410,9 +405,9 @@ fib(0, 1);"""
         )
 
         val allLanguageSetupsForFibonacciTest = listOf(
-            Triple(pythonConfig, pythonCode, expectedPyAst),
-            Triple(javaScriptConfig, javascriptCode, expectedJsAst),
-            Triple(javaConfig, javaCode, expectedJavaAst)
+            Triple(pythonConfig, pythonCode, expectedPyAst), // This already uses integers
+            Triple(javaScriptConfig, javascriptCode, expectedPyAst), // Now uses common AST due to normalization
+            Triple(javaConfig, javaCode, expectedJavaAst) // Java AST should also be compatible with common
             // To add a new language for the fibonacci test, add its Triple here
         )
 
@@ -485,7 +480,7 @@ fib(0, 1);"""
 
         val allLanguageSetupsForIfElseTest = listOf(
             Triple(pythonConfig, pythonCode, expectedAst),
-            Triple(javaScriptConfig, javascriptCode, expectedJavaScriptAst),
+            Triple(javaScriptConfig, javascriptCode, expectedAst), // Now uses common AST due to normalization
             Triple(javaConfig, javaCode, expectedAst)
             // To add a new language for the if-else test, add its Triple here
         )
@@ -513,31 +508,15 @@ fib(0, 1);"""
             }
         """.trimIndent().trim()
 
-        // Expected AST structure for simple if statement
-        val expectedPythonAst = ModuleNode(
+        // Expected common AST structure for simple if statement
+        // All languages should produce this same AST due to normalization
+        val expectedCommonAst = ModuleNode(
             body = listOf(
                 IfNode(
                     test = CompareNode(
                         left = NameNode(id = "a", ctx = Load),
-                        op = "==",
-                        right = ConstantNode(1)
-                    ),
-                    body = listOf(
-                        PrintNode(expression = ConstantNode("one"))
-                    ),
-                    orelse = emptyList()
-                )
-            )
-        )
-
-        // JavaScript uses strict equality ===
-        val expectedJSAst = ModuleNode(
-            body = listOf(
-                IfNode(
-                    test = CompareNode(
-                        left = NameNode(id = "a", ctx = Load),
-                        op = "===",
-                        right = ConstantNode(1.0) // JS numbers are doubles
+                        op = "==", // Canonical equality operator
+                        right = ConstantNode(1) // Use integer for consistency
                     ),
                     body = listOf(
                         PrintNode(expression = ConstantNode("one"))
@@ -548,9 +527,9 @@ fib(0, 1);"""
         )
 
         val allLanguageSetupsForSimpleIfTest = listOf(
-            Triple(pythonConfig, pythonCode, expectedPythonAst),
-            Triple(javaScriptConfig, javascriptCode, expectedJSAst),
-            Triple(javaConfig, javaCode, expectedPythonAst) // Java uses == and integers like Python
+            Triple(pythonConfig, pythonCode, expectedCommonAst),
+            Triple(javaScriptConfig, javascriptCode, expectedCommonAst), // Now uses common AST
+            Triple(javaConfig, javaCode, expectedCommonAst) // Java uses == and integers like Python
             // To add a new language for the simple if test, add its Triple here
         )
 
