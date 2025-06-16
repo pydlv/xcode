@@ -27,7 +27,15 @@ object JavaGenerator {
             is ConstantNode -> {
                 when (val value = ast.value) {
                     is String -> "\"${value.replace("\"", "\\\"")}\"" // Escape quotes in strings
-                    is Number -> value.toString() // Handles Int, Double, etc.
+                    is Number -> {
+                        if (value is Double && value % 1.0 == 0.0) {
+                            value.toInt().toString()
+                        } else if (value is Float && value % 1.0f == 0.0f) {
+                            value.toInt().toString()
+                        } else {
+                            value.toString() // Handles Int, Double, etc.
+                        }
+                    }
                     // Add other constant types as needed (e.g., Boolean)
                     else -> throw NotImplementedError("Constant type ${value?.let { it::class.simpleName }} not implemented in JavaGenerator")
                 }
