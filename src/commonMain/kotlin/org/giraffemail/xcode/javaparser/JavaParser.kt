@@ -4,6 +4,7 @@ import org.antlr.v4.kotlinruntime.CharStream
 import org.antlr.v4.kotlinruntime.CommonTokenStream
 import org.antlr.v4.kotlinruntime.tree.ParseTreeVisitor
 import org.giraffemail.xcode.ast.*
+import org.giraffemail.xcode.common.ParserUtils
 import org.giraffemail.xcode.generated.JavaLexer
 import org.giraffemail.xcode.generated.JavaParser as AntlrJavaParser // Aliased to avoid conflict
 import org.giraffemail.xcode.generated.JavaBaseVisitor
@@ -205,16 +206,8 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         val right = ctx.expression(1)?.accept(this) as? ExpressionNode
             ?: throw IllegalStateException("Right operand of comparison expression is null or not an ExpressionNode for: ${ctx.expression(1)?.text}")
 
-        // Get the comparison operator from the context
-        val operator = when {
-            ctx.text.contains("==") -> "=="
-            ctx.text.contains("!=") -> "!="
-            ctx.text.contains("<=") -> "<="
-            ctx.text.contains(">=") -> ">="
-            ctx.text.contains("<") -> "<"
-            ctx.text.contains(">") -> ">"
-            else -> "=="
-        }
+        // Use the shared utility method to extract comparison operator
+        val operator = ParserUtils.extractComparisonOperator(ctx.text)
 
         return CompareNode(left = left, op = operator, right = right)
     }

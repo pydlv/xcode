@@ -1,6 +1,7 @@
 package org.giraffemail.xcode.pythonparser
 
 import org.giraffemail.xcode.ast.*
+import org.giraffemail.xcode.common.ParserUtils
 import org.giraffemail.xcode.generated.PythonLexer
 import org.giraffemail.xcode.generated.PythonParser as AntlrPythonParser
 import org.antlr.v4.kotlinruntime.CharStream
@@ -177,16 +178,8 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
         val leftOperandCtx = ctx.expression(0)
         val rightOperandCtx = ctx.expression(1)
 
-        // Get the comparison operator
-        val operator = when {
-            ctx.text.contains("==") -> "=="
-            ctx.text.contains("!=") -> "!="
-            ctx.text.contains("<=") -> "<="
-            ctx.text.contains(">=") -> ">="
-            ctx.text.contains("<") -> "<"
-            ctx.text.contains(">") -> ">"
-            else -> "=="
-        }
+        // Use the shared utility method to extract comparison operator
+        val operator = ParserUtils.extractComparisonOperator(ctx.text)
 
         // Ensure operands are not null before visiting
         if (leftOperandCtx == null || rightOperandCtx == null) {
