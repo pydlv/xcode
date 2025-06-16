@@ -84,78 +84,63 @@ class TranspilationTest {
     }
 
     @Test
-    fun `test python to javascript and back to python for print statement`() {
-        val originalPythonCode = "print('cookies')"
-        val expectedIntermediateJsCode = "console.log('cookies');"
-        // Adjusted expectedPyAst
+    fun `test bidirectional print statement transpilation`() {
+        val pythonCode = "print('cookies')"
+        val jsCode = "console.log('cookies');"
         val expectedPyAst = ModuleNode(body=listOf(PrintNode(expression=ConstantNode("cookies"))))
-        // Adjusted expectedJsAstAfterRoundtrip
-        val expectedJsAstAfterRoundtrip = ModuleNode(body=listOf(PrintNode(expression=ConstantNode("cookies"))))
+        // In the original tests, the JS AST after roundtrip from Python was also PrintNode(ConstantNode("cookies")).
+        // And the initial JS AST for JS to Python was also PrintNode(ConstantNode("cookies")).
+        // This implies the AST representation is consistent for this simple case.
+        val expectedJsAst = ModuleNode(body=listOf(PrintNode(expression=ConstantNode("cookies"))))
 
+        // Test Python to JavaScript and back
         assertRoundTripTranspilation(
-            originalCode = originalPythonCode,
-            expectedIntermediateCode = expectedIntermediateJsCode,
+            originalCode = pythonCode,
+            expectedIntermediateCode = jsCode,
             lang1Config = pythonConfig,
             lang2Config = javaScriptConfig,
             expectedInitialAst = expectedPyAst,
-            expectedIntermediateAst = expectedJsAstAfterRoundtrip
+            expectedIntermediateAst = expectedJsAst // AST from JS code
         )
-    }
 
-    @Test
-    fun `test javascript to python and back to javascript for console log statement`() {
-        val originalJsCode = "console.log('more_cookies');"
-        val expectedIntermediatePythonCode = "print('more_cookies')"
-        // Adjusted expectedJsAst (expectedInitialAst)
-        val expectedJsAst = ModuleNode(body=listOf(PrintNode(expression=ConstantNode("more_cookies"))))
-        // Adjusted expectedPyAstAfterRoundtrip
-        val expectedPyAstAfterRoundtrip = ModuleNode(body=listOf(PrintNode(expression=ConstantNode("more_cookies"))))
-
+        // Test JavaScript to Python and back
         assertRoundTripTranspilation(
-            originalCode = originalJsCode,
-            expectedIntermediateCode = expectedIntermediatePythonCode,
+            originalCode = jsCode,
+            expectedIntermediateCode = pythonCode,
             lang1Config = javaScriptConfig,
             lang2Config = pythonConfig,
-            expectedInitialAst = expectedJsAst,
-            expectedIntermediateAst = expectedPyAstAfterRoundtrip
+            expectedInitialAst = expectedJsAst, // AST from JS code
+            expectedIntermediateAst = expectedPyAst  // AST from Python code
         )
     }
 
     @Test
-    fun `test python to javascript and back to python for print with addition`() {
-        val originalPythonCode = "print(1 + 2)"
-        val expectedIntermediateJsCode = "console.log(1 + 2);"
-        // Adjusted expectedPyAst
+    fun `test bidirectional print with addition transpilation`() {
+        val pythonCode = "print(1 + 2)"
+        val jsCode = "console.log(1 + 2);"
+
         val expectedPyAst = ModuleNode(body=listOf(PrintNode(expression=BinaryOpNode(ConstantNode(1), "+", ConstantNode(2)))))
-        // Adjusted expectedJsAstAfterRoundtrip - JS parser produces Doubles
-        val expectedJsAstAfterRoundtrip = ModuleNode(body=listOf(PrintNode(expression=BinaryOpNode(ConstantNode(1.0), "+", ConstantNode(2.0)))))
+        // JS parser produces Doubles for numbers, Python parser produces Ints
+        val expectedJsAst = ModuleNode(body=listOf(PrintNode(expression=BinaryOpNode(ConstantNode(1.0), "+", ConstantNode(2.0)))))
 
+        // Test Python to JavaScript and back
         assertRoundTripTranspilation(
-            originalCode = originalPythonCode,
-            expectedIntermediateCode = expectedIntermediateJsCode,
+            originalCode = pythonCode,
+            expectedIntermediateCode = jsCode,
             lang1Config = pythonConfig,
             lang2Config = javaScriptConfig,
             expectedInitialAst = expectedPyAst,
-            expectedIntermediateAst = expectedJsAstAfterRoundtrip
+            expectedIntermediateAst = expectedJsAst // AST from JS code (with Doubles)
         )
-    }
 
-    @Test
-    fun `test javascript to python and back to javascript for console log with addition`() {
-        val originalJsCode = "console.log(1 + 2);"
-        val expectedIntermediatePythonCode = "print(1 + 2)"
-        // Adjusted expectedInitialJsAst - JS parser produces Doubles
-        val expectedInitialJsAst = ModuleNode(body=listOf(PrintNode(expression=BinaryOpNode(ConstantNode(1.0), "+", ConstantNode(2.0)))))
-        // Adjusted expectedPyAstAfterRoundtrip
-        val expectedPyAstAfterRoundtrip = ModuleNode(body=listOf(PrintNode(expression=BinaryOpNode(ConstantNode(1), "+", ConstantNode(2)))))
-
+        // Test JavaScript to Python and back
         assertRoundTripTranspilation(
-            originalCode = originalJsCode,
-            expectedIntermediateCode = expectedIntermediatePythonCode,
+            originalCode = jsCode,
+            expectedIntermediateCode = pythonCode,
             lang1Config = javaScriptConfig,
             lang2Config = pythonConfig,
-            expectedInitialAst = expectedInitialJsAst,
-            expectedIntermediateAst = expectedPyAstAfterRoundtrip
+            expectedInitialAst = expectedJsAst, // AST from JS code (with Doubles)
+            expectedIntermediateAst = expectedPyAst  // AST from Python code (with Ints)
         )
     }
 
