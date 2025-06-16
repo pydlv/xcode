@@ -29,10 +29,6 @@ class TranspilationTest {
     private val javaScriptConfig = LanguageConfig("JavaScript", JavaScriptParser::parse, { ast -> JavaScriptGenerator().generate(ast) }) // Changed
     private val javaConfig = LanguageConfig("Java", JavaParser::parse, { ast -> JavaGenerator().generate(ast) }) // Changed
 
-    private val expectedPrintCookiesAst = ModuleNode(
-        body = listOf(PrintNode(expression = ConstantNode("cookies")))
-    )
-
     private fun assertRoundTripTranspilation(
         originalCode: String,
         expectedIntermediateCode: String,
