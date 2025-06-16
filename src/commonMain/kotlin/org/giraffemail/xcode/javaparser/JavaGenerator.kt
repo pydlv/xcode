@@ -8,7 +8,7 @@ class JavaGenerator : AbstractAstGenerator() {
 
     override fun getStatementTerminator(): String = ";"
 
-    override fun formatStringLiteral(value: String): String = "\"\"${value.replace("\"", "\\\"")}\""
+    override fun formatStringLiteral(value: String): String = "\"${value.replace("\"", "\\\"")}\""
 
     override fun formatFunctionName(name: String): String {
         // Java typically uses qualified names, so direct mapping might be less common
