@@ -1,18 +1,6 @@
 package org.giraffemail.xcode.transpiler
 
-import org.giraffemail.xcode.ast.AssignNode
-import org.giraffemail.xcode.ast.AstNode
-import org.giraffemail.xcode.ast.BinaryOpNode
-import org.giraffemail.xcode.ast.CallNode
-import org.giraffemail.xcode.ast.CallStatementNode
-import org.giraffemail.xcode.ast.ConstantNode
-import org.giraffemail.xcode.ast.FunctionDefNode
-import org.giraffemail.xcode.ast.Load
-import org.giraffemail.xcode.ast.ModuleNode
-import org.giraffemail.xcode.ast.NameNode
-import org.giraffemail.xcode.ast.PrintNode
-import org.giraffemail.xcode.ast.StatementNode
-import org.giraffemail.xcode.ast.Store
+import org.giraffemail.xcode.ast.*
 import org.giraffemail.xcode.javaparser.JavaGenerator
 import org.giraffemail.xcode.javaparser.JavaParser
 import org.giraffemail.xcode.javascriptparser.JavaScriptGenerator
