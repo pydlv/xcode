@@ -1,0 +1,47 @@
+name: "Copilot Setup Steps"
+
+# Automatically run the setup steps when they are changed to allow for easy validation, and
+# allow manual testing through the repository's "Actions" tab
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+
+    # Set the permissions to the lowest permissions possible needed for your steps.
+    # Copilot will be given its own token for its operations.
+    permissions:
+      # If you want to clone the repository as part of your setup steps, for example to install dependencies, you'll need the `contents: read` permission. If you don't clone the repository in your setup steps, Copilot will do this for you automatically after the steps complete.
+      contents: read
+
+    # You can define any steps you want, and they will run before the agent starts.
+    # If you do not check out your code, Copilot will do this for you.
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK and Gradle cache
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin' # You can choose other distributions like 'zulu', 'adopt'
+          java-version: '17'   # Or your project's required Java version (e.g., '11', '21')
+          cache: 'gradle'      # This enables caching for Gradle dependencies
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Install KMP dependencies
+        run: ./gradlew dependencies --refresh-dependencies
+        # This command will build the project and download/cache dependencies.
+        # Alternatively, you could use a more specific task like `./gradlew resolveDependencies`
+        # or `./gradlew :shared:dependencies` if you have a specific module and task.
+        # Ensure your project's build.gradle(.kts) files are configured to use
+        # download.jetbrains.com or other necessary repositories.
