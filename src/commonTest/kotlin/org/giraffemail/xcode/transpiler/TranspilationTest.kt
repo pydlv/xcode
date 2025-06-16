@@ -9,7 +9,6 @@ import org.giraffemail.xcode.pythonparser.PythonGenerator
 import org.giraffemail.xcode.pythonparser.PythonParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.fail
 
 data class LanguageConfig(
@@ -111,7 +110,7 @@ class TranspilationTest {
         println("Initial ${languageSequence.first().name} code:\\n$initialCode")
 
         var currentCode = initialCode
-        var currentAst: AstNode? = null
+        var currentAst: AstNode?
 
         try {
             for (i in languageSequence.indices) {
@@ -265,7 +264,7 @@ class TranspilationTest {
         """.trimIndent().trim() // MODIFIED: Added .trim() to remove leading/trailing whitespace
 
         // Define expected function body for both languages
-        val functionBody = listOf<StatementNode>(
+        val functionBody = listOf(
             AssignNode(
                 target = NameNode(id = "c", ctx = Store),
                 value = BinaryOpNode(

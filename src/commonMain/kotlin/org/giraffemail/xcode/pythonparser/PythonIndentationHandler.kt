@@ -35,14 +35,6 @@ class PythonIndentationHandler {
                     indentStack.removeAt(indentStack.lastIndex)
                     result.add("DEDENT") // DEDENT token on its own line
                 }
-                if (currentIndent != indentStack.last()) {
-                    // This case should ideally be handled by the parser as a syntax error
-                    // For preprocessing, we might log or decide how to handle inconsistent indentation
-                    // For now, let\'s assume the parser will catch it, or adjust if needed.
-                    // However, throwing an error here can also be valid.
-                    // For simplicity in getting tests to pass, let\'s try to proceed.
-                    // throw IllegalStateException("Inconsistent indentation at line: $line - current: $currentIndent, expected: ${indentStack.last()}")
-                }
                 result.add(content) // Add the current line\'s content
             }
         }
