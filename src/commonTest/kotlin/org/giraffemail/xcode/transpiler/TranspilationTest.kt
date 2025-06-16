@@ -300,7 +300,7 @@ class TranspilationTest {
                 print(c)
                 fib(b, c)
             fib(0, 1)
-        """.trimIndent().trim() // MODIFIED: Added .trim() to remove leading/trailing whitespace
+        """.trimIndent().trim()
 
         // Expected JavaScript transpilation
         val javascriptCode = """
@@ -310,7 +310,7 @@ class TranspilationTest {
                 fib(b, c);
             }
             fib(0, 1);
-        """.trimIndent().trim() // MODIFIED: Added .trim() to remove leading/trailing whitespace
+        """.trimIndent().trim()
 
         // Define expected function body for both languages
         val functionBody = listOf(
@@ -381,24 +381,12 @@ class TranspilationTest {
             )
         )
 
-        // Test Python to JavaScript transpilation
-        assertRoundTripTranspilation(
-            originalCode = pythonCode,
-            expectedIntermediateCode = javascriptCode,
-            lang1Config = pythonConfig,
-            lang2Config = javaScriptConfig,
-            expectedInitialAst = expectedPyAst,    // Parsed from Python code
-            expectedIntermediateAst = expectedJsAst // Parsed from generated JS code
+        val allLanguageSetupsForFibonacciTest = listOf(
+            Triple(pythonConfig, pythonCode, expectedPyAst),
+            Triple(javaScriptConfig, javascriptCode, expectedJsAst)
+            // To add a new language for the fibonacci test, add its Triple here
         )
 
-        // Test JavaScript to Python transpilation
-        assertRoundTripTranspilation(
-            originalCode = javascriptCode,
-            expectedIntermediateCode = pythonCode,
-            lang1Config = javaScriptConfig,
-            lang2Config = pythonConfig,
-            expectedInitialAst = expectedJsAst,    // Parsed from JS code
-            expectedIntermediateAst = expectedPyAst     // Parsed from generated Python code
-        )
+        executeTranspilationTests("Recursive Fibonacci", allLanguageSetupsForFibonacciTest)
     }
 }
