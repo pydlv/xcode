@@ -221,11 +221,10 @@ class TranspilationTest {
     fun `test recursive fibonacci function transpilation`() {
         // Python code for recursive fibonacci
         val pythonCode = """
-            def fib(a,b):
+            def fib(a, b):
                 c = a + b
                 print(c)
                 fib(b, c)
-            
             fib(0, 1)
         """.trimIndent().trim() // MODIFIED: Added .trim() to remove leading/trailing whitespace
 
@@ -236,7 +235,6 @@ class TranspilationTest {
                 console.log(c);
                 fib(b, c);
             }
-            
             fib(0, 1);
         """.trimIndent().trim() // MODIFIED: Added .trim() to remove leading/trailing whitespace
 
