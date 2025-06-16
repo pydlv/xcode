@@ -1,88 +1,83 @@
 package org.giraffemail.xcode.pythonparser
 
 import org.giraffemail.xcode.ast.*
+import org.giraffemail.xcode.common.AbstractAstGenerator
 
-object PythonGenerator {
+class PythonGenerator : AbstractAstGenerator() {
 
-    fun generate(ast: AstNode): String {
-        return when (ast) {
-            is ModuleNode -> ast.body.joinToString(separator = "\n") { generateStatement(it) }
-            else -> "// Unsupported AST Node type at top level"
+    override fun getStatementSeparator(): String = "\n"
+
+    override fun getStatementTerminator(): String = ""
+
+    override fun formatStringLiteral(value: String): String = "'${value.replace("'", "\\'")}'"
+
+    override fun formatFunctionName(name: String): String {
+        return when (name) {
+            "console.log" -> "print"
+            else -> name
         }
     }
 
-    private fun generateStatement(statement: StatementNode): String {
-        return when (statement) {
-            is ExprNode -> generateExpression(statement.value)
-            is PrintNode -> "print(${generateExpression(statement.expression)})" // Handle PrintNode
-            is FunctionDefNode -> {
-                val funcName = statement.name
-                val params = statement.args.joinToString(", ") { it.id }
-                val body = statement.body.joinToString("\n    ") { generateStatement(it) }
-                "def $funcName($params):\n    $body"
-            }
-            is AssignNode -> {
-                val targetName = statement.target.id
-                val valueExpr = generateExpression(statement.value)
-                "$targetName = $valueExpr"
-            }
-            is CallStatementNode -> {
-                generateExpression(statement.call)
-            }
-            is UnknownNode -> "# Unknown statement: ${statement.description}" // Handle UnknownNode
-            // Add other statement types here if needed
-        }
+    override fun visitPrintNode(node: PrintNode): String {
+        // Use formatFunctionName to handle potential mappings, though "print" is standard.
+        return "${formatFunctionName("print")}(${generateExpression(node.expression)})"
     }
 
-    private fun generateExpression(expression: ExpressionNode): String {
-        return when (expression) {
-            is CallNode -> {
-                val funcString = when (val funcNode = expression.func) {
-                    is NameNode -> funcNode.id // Standard case, e.g., print from Python AST
-                    is MemberExpressionNode -> {
-                        // Check if it's console.log from JS AST
-                        if (funcNode.obj is NameNode && funcNode.obj.id == "console" &&
-                            funcNode.property is NameNode && funcNode.property.id == "log") {
-                            "print" // Map console.log to print
-                        } else {
-                            // For other MemberExpressionNodes, generate them (though Python doesn't use this for print)
-                            val objStr = generateExpression(funcNode.obj)
-                            val propStr = generateExpression(funcNode.property)
-                            "$objStr.$propStr" // Generic member access like object.property
-                        }
-                    }
-                    else -> generateExpression(funcNode) // Fallback for other func types, though unlikely for this simple case
-                }
-                val args = expression.args.joinToString(separator = ", ") { generateExpression(it) }
-                "$funcString($args)"
-            }
-            is NameNode -> expression.id // e.g., "print"
-            is ConstantNode -> {
-                when (val value = expression.value) {
-                    is String -> "'${value.replace("'", "\\'")}'" // Basic string escaping
-                    is Double -> if (value == value.toInt().toDouble()) value.toInt().toString() else value.toString()
-                    is Float -> if (value == value.toInt().toFloat()) value.toInt().toString() else value.toString()
-                    // Add other constant types (Int, Boolean etc.) here if needed
-                    else -> value.toString()
-                }
-            }
+    override fun visitFunctionDefNode(node: FunctionDefNode): String {
+        val funcName = node.name
+        val params = node.args.joinToString(", ") { it.id } // Assuming args are NameNodes for params
+        // Each statement in the body needs to be indented.
+        val body = node.body.joinToString("\n") { "    " + generateStatement(it) }
+        return "def $funcName($params):\n$body"
+    }
+
+    override fun visitAssignNode(node: AssignNode): String {
+        // Compiler warning in JSGenerator implied node.target is always NameNode.
+        // If AstNode.AssignNode.target is confirmed to be NameNode, this cast is safe.
+        // Otherwise, the original if/else structure might be needed if target can be other ExpressionNode types.
+        val targetName = node.target.id // Assuming node.target is of type NameNode
+        val valueExpr = generateExpression(node.value)
+        return "$targetName = $valueExpr"
+    }
+
+    override fun visitCallStatementNode(node: CallStatementNode): String {
+        // In Python, a call statement is just the expression, no semicolon.
+        return generateExpression(node.call)
+    }
+
+    override fun visitCallNode(node: CallNode): String {
+        val funcString = when (val funcNode = node.func) {
+            is NameNode -> formatFunctionName(funcNode.id) // Handles mapping like "console.log"
             is MemberExpressionNode -> {
-                // This case is for when a MemberExpressionNode is an expression itself, not the func of a CallNode.
-                // It might be hit if we try to generate code for an AST like: x = console.log
-                val objStr = generateExpression(expression.obj)
-                val propStr = generateExpression(expression.property)
-                // Python doesn't have a direct equivalent for assigning a method reference like this
-                // in a simple way that translates directly from JS's console.log.
-                // For now, return a placeholder or a representation that makes sense.
-                "${objStr}.${propStr} # Python equivalent for member access might vary"
+                // Special handling for console.log from JS AST
+                if (funcNode.obj is NameNode && (funcNode.obj as NameNode).id == "console" &&
+                    funcNode.property is NameNode && (funcNode.property as NameNode).id == "log") {
+                    formatFunctionName("console.log") // This will return "print"
+                } else {
+                    // For other MemberExpressionNodes, generate them as expressions
+                    generateExpression(funcNode) // This will call visitMemberExpressionNode
+                }
             }
-            is BinaryOpNode -> {
-                val leftStr = generateExpression(expression.left)
-                val rightStr = generateExpression(expression.right)
-                "$leftStr ${expression.op} $rightStr"
-            }
-            is UnknownNode -> "# Unknown expression: ${expression.description}" // Handle UnknownNode
-            // else -> "# Unhandled ExpressionNode type" // Not strictly needed if all sealed subtypes are covered
+            else -> generateExpression(funcNode) // Fallback for other func types
+        }
+        val args = generateArgumentList(node.args)
+        return "$funcString($args)"
+    }
+
+    override fun visitMemberExpressionNode(node: MemberExpressionNode): String {
+        val objStr = generateExpression(node.obj)
+        // Revert to checking type of property before accessing .id
+        val propStr = if (node.property is NameNode) node.property.id else generateExpression(node.property)
+        return "$objStr.$propStr"
+    }
+
+    override fun visitConstantNode(node: ConstantNode): String {
+        return when (val value = node.value) {
+            is Boolean -> if (value) "True" else "False" // Python-specific boolean literals
+            // Delegate to super for strings (which handles quoting) and numbers (int/double/float conversion)
+            else -> super.visitConstantNode(node)
         }
     }
+    // visitNameNode, visitBinaryOpNode, visitUnknownNode, visitExprNode, visitModuleNode
+    // will use the open implementations from AbstractAstGenerator.
 }

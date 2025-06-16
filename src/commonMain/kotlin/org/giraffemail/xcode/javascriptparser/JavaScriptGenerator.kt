@@ -1,102 +1,69 @@
 package org.giraffemail.xcode.javascriptparser
 
 import org.giraffemail.xcode.ast.*
+import org.giraffemail.xcode.common.AbstractAstGenerator
 
-object JavaScriptGenerator {
+class JavaScriptGenerator : AbstractAstGenerator() {
 
-    fun generate(ast: AstNode): String {
-        val generatedCode = when (ast) {
-            is ModuleNode -> ast.body.joinToString(separator = "\n") { generateStatement(it) }
-            else -> "// Unsupported AST Node type at top level"
-        }
+    override fun getStatementSeparator(): String = "\n"
 
-        // Post-process the generated code to fix the Fibonacci test case
-        // This is a pragmatic approach to get the test passing when we have both function def and call
-        // return postProcessGeneratedCode(generatedCode) // Removed post-processing
-        return generatedCode // Return generated code directly
-    }
+    override fun getStatementTerminator(): String = ";"
 
-    /**
-     * Post-processes the generated JavaScript code to fix special formatting cases.
-     * In particular, it ensures function calls after function definitions are properly separated.
-     */
-    /* // Commented out the entire function as it's no longer used
-    private fun postProcessGeneratedCode(code: String): String {
-        // Pattern for Fibonacci test case: Handle function calls that incorrectly appear inside function bodies
-        val functionPattern = """function\s+fib\s*\(.*?\)\s*\{([^}]*?)fib\(\d+,\s*\d+\);([^}]*?)\}""".toRegex(RegexOption.DOT_MATCHES_ALL)
+    override fun formatStringLiteral(value: String): String = "'${value.replace("'", "\\'")}'"
 
-        val result = functionPattern.find(code)?.let { matchResult ->
-            val beforeCall = matchResult.groupValues[1]
-            val afterCall = matchResult.groupValues[2]
-
-            // Reconstruct the proper format with the call outside the function
-            val functionBody = beforeCall + afterCall
-            val functionDef = "function fib(a, b) {\n$functionBody}"
-            val functionCall = "fib(0, 1);"
-
-            "$functionDef\n\n$functionCall"
-        } ?: code  // If no match, return the original code
-
-        return result
-    }
-    */
-
-    private fun generateStatement(statement: StatementNode): String {
-        return when (statement) {
-            is ExprNode -> "${generateExpression(statement.value)};" // JS statements often end with a semicolon
-            is PrintNode -> "console.log(${generateExpression(statement.expression)});" // Handle PrintNode
-            is FunctionDefNode -> {
-                val funcName = statement.name
-                val params = statement.args.joinToString(", ") { it.id }
-                val body = statement.body.joinToString("\n    ") { generateStatement(it) }
-                "function $funcName($params) {\n    $body\n}"
-            }
-            is AssignNode -> {
-                val targetName = statement.target.id
-                val valueExpr = generateExpression(statement.value)
-                "let $targetName = $valueExpr;"
-            }
-            is CallStatementNode -> {
-                "${generateExpression(statement.call)};"
-            }
-            is UnknownNode -> "// Unknown statement: ${statement.description}" // Handle UnknownNode
+    override fun formatFunctionName(name: String): String {
+        return when (name) {
+            "print" -> "console.log"
+            else -> name
         }
     }
 
-    private fun generateExpression(expression: ExpressionNode): String {
-        return when (expression) {
-            is CallNode -> {
-                val funcString = when (val funcNode = expression.func) {
-                    is NameNode -> {
-                        if (funcNode.id == "print") {
-                            "console.log" // Map Python's print to console.log
-                        } else {
-                            funcNode.id // Normal function name
-                        }
-                    }
-                    else -> generateExpression(funcNode)
-                }
-                val args = expression.args.joinToString(separator = ", ") { generateExpression(it) }
-                "$funcString($args)"
-            }
-            is MemberExpressionNode -> {
-                val obj = generateExpression(expression.obj)
-                val prop = generateExpression(expression.property)
-                "$obj.$prop"
-            }
-            is NameNode -> expression.id // e.g., "console", "log"
-            is ConstantNode -> {
-                when (val value = expression.value) {
-                    is String -> "'${value.replace("'", "\\'")}'" // Basic string escaping
-                    else -> value.toString()
-                }
-            }
-            is BinaryOpNode -> {
-                val leftStr = generateExpression(expression.left)
-                val rightStr = generateExpression(expression.right)
-                "$leftStr ${expression.op} $rightStr"
-            }
-            is UnknownNode -> "/* Unknown expression: ${expression.description} */" // Handle UnknownNode
-        }
+    override fun visitPrintNode(node: PrintNode): String {
+        return "${formatFunctionName("print")}(${generateExpression(node.expression)})${getStatementTerminator()}"
     }
+
+    override fun visitFunctionDefNode(node: FunctionDefNode): String {
+        val funcName = node.name
+        val params = node.args.joinToString(", ") { it.id } // Assuming args are NameNodes for params
+        // Indent statements within the function body
+        val body = node.body.joinToString("\n") { "    " + generateStatement(it) }
+        return "function $funcName($params) {\n$body\n}"
+    }
+
+    override fun visitAssignNode(node: AssignNode): String {
+        // Compiler warning indicated 'node.target is NameNode' is always true.
+        // This implies node.target is already NameNode or a subtype from which .id can be accessed.
+        val targetName = node.target.id // Assuming node.target is of type NameNode
+        val valueExpr = generateExpression(node.value)
+        // Using 'let' for assignments, could be 'var' or 'const' based on further requirements
+        return "let $targetName = $valueExpr${getStatementTerminator()}"
+    }
+
+    override fun visitCallStatementNode(node: CallStatementNode): String {
+        return "${generateExpression(node.call)}${getStatementTerminator()}"
+    }
+
+    override fun visitCallNode(node: CallNode): String {
+        val funcString = when (val funcNode = node.func) {
+            is NameNode -> formatFunctionName(funcNode.id) // Handles mapping like "print"
+            // MemberExpressionNode (e.g., obj.method) is handled by generateExpression calling visitMemberExpressionNode
+            else -> generateExpression(funcNode)
+        }
+        val args = generateArgumentList(node.args)
+        return "$funcString($args)"
+    }
+
+    override fun visitMemberExpressionNode(node: MemberExpressionNode): String {
+        val objStr = generateExpression(node.obj)
+        // Revert to checking type of property before accessing .id
+        val propStr = if (node.property is NameNode) node.property.id else generateExpression(node.property)
+        return "$objStr.$propStr"
+    }
+
+    // visitConstantNode will use the base implementation which calls formatStringLiteral for strings.
+    // Numbers and booleans will be formatted by the base class's visitConstantNode.
+    // If JS needs specific boolean (true/false) or number formatting different from base, override visitConstantNode.
+
+    // visitNameNode, visitBinaryOpNode, visitUnknownNode, visitExprNode, visitModuleNode
+    // will use the open implementations from AbstractAstGenerator.
 }

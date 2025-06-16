@@ -25,9 +25,9 @@ data class LanguageConfig(
  */
 class TranspilationTest {
 
-    private val pythonConfig = LanguageConfig("Python", PythonParser::parse, PythonGenerator::generate)
-    private val javaScriptConfig = LanguageConfig("JavaScript", JavaScriptParser::parse, JavaScriptGenerator::generate)
-    private val javaConfig = LanguageConfig("Java", JavaParser::parse, JavaGenerator::generate)
+    private val pythonConfig = LanguageConfig("Python", PythonParser::parse, { ast -> PythonGenerator().generate(ast) }) // Changed
+    private val javaScriptConfig = LanguageConfig("JavaScript", JavaScriptParser::parse, { ast -> JavaScriptGenerator().generate(ast) }) // Changed
+    private val javaConfig = LanguageConfig("Java", JavaParser::parse, { ast -> JavaGenerator().generate(ast) }) // Changed
 
     private val expectedPrintCookiesAst = ModuleNode(
         body = listOf(PrintNode(expression = ConstantNode("cookies")))
@@ -365,8 +365,8 @@ class TranspilationTest {
                 FunctionDefNode(
                     name = "fib",
                     args = listOf(NameNode(id = "a", ctx = Load), NameNode(id = "b", ctx = Load)),
-                    body = functionBody, // functionBody is the same
-                    decorator_list = emptyList()
+                    body = functionBody // functionBody is the same
+                    , decorator_list = emptyList()
                 ),
                 CallStatementNode(
                     call = CallNode(

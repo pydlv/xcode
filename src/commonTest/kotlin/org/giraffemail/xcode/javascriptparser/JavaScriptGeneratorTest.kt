@@ -25,7 +25,7 @@ class JavaScriptGeneratorTest {
             )
         )
         val expectedCode = "console.log('Hello, World!');"
-        val actualCode = JavaScriptGenerator.generate(ast)
+        val actualCode = JavaScriptGenerator().generate(ast)
         assertEquals(expectedCode, actualCode, "Generated JavaScript code did not match expected.")
     }
 
@@ -49,7 +49,7 @@ class JavaScriptGeneratorTest {
             )
         )
         val expectedCode = "console.log('$customString');"
-        val actualCode = JavaScriptGenerator.generate(ast)
+        val actualCode = JavaScriptGenerator().generate(ast)
         assertEquals(expectedCode, actualCode, "Generated JavaScript code with arbitrary string did not match expected.")
     }
 
@@ -63,7 +63,7 @@ class JavaScriptGeneratorTest {
         val moduleAst = ModuleNode(body = listOf(ExprNode(value = ast)))
         // For JavaScript, an expression statement ends with a semicolon.
         val expectedCode = "1 + 2;"
-        val actualCode = JavaScriptGenerator.generate(moduleAst)
+        val actualCode = JavaScriptGenerator().generate(moduleAst)
         assertEquals(expectedCode, actualCode, "Generated JavaScript code for simple addition did not match expected.")
     }
 }
