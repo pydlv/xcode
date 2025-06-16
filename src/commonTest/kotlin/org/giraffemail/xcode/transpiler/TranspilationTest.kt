@@ -431,9 +431,9 @@ fib(0, 1);"""
 
         val javascriptCode = """
             if (x > 5) {
-                console.log("greater");
+                console.log('greater');
             } else {
-                console.log("lesser");
+                console.log('lesser');
             }
         """.trimIndent().trim()
 
@@ -484,7 +484,7 @@ fib(0, 1);"""
 
         val javascriptCode = """
             if (a === 1) {
-                console.log("one");
+                console.log('one');
             }
         """.trimIndent().trim()
 

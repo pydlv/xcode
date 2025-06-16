@@ -76,6 +76,14 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
         )
     }
 
+    // Handle function body
+    override fun visitFunctionBody(ctx: AntlrJavaScriptParser.FunctionBodyContext): AstNode {
+        val statements = ctx.statement().mapNotNull { stmtCtx ->
+            visit(stmtCtx) as? StatementNode
+        }
+        return ModuleNode(body = statements)
+    }
+
     // Handle variable assignment statements
     override fun visitAssignStatement(ctx: AntlrJavaScriptParser.AssignStatementContext): AstNode {
         val targetId = ctx.IDENTIFIER().text // Keep null check for safety
@@ -106,11 +114,11 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
             ?: UnknownNode("Invalid condition in if statement")
 
         // Get the if body (first functionBody)
-        val ifBody = ctx.functionBody(0).let { visit(it) as? ModuleNode }?.body ?: emptyList()
+        val ifBody = ctx.functionBody(0)?.let { visit(it) as? ModuleNode }?.body ?: emptyList()
 
         // Get the else body if present (second functionBody)
         val elseBody = if (ctx.functionBody().size > 1) {
-            ctx.functionBody(1).let { visit(it) as? ModuleNode }?.body ?: emptyList()
+            ctx.functionBody(1)?.let { visit(it) as? ModuleNode }?.body ?: emptyList()
         } else {
             emptyList()
         }
