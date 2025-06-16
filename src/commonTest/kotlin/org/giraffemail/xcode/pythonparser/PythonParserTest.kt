@@ -10,14 +10,14 @@ import kotlin.test.assertEquals
 class PythonParserTest {
     @Test
     fun `test parsing specific input that triggers error - placeholder`() {
-        val invalidPythonCode = "trigger_error" // Specific string to trigger placeholder error
+        val invalidPythonCode = "trigger_error_python" // Specific string to trigger placeholder error for Python
         try {
             PythonParser.parse(invalidPythonCode)
-            fail("Parsing 'trigger_error' should have thrown AstParseException (placeholder test)")
+            fail("Parsing 'trigger_error_python' should have thrown AstParseException (placeholder test)")
         } catch (e: AstParseException) { // Changed to AstParseException
             // Expected exception from placeholder logic
             assertNotNull(e.message, "Exception message should not be null")
-            assertTrue(e.message!!.contains("Simulated parsing error for 'trigger_error' input."), "Incorrect error message: ${e.message}")
+            assertTrue(e.message!!.contains("Simulated parsing error for 'trigger_error_python' input in Python."), "Incorrect error message: ${e.message}") // Updated expected message
             println("Caught expected placeholder exception: ${e.message}")
         } catch (e: Exception) {
             fail("Unexpected exception type: ${e::class.simpleName} - ${e.message}")

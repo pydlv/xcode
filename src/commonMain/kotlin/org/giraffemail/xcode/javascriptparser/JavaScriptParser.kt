@@ -3,45 +3,37 @@ package org.giraffemail.xcode.javascriptparser
 import org.giraffemail.xcode.ast.*
 import org.giraffemail.xcode.generated.JavaScriptLexer
 import org.giraffemail.xcode.generated.JavaScriptParser as AntlrJavaScriptParser
-import org.antlr.v4.kotlinruntime.CharStreams
+import org.antlr.v4.kotlinruntime.CharStream
 import org.antlr.v4.kotlinruntime.CommonTokenStream
+import org.antlr.v4.kotlinruntime.tree.ParseTreeVisitor
 import org.giraffemail.xcode.generated.JavaScriptBaseVisitor
+import org.giraffemail.xcode.parserbase.AbstractAntlrParser
 
-object JavaScriptParser {
+object JavaScriptParser : AbstractAntlrParser<JavaScriptLexer, AntlrJavaScriptParser, AntlrJavaScriptParser.ProgramContext>() {
 
-    /**
-     * Parses the given JavaScript code string into an Abstract Syntax Tree (AST).
-     *
-     * @param jsCode The JavaScript code to parse.
-     * @return An AstNode representing the AST of the JavaScript code.
-     * @throws AstParseException if parsing fails.
-     */
-    fun parse(jsCode: String): AstNode {
-        println("JavaScriptParser.parse attempting to parse with ANTLR: '$jsCode'")
-
-        if (jsCode == "trigger_error") { // Keep existing test error condition
-            throw AstParseException("Simulated parsing error for 'trigger_error' input.")
-        }
-
-        try {
-            val lexer = JavaScriptLexer(CharStreams.fromString(jsCode))
-
-            val tokens = CommonTokenStream(lexer)
-            val parser = AntlrJavaScriptParser(tokens)
-
-            val tree = parser.program() // Assuming 'program' is the entry rule in JavaScript.g4
-
-            val astBuilder = JavaScriptAstBuilder()
-            return astBuilder.visit(tree) ?: UnknownNode("Failed to build AST from JavaScript parse tree, visit returned null.")
-        } catch (e: AstParseException) {
-            // Re-throw AstParseException as it's our expected exception type for parsing errors
-            throw e
-        } catch (e: Exception) {
-            // Wrap other exceptions
-            println("ANTLR parsing failed for JavaScript with unexpected exception: ${e.message}")
-            throw AstParseException("Failed to parse JavaScript code using ANTLR: ${e.message}", e)
-        }
+    override fun createLexer(charStream: CharStream): JavaScriptLexer {
+        return JavaScriptLexer(charStream)
     }
+
+    override fun createAntlrParser(tokens: CommonTokenStream): AntlrJavaScriptParser {
+        return AntlrJavaScriptParser(tokens)
+    }
+
+    override fun invokeEntryPoint(parser: AntlrJavaScriptParser): AntlrJavaScriptParser.ProgramContext {
+        return parser.program() // Assuming 'program' is the entry rule in JavaScript.g4
+    }
+
+    override fun createAstBuilder(): ParseTreeVisitor<AstNode> {
+        return JavaScriptAstBuilder()
+    }
+
+    override fun getLanguageName(): String {
+        return "JavaScript"
+    }
+
+    // The main parse method is now inherited from AbstractAntlrParser.
+    // The original parse method's content, including the "trigger_error" check
+    // and try-catch block, is now handled by the abstract class and the overrides above.
 }
 
 // Visitor to convert ANTLR ParseTree to your custom AST for JavaScript
@@ -62,7 +54,7 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
     }
 
     override fun visitFunctionDeclaration(ctx: AntlrJavaScriptParser.FunctionDeclarationContext): AstNode {
-        val funcName = ctx.IDENTIFIER()?.text ?: ""
+        val funcName = ctx.IDENTIFIER()?.text ?: "" // Keep null check for safety, though grammar might ensure IDENTIFIER exists
 
         // Parse parameters
         val parameters = mutableListOf<NameNode>()
@@ -86,7 +78,7 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
 
     // Handle variable assignment statements
     override fun visitAssignStatement(ctx: AntlrJavaScriptParser.AssignStatementContext): AstNode {
-        val targetId = ctx.IDENTIFIER()?.text ?: ""
+        val targetId = ctx.IDENTIFIER()?.text ?: "" // Keep null check for safety
         val targetNode = NameNode(id = targetId, ctx = Store)
 
         val valueExpr = visit(ctx.expression()) as? ExpressionNode
@@ -97,7 +89,7 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
 
     // Handle function calls as statements
     override fun visitFunctionCallStatement(ctx: AntlrJavaScriptParser.FunctionCallStatementContext): AstNode {
-        val funcName = ctx.IDENTIFIER()?.text ?: ""
+        val funcName = ctx.IDENTIFIER()?.text ?: "" // Keep null check for safety
         val funcNameNode = NameNode(id = funcName, ctx = Load)
 
         // Parse arguments
@@ -115,7 +107,7 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
 
     // Handle function calls in expressions
     override fun visitFunctionCall(ctx: AntlrJavaScriptParser.FunctionCallContext): AstNode {
-        val funcName = ctx.IDENTIFIER()?.text ?: ""
+        val funcName = ctx.IDENTIFIER()?.text ?: "" // Keep null check for safety
         val funcNameNode = NameNode(id = funcName, ctx = Load)
 
         // Parse arguments
@@ -148,19 +140,19 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
 
     // Handle StringLiteral: STRING_LITERAL
     override fun visitStringLiteral(ctx: AntlrJavaScriptParser.StringLiteralContext): AstNode {
-        val text = ctx.STRING_LITERAL()!!.text
+        val text = ctx.STRING_LITERAL().text // Removed !! as it's not nullable
         val content = if (text.length >= 2) text.substring(1, text.length - 1) else ""
         return ConstantNode(content)
     }
 
     // Handle Identifier: IDENTIFIER
     override fun visitIdentifier(ctx: AntlrJavaScriptParser.IdentifierContext): AstNode {
-        return NameNode(ctx.IDENTIFIER()!!.text, Load)
+        return NameNode(ctx.IDENTIFIER().text, Load) // Removed !! as it's not nullable
     }
 
     // Handle NumberLiteral: NUMBER
     override fun visitNumberLiteral(ctx: AntlrJavaScriptParser.NumberLiteralContext): AstNode {
-        val numText = ctx.NUMBER()!!.text
+        val numText = ctx.NUMBER().text // Removed !! as it's not nullable
         // JavaScript numbers are floating-point. Always parse as Double.
         val value = numText.toDoubleOrNull() ?: 0.0 // Default to 0.0 if parsing fails for some reason
         return ConstantNode(value)

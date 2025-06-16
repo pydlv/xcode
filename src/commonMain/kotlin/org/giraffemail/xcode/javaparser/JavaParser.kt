@@ -1,32 +1,47 @@
 package org.giraffemail.xcode.javaparser
 
-import org.antlr.v4.kotlinruntime.CharStreams
+import org.antlr.v4.kotlinruntime.CharStream
 import org.antlr.v4.kotlinruntime.CommonTokenStream
+import org.antlr.v4.kotlinruntime.tree.ParseTreeVisitor
 import org.giraffemail.xcode.ast.*
 import org.giraffemail.xcode.generated.JavaLexer
-import org.giraffemail.xcode.generated.JavaParser // ANTLR generated parser
-import org.giraffemail.xcode.generated.JavaBaseVisitor // ANTLR generated base visitor
+import org.giraffemail.xcode.generated.JavaParser as AntlrJavaParser // Aliased to avoid conflict
+import org.giraffemail.xcode.generated.JavaBaseVisitor
+import org.giraffemail.xcode.parserbase.AbstractAntlrParser
 
-object JavaParser {
-    fun parse(code: String): AstNode {
-        // println("JavaParser.parse called with ANTLR for: $code") // Uncomment for debugging
-        val lexer = JavaLexer(CharStreams.fromString(code))
-        val tokens = CommonTokenStream(lexer)
-        val parser = JavaParser(tokens)
+object JavaParser : AbstractAntlrParser<JavaLexer, AntlrJavaParser, AntlrJavaParser.CompilationUnitContext>() {
+
+    override fun createLexer(charStream: CharStream): JavaLexer {
+        return JavaLexer(charStream)
+    }
+
+    override fun createAntlrParser(tokens: CommonTokenStream): AntlrJavaParser {
+        return AntlrJavaParser(tokens)
+    }
+
+    override fun invokeEntryPoint(parser: AntlrJavaParser): AntlrJavaParser.CompilationUnitContext {
         // Consider adding a custom error listener for more detailed error reports
         // parser.removeErrorListeners()
         // parser.addErrorListener(MyCustomErrorListener())
-
-        val tree = parser.compilationUnit() // Entry rule
-        val astBuilder = JavaAstBuilderVisitor()
-        // The result of astBuilder.visit(compilationUnitContext) should be ModuleNode (non-null)
-        return astBuilder.visit(tree) // Removed unnecessary Elvis operator
+        return parser.compilationUnit() // Entry rule
     }
+
+    override fun createAstBuilder(): ParseTreeVisitor<AstNode> {
+        return JavaAstBuilderVisitor()
+    }
+
+    override fun getLanguageName(): String {
+        return "Java"
+    }
+
+    // The main parse method is now inherited from AbstractAntlrParser.
+    // The original parse method's content is now handled by the abstract class
+    // and the overrides above.
 }
 
 private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
 
-    override fun visitCompilationUnit(ctx: JavaParser.CompilationUnitContext): ModuleNode {
+    override fun visitCompilationUnit(ctx: AntlrJavaParser.CompilationUnitContext): ModuleNode { // Changed JavaParser to AntlrJavaParser
         val statements = ctx.statement().mapNotNull {
             // Ensure that the result of accept is treated as AstNode,
             // then safely cast to StatementNode or filter out if not applicable.
@@ -38,7 +53,7 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
     }
 
     // Handles the 'statement' rule from the grammar
-    override fun visitStatement(ctx: JavaParser.StatementContext): AstNode {
+    override fun visitStatement(ctx: AntlrJavaParser.StatementContext): AstNode { // Changed JavaParser to AntlrJavaParser
         // Grammar: statement: expressionStatement;
         // Delegate to the expressionStatement visitor
         // Must return non-null AstNode. If expressionStatement can be null in a valid statement,
@@ -46,19 +61,19 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         return ctx.expressionStatement().accept(this) // Removed unnecessary Elvis operator
     }
 
-    override fun visitExpressionStatement(ctx: JavaParser.ExpressionStatementContext): AstNode {
+    override fun visitExpressionStatement(ctx: AntlrJavaParser.ExpressionStatementContext): AstNode { // Changed JavaParser to AntlrJavaParser
         // An expression statement's AST node is its expression's AST node.
         // Must return non-null AstNode.
         return ctx.expression().accept(this) // Removed unnecessary Elvis operator
     }
 
-    override fun visitPrintlnExpression(ctx: JavaParser.PrintlnExpressionContext): PrintNode {
+    override fun visitPrintlnExpression(ctx: AntlrJavaParser.PrintlnExpressionContext): PrintNode { // Changed JavaParser to AntlrJavaParser
         val expression = ctx.expression().accept(this) as? ExpressionNode // Removed unnecessary safe call
             ?: throw IllegalStateException("Println expression content is null or not an ExpressionNode for: ${ctx.text}")
         return PrintNode(expression = expression)
     }
 
-    override fun visitAdditiveExpression(ctx: JavaParser.AdditiveExpressionContext): BinaryOpNode {
+    override fun visitAdditiveExpression(ctx: AntlrJavaParser.AdditiveExpressionContext): BinaryOpNode { // Changed JavaParser to AntlrJavaParser
         val left = ctx.expression(0)?.accept(this) as? ExpressionNode
             ?: throw IllegalStateException("Left operand of additive expression is null or not an ExpressionNode for: ${ctx.expression(0)?.text}")
         val right = ctx.expression(1)?.accept(this) as? ExpressionNode
@@ -76,15 +91,15 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
     }
 
     // Handles the 'PrimaryExpression' labeled alternative in the 'expression' rule
-    override fun visitPrimaryExpression(ctx: JavaParser.PrimaryExpressionContext): ExpressionNode {
+    override fun visitPrimaryExpression(ctx: AntlrJavaParser.PrimaryExpressionContext): ExpressionNode { // Changed JavaParser to AntlrJavaParser
         // Delegates to the 'primary' rule's visitor
         // The accept call on primary() should return ExpressionNode or compatible.
-        return ctx.primary().accept(this) as? ExpressionNode // Removed unnecessary safe call
+        return ctx.primary().accept(this) as? ExpressionNode
             ?: throw IllegalStateException("Primary expression content is null or not an ExpressionNode for: ${ctx.text}")
     }
 
     // Handles the 'LiteralExpression' labeled alternative in the 'primary' rule
-    override fun visitLiteralExpression(ctx: JavaParser.LiteralExpressionContext): ConstantNode {
+    override fun visitLiteralExpression(ctx: AntlrJavaParser.LiteralExpressionContext): ConstantNode {
         // This method corresponds to the # LiteralExpression label in the grammar.
         // It should delegate to the existing visitLiteral method.
         // The LiteralExpressionContext is essentially a wrapper around LiteralContext here.
@@ -96,7 +111,7 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
     // The logic for primary expressions is handled by visitPrimaryExpression
     // and the specific visitLiteral or other primary alternatives.
 
-    override fun visitLiteral(ctx: JavaParser.LiteralContext): ConstantNode {
+    override fun visitLiteral(ctx: AntlrJavaParser.LiteralContext): ConstantNode {
         return when {
             ctx.STRING_LITERAL() != null -> {
                 var text = ctx.STRING_LITERAL()!!.text
@@ -128,8 +143,12 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
     // Generic visit method from AbstractParseTreeVisitor.
     // This is called when `someNode.accept(this)` is invoked.
     // It then dispatches to the more specific visit<RuleName> methods.
-    override fun visit(tree: org.antlr.v4.kotlinruntime.tree.ParseTree): AstNode { // Return type changed to non-nullable AstNode
-        return tree.accept(this) // Removed unnecessary Elvis operator
+    override fun visit(tree: org.antlr.v4.kotlinruntime.tree.ParseTree): AstNode {
+        // Ensure the return type matches the base class expectation.
+        // If the specific visit method for 'tree' (e.g., visitCompilationUnit) returns AstNode,
+        // this should correctly propagate it.
+        // The base visitor's accept should handle the non-null return.
+        return tree.accept(this)
     }
 
     // Default result if a more specific visit method is not overridden for a particular node type

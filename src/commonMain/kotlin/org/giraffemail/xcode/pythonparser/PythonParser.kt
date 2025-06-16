@@ -3,47 +3,44 @@ package org.giraffemail.xcode.pythonparser
 import org.giraffemail.xcode.ast.*
 import org.giraffemail.xcode.generated.PythonLexer
 import org.giraffemail.xcode.generated.PythonParser as AntlrPythonParser
-import org.antlr.v4.kotlinruntime.CharStreams
+import org.antlr.v4.kotlinruntime.CharStream
 import org.antlr.v4.kotlinruntime.CommonTokenStream
+import org.antlr.v4.kotlinruntime.tree.ParseTreeVisitor
 import org.giraffemail.xcode.generated.PythonBaseVisitor
+import org.giraffemail.xcode.parserbase.AbstractAntlrParser
 
-object PythonParser {
+object PythonParser : AbstractAntlrParser<PythonLexer, AntlrPythonParser, AntlrPythonParser.ProgramContext>() {
 
-    /**
-     * Parses the given Python code string into an Abstract Syntax Tree (AST).
-     *
-     * @param pythonCode The Python code to parse.
-     * @return An AstNode representing the AST of the Python code.
-     * @throws AstParseException if parsing fails.
-     */
-    fun parse(pythonCode: String): AstNode {
-        println("PythonParser.parse attempting to parse with ANTLR: '$pythonCode'")
+    private val indentationHandler = PythonIndentationHandler()
 
-        if (pythonCode == "trigger_error") {
-            throw AstParseException("Simulated parsing error for 'trigger_error' input.")
-        }
-
-        try {
-            val indentationHandler = PythonIndentationHandler()
-            val preprocessedCode = indentationHandler.processIndentation(pythonCode)
-            println("Preprocessed Python code:\\n$preprocessedCode") // Log preprocessed code
-
-            val lexer = PythonLexer(CharStreams.fromString(preprocessedCode))
-            val tokens = CommonTokenStream(lexer)
-            val parser = AntlrPythonParser(tokens)
-
-            val tree = parser.program()
-
-            val astBuilder = PythonAstBuilder()
-            // Removed Elvis operator as visit should not return null based on PythonBaseVisitor
-            return astBuilder.visit(tree)
-        } catch (e: AstParseException) {
-            throw e
-        } catch (e: Exception) {
-            println("ANTLR parsing failed with unexpected exception: ${e.message}")
-            throw AstParseException("Failed to parse Python code using ANTLR: ${e.message}", e)
-        }
+    override fun preprocessCode(code: String): String {
+        return indentationHandler.processIndentation(code)
     }
+
+    override fun createLexer(charStream: CharStream): PythonLexer {
+        return PythonLexer(charStream)
+    }
+
+    override fun createAntlrParser(tokens: CommonTokenStream): AntlrPythonParser {
+        return AntlrPythonParser(tokens)
+    }
+
+    override fun invokeEntryPoint(parser: AntlrPythonParser): AntlrPythonParser.ProgramContext {
+        return parser.program()
+    }
+
+    override fun createAstBuilder(): ParseTreeVisitor<AstNode> {
+        return PythonAstBuilder()
+    }
+
+    override fun getLanguageName(): String {
+        return "Python"
+    }
+
+    // The main parse method is now inherited from AbstractAntlrParser.
+    // The original parse method's content, including the "trigger_error" check,
+    // try-catch block, and preprocessing, is now handled by the abstract class
+    // and the overrides above.
 
     /* // Fully commented out preprocessPythonCode function
     private fun preprocessPythonCode(code: String): String {
