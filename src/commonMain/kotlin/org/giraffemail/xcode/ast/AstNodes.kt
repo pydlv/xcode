@@ -8,6 +8,7 @@ sealed interface ExpressionNode : AstNode
 sealed interface NameContext
 data object Load : NameContext // Using data object for singleton, idiomatic for fixed contexts
 data object Store : NameContext // For variable assignment targets
+data object Param : NameContext // For function parameters
 // Potentially others like Del could be added if needed for more complex parsing
 
 data class ModuleNode(val body: List<StatementNode>) : AstNode // Can represent the whole program

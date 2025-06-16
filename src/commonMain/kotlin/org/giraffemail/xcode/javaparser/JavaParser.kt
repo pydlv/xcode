@@ -41,24 +41,113 @@ object JavaParser : AbstractAntlrParser<JavaLexer, AntlrJavaParser, AntlrJavaPar
 
 private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
 
-    override fun visitCompilationUnit(ctx: AntlrJavaParser.CompilationUnitContext): ModuleNode { // Changed JavaParser to AntlrJavaParser
+    override fun visitCompilationUnit(ctx: AntlrJavaParser.CompilationUnitContext): ModuleNode {
         val statements = ctx.statement().mapNotNull {
-            // Ensure that the result of accept is treated as AstNode,
-            // then safely cast to StatementNode or filter out if not applicable.
-            // If visitStatement now must return AstNode, null check might be less critical here
-            // but as? StatementNode handles type safety.
+            // It's generally safer to attempt a cast and handle null if a statement might not produce a StatementNode,
+            // or if a statement type is unhandled and visitStatement returns null.
             it.accept(this) as? StatementNode
         }
         return ModuleNode(body = statements)
     }
 
-    // Handles the 'statement' rule from the grammar
-    override fun visitStatement(ctx: AntlrJavaParser.StatementContext): AstNode { // Changed JavaParser to AntlrJavaParser
-        // Grammar: statement: expressionStatement;
-        // Delegate to the expressionStatement visitor
-        // Must return non-null AstNode. If expressionStatement can be null in a valid statement,
-        // this needs a more robust way to return a valid AstNode (e.g., an EmptyStatementNode).
-        return ctx.expressionStatement().accept(this) // Removed unnecessary Elvis operator
+    // visitStatement must return AstNode as per JavaBaseVisitor
+    override fun visitStatement(ctx: AntlrJavaParser.StatementContext): AstNode {
+        return when {
+            ctx.expressionStatement() != null -> ctx.expressionStatement()!!.accept(this) // Added !! based on grammar structure
+            ctx.functionDefinition() != null -> ctx.functionDefinition()!!.accept(this)   // Added !!
+            ctx.assignmentStatement() != null -> ctx.assignmentStatement()!!.accept(this) // Added !!
+            ctx.callStatement() != null -> ctx.callStatement()!!.accept(this)           // Added !!
+            else -> {
+                // This case should ideally not be reached if the grammar is complete for 'statement' alternatives
+                // and all alternatives are handled above.
+                // Returning an UnknownNode or throwing an exception is better than returning null if AstNode is expected.
+                println("Warning: Unhandled or null statement type in visitStatement: ${ctx.text}")
+                UnknownNode("Unhandled statement: ${ctx.text}") // Ensure UnknownNode is a valid AstNode
+            }
+        }
+    }
+
+    override fun visitFunctionDefinition(ctx: AntlrJavaParser.FunctionDefinitionContext): FunctionDefNode {
+        val name = ctx.IDENTIFIER()!!.text // Added !! assuming IDENTIFIER is mandatory
+        val params: List<NameNode> = ctx.parameterList()?.let { paramListCtx: AntlrJavaParser.ParameterListContext ->
+            getParameters(paramListCtx)
+        } ?: emptyList()
+        val body = ctx.statement().mapNotNull { it.accept(this) as? StatementNode } // Process body statements
+        return FunctionDefNode(name = name, args = params, body = body, decorator_list = emptyList())
+    }
+
+    // visitParameterList should return a List<NameNode>, but the base visitor might expect AstNode.
+    // If JavaBaseVisitor expects AstNode for all visit methods, this needs adjustment.
+    // For now, assuming this specific signature is intended for internal use or the base visitor is flexible.
+    // However, the error indicates it expects AstNode. This method might not be an override of a base visit method then,
+    // or it needs to wrap its result in a generic AstNode if it is.
+    // Let's assume it's a helper and not an override for now, if it's not in JavaBaseVisitor.
+    // If it IS in JavaBaseVisitor, the design is tricky. Let's assume it's a helper.
+    // Re-evaluating: The error message implies it *is* an override. This is a conflict.
+    // The base ANTLR visitor generator will create visit methods for all labeled rules if not default.
+    // If parameterList is a rule, it will have a visitParameterList. This needs to return AstNode.
+    // The current AST design doesn't have a node type for "a list of parameters".
+    // This indicates a mismatch between grammar structure intended for direct AST mapping and the visitor overrides.
+
+    // Let's assume `parameterList` is a rule and `visitParameterList` is an override.
+    // We cannot directly return List<NameNode>. We'd need a wrapper or change the AST.
+    // For now, to resolve the compile error, we'll make it return a dummy/placeholder AstNode
+    // and the actual parameter list processing will be done by calling a separate helper.
+    // This is a workaround for the type system; the real fix might involve AST/grammar redesign.
+
+    fun getParameters(ctx: AntlrJavaParser.ParameterListContext): List<NameNode> {
+        return ctx.parameter()?.map { getParameter(it!!) } ?: emptyList()
+    }
+
+    fun getParameter(ctx: AntlrJavaParser.ParameterContext): NameNode {
+        val paramName = ctx.IDENTIFIER(1)!!.text // Second IDENTIFIER is the name
+        return NameNode(id = paramName, ctx = Param)
+    }
+
+    // This would be the overridden method, now returning a placeholder
+    override fun visitParameterList(ctx: AntlrJavaParser.ParameterListContext): AstNode {
+        // This method must return AstNode. The actual list is obtained via getParameters.
+        // This is a common pattern if the AST doesn't have a direct node for this list structure.
+        // Returning a generic node or even a specific placeholder if useful.
+        return UnknownNode("ParameterList placeholder; use getParameters for actual list")
+    }
+
+    // visitParameter is likely also an override and must return AstNode.
+    override fun visitParameter(ctx: AntlrJavaParser.ParameterContext): AstNode {
+        val paramName = ctx.IDENTIFIER(1)!!.text
+        return NameNode(id = paramName, ctx = Param)
+    }
+
+    // In visitFunctionDefinition, change to use getParameters:
+    // val params = ctx.parameterList()?.let { getParameters(it) } ?: emptyList()
+    // This was already correct. The issue is the return type of the overridden visitParameterList.
+
+
+    override fun visitAssignmentStatement(ctx: AntlrJavaParser.AssignmentStatementContext): AssignNode {
+        val target = NameNode(id = ctx.IDENTIFIER().text, ctx = Store)
+        val value = ctx.expression().accept(this) as? ExpressionNode
+            ?: throw IllegalStateException("Assignment value is null or not an ExpressionNode for: ${ctx.text}")
+        return AssignNode(target = target, value = value)
+    }
+
+    override fun visitCallStatement(ctx: AntlrJavaParser.CallStatementContext): CallStatementNode {
+        val call = visitCallExpression(ctx.IDENTIFIER().text, ctx.argumentList())
+        return CallStatementNode(call = call)
+    }
+
+    // Helper for CallExpression and CallStatement to build CallNode
+    private fun visitCallExpression(functionName: String, argsCtx: AntlrJavaParser.ArgumentListContext?): CallNode {
+        val args = argsCtx?.expression()?.mapNotNull {
+            it.accept(this) as? ExpressionNode
+        } ?: emptyList()
+        return CallNode(func = NameNode(id = functionName, ctx = Load), args = args, keywords = emptyList())
+    }
+
+    // This handles calls that are part of an expression, if the grammar distinguishes them.
+    // The current grammar has IDENTIFIER LPAREN argumentList RPAREN as an 'expression' alternative.
+    override fun visitCallExpression(ctx: AntlrJavaParser.CallExpressionContext): CallNode {
+        val functionName = ctx.IDENTIFIER().text
+        return visitCallExpression(functionName, ctx.argumentList())
     }
 
     override fun visitExpressionStatement(ctx: AntlrJavaParser.ExpressionStatementContext): AstNode { // Changed JavaParser to AntlrJavaParser
@@ -98,6 +187,16 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
             ?: throw IllegalStateException("Primary expression content is null or not an ExpressionNode for: ${ctx.text}")
     }
 
+    // Added for IDENTIFIER as a primary expression (e.g. variable access)
+    override fun visitIdentifierPrimary(ctx: AntlrJavaParser.IdentifierPrimaryContext): NameNode {
+        return NameNode(id = ctx.IDENTIFIER().text, ctx = Load)
+    }
+
+    // Added for IDENTIFIER used in an expression context directly (e.g. as a standalone variable)
+    override fun visitIdentifierAccessExpression(ctx: AntlrJavaParser.IdentifierAccessExpressionContext): NameNode {
+        return NameNode(id = ctx.IDENTIFIER().text, ctx = Load)
+    }
+
     // Handles the 'LiteralExpression' labeled alternative in the 'primary' rule
     override fun visitLiteralExpression(ctx: AntlrJavaParser.LiteralExpressionContext): ConstantNode {
         // This method corresponds to the # LiteralExpression label in the grammar.
@@ -106,10 +205,6 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         // Access the actual LiteralContext using ctx.literal()
         return visitLiteral(ctx.literal())
     }
-
-    // Removed visitPrimary method as it was causing "overrides nothing" error.
-    // The logic for primary expressions is handled by visitPrimaryExpression
-    // and the specific visitLiteral or other primary alternatives.
 
     override fun visitLiteral(ctx: AntlrJavaParser.LiteralContext): ConstantNode {
         when {

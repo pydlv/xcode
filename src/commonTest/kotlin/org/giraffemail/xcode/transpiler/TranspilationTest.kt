@@ -381,9 +381,42 @@ class TranspilationTest {
             )
         )
 
+        // Java code for recursive fibonacci
+        val javaCode = """public static void fib(Object a, Object b) {
+        c = a + b;
+        System.out.println(c);
+        fib(b, c);
+    }
+fib(0, 1);"""
+
+        // Define expected AST structure for Java (integers for constants)
+        // This assumes the Java parser/generator can map the class structure to/from this common AST form
+        // for the purpose of this test, to align with Python/JS ASTs.
+        val expectedJavaAst = ModuleNode(
+            body = listOf(
+                FunctionDefNode(
+                    name = "fib",
+                    args = listOf(NameNode(id = "a", ctx = Param), NameNode(id = "b", ctx = Param)),
+                    body = functionBody, // functionBody is the same
+                    decorator_list = emptyList()
+                ),
+                CallStatementNode(
+                    call = CallNode(
+                        func = NameNode(id = "fib", ctx = Load),
+                        args = listOf(
+                            ConstantNode(0), // Java uses Integer
+                            ConstantNode(1)  // Java uses Integer
+                        ),
+                        keywords = emptyList()
+                    )
+                )
+            )
+        )
+
         val allLanguageSetupsForFibonacciTest = listOf(
             Triple(pythonConfig, pythonCode, expectedPyAst),
-            Triple(javaScriptConfig, javascriptCode, expectedJsAst)
+            Triple(javaScriptConfig, javascriptCode, expectedJsAst),
+            Triple(javaConfig, javaCode, expectedJavaAst)
             // To add a new language for the fibonacci test, add its Triple here
         )
 
