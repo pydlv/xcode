@@ -1,5 +1,7 @@
 grammar Python;
 
+import CommonLexerRules; // Import common lexer rules
+
 program: program_body? EOF;
 
 program_body // Sequence of top-level statements
@@ -17,7 +19,7 @@ statement // Basic statements
     | functionCallStatement
     ;
 
-printStatement: 'print' '(' expression ')' ;
+printStatement: 'print' '(' expression ')' ; // Using literal parens
 
 functionDef: 'def' IDENTIFIER '(' parameters? ')' ':' NEWLINE INDENT function_body? DEDENT ; // function_body is now optional
 
@@ -30,28 +32,27 @@ parameter: IDENTIFIER ;
 
 assignStatement: IDENTIFIER '=' expression ;
 
-functionCallStatement: IDENTIFIER '(' arguments? ')' ;
+functionCallStatement: IDENTIFIER '(' arguments? ')' ; // Using literal parens
 
 arguments: expression (',' expression)* ;
 
 expression
     : expression '+' expression          # Addition
-    | IDENTIFIER '(' arguments? ')'      # FunctionCallInExpression
-    | STRING_LITERAL                     # StringLiteral
-    | IDENTIFIER                         # Identifier
-    | NUMBER                             # NumberLiteral
+    | IDENTIFIER '(' arguments? ')'      # FunctionCallInExpression // Using literal parens
+    | STRING_LITERAL                     # StringLiteral // Uses common STRING_LITERAL
+    | IDENTIFIER                         # Identifier    // Uses common IDENTIFIER
+    | NUMBER                             # NumberLiteral // Uses common NUMBER
     ;
 
-// Lexer Rules
+// Lexer Rules - Most are now imported
 // Keywords/Special Tokens first - order matters for tokens that could also be identifiers
-INDENT: 'INDENT' ;
-DEDENT: 'DEDENT' ;
+INDENT: 'INDENT' ; // Specific to Python, keep here
+DEDENT: 'DEDENT' ; // Specific to Python, keep here
 
-// Literals and Identifiers
-STRING_LITERAL: '\'' ( '\\' . | ~['\\] )* '\'' | '"' ( '\\' . | ~["\\] )* '"' ;
-IDENTIFIER: [a-zA-Z_] [a-zA-Z_0-9]* ; // Must be after INDENT/DEDENT and other keywords defined as lexer rules
-NUMBER: [0-9]+ ('.' [0-9]+)? ;
+// STRING_LITERAL, IDENTIFIER, NUMBER are now imported from CommonLexerRules
 
 // Whitespace and Newlines
-NEWLINE: ( '\r'? '\n' | '\r' )+ ; // Match one or more newlines/carriage returns. Consolidates multiple blank lines.
-WHITESPACE: [ \t]+ -> skip ; // Skips whitespace characters except newlines (handled by NEWLINE token)
+NEWLINE: ( '\r'? '\n' | '\r' )+ ; // Python specific newline handling, keep here
+// WHITESPACE is now WS_HORIZONTAL from CommonLexerRules
+// Python does not use // or /* */ comments by default, so SL_COMMENT and ML_COMMENT are not used.
+// If Python needs to support # comments, a rule like: HASH_COMMENT: '#' ~[\r\n]* -> skip; would be added here.

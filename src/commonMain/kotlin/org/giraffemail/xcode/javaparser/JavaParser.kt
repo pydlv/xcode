@@ -112,27 +112,37 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
     // and the specific visitLiteral or other primary alternatives.
 
     override fun visitLiteral(ctx: AntlrJavaParser.LiteralContext): ConstantNode {
-        return when {
+        when {
             ctx.STRING_LITERAL() != null -> {
-                var text = ctx.STRING_LITERAL()!!.text
-                // Remove surrounding quotes
-                if (text.length >= 2 && text.startsWith("\"") && text.endsWith("\"")) {
-                    text = text.substring(1, text.length - 1)
+                var text = ctx.STRING_LITERAL()!!.text // Includes outer quotes e.g., "\\\"cookies\\\"" or "'cookies'"
+
+                if (text.length >= 2) {
+                    val firstChar = text.first()
+                    val lastChar = text.last()
+                    // Strip outer quotes if they are a matching pair of single or double quotes
+                    // Corrected char literal for single quote to '\''
+                    if ((firstChar == '"' && lastChar == '"') || (firstChar == '\'' && lastChar == '\'')) {
+                        text = text.substring(1, text.length - 1)
+                    }
                 }
-                // Unescape internal escaped quotes (e.g., \\\" -> \")
-                text = text.replace("\\\"\"", "\"")
-                ConstantNode(text)
+
+                // Unescape sequences.
+                text = text.replace("\\\\\\\\\\\\\\\\", "\\\\\\\\")  // find \\\\\\\\, replace with \\\\
+                text = text.replace("\\\\\\\\\\\\\\\"", "\\\"")  // find \\\\\\\", replace with "
+                text = text.replace("\\\\\\\\\\\\\\\'", "\'")    // find \\\\\\', replace with '
+
+                return ConstantNode(text) // Explicit return
             }
-            ctx.DECIMAL_LITERAL() != null -> {
-                val text = ctx.DECIMAL_LITERAL()!!.text
+            ctx.NUMBER() != null -> { // Changed from DECIMAL_LITERAL to NUMBER
+                val textVal = ctx.NUMBER()!!.text // Changed from DECIMAL_LITERAL to NUMBER
                 try {
                     // Java typically treats whole numbers as int
-                    ConstantNode(text.toInt())
+                    return ConstantNode(textVal.toInt()) // Explicit return
                 } catch (_: NumberFormatException) { // Changed 'e' to '_'
                     try {
-                        ConstantNode(text.toDouble())
+                        return ConstantNode(textVal.toDouble()) // Explicit return
                     } catch (_: NumberFormatException) { // Changed 'e2' to '_'
-                        throw IllegalArgumentException("Could not parse decimal literal: '$text'")
+                        throw IllegalArgumentException("Could not parse number literal: '$textVal'") // Updated error message
                     }
                 }
             }
@@ -154,8 +164,6 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
     // Default result if a more specific visit method is not overridden for a particular node type
     // and visitChildren is called on its parent.
     override fun defaultResult(): AstNode {
-        // If the base class (ultimately AbstractParseTreeVisitor via JavaBaseVisitor<AstNode>)
-        // insists on a non-null AstNode, we cannot return null.
         // Throwing an exception is safer than returning an arbitrary/dummy node
         // unless a specific "UnknownNode" or "EmptyNode" is part of the AST design
         // and appropriate here.

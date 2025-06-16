@@ -1,5 +1,7 @@
 grammar JavaScript;
 
+import CommonLexerRules; // Import common lexer rules
+
 program: statement* EOF;
 
 statement
@@ -9,30 +11,30 @@ statement
     | functionCallStatement
     ;
 
-consoleLogStatement: 'console' '.' 'log' '(' expression ')' ';'? ;
+consoleLogStatement: 'console' '.' 'log' '(' expression ')' ';'? ; // Using literal chars
 
 functionDeclaration:
-    'function' IDENTIFIER '(' parameterList? ')' '{' functionBody '}' ;
+    'function' IDENTIFIER '(' parameterList? ')' '{' functionBody '}' ; // Using literal chars
 
-parameterList: IDENTIFIER (',' IDENTIFIER)* ;
+parameterList: IDENTIFIER (',' IDENTIFIER)* ; // Using literal chars
 
 functionBody: statement* ;
 
-assignStatement: 'let'? IDENTIFIER '=' expression ';'? ;
+assignStatement: 'let'? IDENTIFIER '=' expression ';'? ; // Using literal chars
 
-functionCallStatement: IDENTIFIER '(' arguments? ')' ';'? ;
+functionCallStatement: IDENTIFIER '(' arguments? ')' ';'? ; // Using literal chars
 
-arguments: expression (',' expression)* ;
+arguments: expression (',' expression)* ; // Using literal chars
 
 expression
     : expression '+' expression  # Addition
     | IDENTIFIER '(' arguments? ')'  # FunctionCall
-    | STRING_LITERAL            # StringLiteral
-    | IDENTIFIER                # Identifier
-    | NUMBER                    # NumberLiteral
+    | STRING_LITERAL            # StringLiteral // Uses common STRING_LITERAL
+    | IDENTIFIER                # Identifier    // Uses common IDENTIFIER
+    | NUMBER                    # NumberLiteral // Uses common NUMBER
     ;
 
-STRING_LITERAL: '\'' ( '\\' . | ~['\\] )* '\'' | '"' ( '\\' . | ~["\\] )* '"' ;
-IDENTIFIER: [a-zA-Z_] [a-zA-Z_0-9]* ;
-NUMBER: [0-9]+ ('.' [0-9]+)? ;
-WS: [ \t\r\n]+ -> skip ;
+// Lexer Rules - Most are now imported
+// STRING_LITERAL, IDENTIFIER, NUMBER are now imported from CommonLexerRules.
+// WS is now handled by WS_ALL from CommonLexerRules.
+// JavaScript comments (// and /* */) are handled by SL_COMMENT and ML_COMMENT from CommonLexerRules.
