@@ -34,8 +34,7 @@ class TranspilationTest {
         expectedIntermediateCode: String,
         lang1Config: LanguageConfig,
         lang2Config: LanguageConfig,
-        expectedInitialAst: AstNode? = null,      // Expected AST from original code (lang1)
-        expectedIntermediateAst: AstNode? = null  // Expected AST from intermediate code (lang2) after generation and re-parsing
+        expectedCommonAst: AstNode
     ) {
         println("Starting round-trip transpilation test: ${lang1Config.name} -> ${lang2Config.name} -> ${lang1Config.name}")
         println("Original ${lang1Config.name} code:\\n$originalCode")
@@ -45,10 +44,8 @@ class TranspilationTest {
             println("\\nStep 1: Parsing ${lang1Config.name} to AST...")
             val astFromLang1 = lang1Config.parseFn(originalCode)
             println("Generated AST from ${lang1Config.name}:\\n$astFromLang1")
-            expectedInitialAst?.let {
-                println("Expected initial AST from ${lang1Config.name}:\\n$it")
-                assertEquals(it, astFromLang1, "Initial AST from ${lang1Config.name} parser is not as expected for code: \'$originalCode\'.")
-            }
+            println("Expected common AST:\\n$expectedCommonAst")
+            assertEquals(expectedCommonAst, astFromLang1, "Initial AST from ${lang1Config.name} parser is not as expected for code: \'$originalCode\'.")
             println("Step 1 PASSED.")
 
             // 2. AST to Lang2
@@ -63,10 +60,8 @@ class TranspilationTest {
             println("\\nStep 3: Parsing ${lang2Config.name} to AST...")
             val astFromLang2 = lang2Config.parseFn(generatedIntermediateCode)
             println("Generated AST from ${lang2Config.name}:\\n$astFromLang2")
-            expectedIntermediateAst?.let {
-                println("Expected intermediate AST from ${lang2Config.name}:\\n$it")
-                assertEquals(it, astFromLang2, "AST from ${lang2Config.name} parser is not as expected for code: \'$generatedIntermediateCode\'.")
-            }
+            println("Expected common AST:\\n$expectedCommonAst")
+            assertEquals(expectedCommonAst, astFromLang2, "AST from ${lang2Config.name} parser is not as expected for code: \'$generatedIntermediateCode\'.")
             println("Step 3 PASSED.")
 
             // 4. AST to Lang1 (back to original)
@@ -89,16 +84,13 @@ class TranspilationTest {
         initialCode: String,
         languageSequence: List<LanguageConfig>,
         expectedIntermediateGeneratedCodes: List<String>,
-        expectedAstsForEachStage: List<AstNode>
+        expectedCommonAst: AstNode
     ) {
         if (languageSequence.size < 2) {
             fail("Language sequence must have at least 2 languages for sequential transpilation.")
         }
         if (expectedIntermediateGeneratedCodes.size != languageSequence.size - 1) {
             fail("Mismatch in expected intermediate codes count. Expected ${languageSequence.size - 1}, got ${expectedIntermediateGeneratedCodes.size}")
-        }
-        if (expectedAstsForEachStage.size != languageSequence.size) {
-            fail("Mismatch in expected ASTs count. Expected ${languageSequence.size}, got ${expectedAstsForEachStage.size}")
         }
 
         val sequenceDescription = languageSequence.joinToString(" -> ") { it.name }
@@ -115,7 +107,7 @@ class TranspilationTest {
                 println("\\nStep ${i + 1}: Parsing ${currentLangConfig.name} to AST...")
                 currentAst = currentLangConfig.parseFn(currentCode)
                 println("Parsed AST: $currentAst")
-                assertEquals(expectedAstsForEachStage[i], currentAst, "AST for ${currentLangConfig.name} (stage ${i+1}) did not match expected.")
+                assertEquals(expectedCommonAst, currentAst, "AST for ${currentLangConfig.name} (stage ${i+1}) did not match expected common AST.")
 
                 if (i < languageSequence.size -1) { // Intermediate generation L1->L2, L2->L3 etc.
                     val targetLangForGeneration = languageSequence[i+1]
@@ -135,7 +127,7 @@ class TranspilationTest {
 
                     // Optionally, re-parse the final code and check its AST
                     val finalParsedAst = finalTargetLang.parseFn(finalGeneratedCode)
-                    assertEquals(expectedAstsForEachStage.first(), finalParsedAst, "AST of final ${finalTargetLang.name} code should match expected initial AST of ${languageSequence.first().name}.")
+                    assertEquals(expectedCommonAst, finalParsedAst, "AST of final ${finalTargetLang.name} code should match expected common AST.")
                 }
             }
         } catch (e: Exception) {
@@ -147,7 +139,8 @@ class TranspilationTest {
 
     private fun executeTranspilationTests(
         testName: String,
-        allLanguageSetups: List<Triple<LanguageConfig, String, AstNode>>
+        allLanguageSetups: List<Pair<LanguageConfig, String>>,
+        expectedCommonAst: AstNode
     ) {
         val nLanguages = allLanguageSetups.size
         if (nLanguages >= 2) {
@@ -156,16 +149,15 @@ class TranspilationTest {
                 for (j in allLanguageSetups.indices) {
                     if (i == j) continue
 
-                    val (lang1Config, code1, ast1) = allLanguageSetups[i]
-                    val (lang2Config, code2, ast2) = allLanguageSetups[j]
+                    val (lang1Config, code1) = allLanguageSetups[i]
+                    val (lang2Config, code2) = allLanguageSetups[j]
 
                     assertRoundTripTranspilation(
                         originalCode = code1,
                         expectedIntermediateCode = code2,
                         lang1Config = lang1Config,
                         lang2Config = lang2Config,
-                        expectedInitialAst = ast1,
-                        expectedIntermediateAst = ast2
+                        expectedCommonAst = expectedCommonAst
                     )
                 }
             }
@@ -175,13 +167,11 @@ class TranspilationTest {
             for (startIndex in 0 until nLanguages) {
                 val currentLanguageSequence = mutableListOf<LanguageConfig>()
                 val currentExpectedIntermediateCodes = mutableListOf<String>()
-                val currentExpectedAsts = mutableListOf<AstNode>()
 
                 for (offset in 0 until nLanguages) {
                     val currentIndex = (startIndex + offset) % nLanguages
-                    val (langConfig, _, ast) = allLanguageSetups[currentIndex]
+                    val (langConfig, _) = allLanguageSetups[currentIndex]
                     currentLanguageSequence.add(langConfig)
-                    currentExpectedAsts.add(ast)
                     if (offset < nLanguages - 1) {
                         val nextIndexInSequence = (startIndex + offset + 1) % nLanguages
                         currentExpectedIntermediateCodes.add(allLanguageSetups[nextIndexInSequence].second)
@@ -192,16 +182,16 @@ class TranspilationTest {
                     initialCode = initialCodeForSequence,
                     languageSequence = currentLanguageSequence,
                     expectedIntermediateGeneratedCodes = currentExpectedIntermediateCodes,
-                    expectedAstsForEachStage = currentExpectedAsts
+                    expectedCommonAst = expectedCommonAst
                 )
             }
             println("\\\\n--- Sequential Transpilation Tests for \'$testName\' (n=${nLanguages}) Completed ---")
         } else if (nLanguages == 1) {
-            val (config, code, ast) = allLanguageSetups.first()
+            val (config, code) = allLanguageSetups.first()
             println("Testing single language parse/generate for \'$testName\': ${config.name}")
             try {
                 val parsed = config.parseFn(code)
-                assertEquals(ast, parsed, "AST mismatch for single language parse ($testName).")
+                assertEquals(expectedCommonAst, parsed, "AST mismatch for single language parse ($testName).")
                 val generated = config.generateFn(parsed)
                 assertEquals(code, generated, "Code mismatch for single language generate ($testName).")
             } catch (e: Exception) {
@@ -225,13 +215,13 @@ class TranspilationTest {
         )
 
         val allLanguageSetupsForPrintTest = listOf(
-            Triple(pythonConfig, pythonPrintCode, commonExpectedPrintAst),
-            Triple(javaScriptConfig, jsPrintCode, commonExpectedPrintAst),
-            Triple(javaConfig, javaPrintCode, commonExpectedPrintAst) // Using the common AST
-            // To add a new language for the print test, add its Triple here
+            Pair(pythonConfig, pythonPrintCode),
+            Pair(javaScriptConfig, jsPrintCode),
+            Pair(javaConfig, javaPrintCode)
+            // To add a new language for the print test, add its Pair here
         )
 
-        executeTranspilationTests("Print Cookies", allLanguageSetupsForPrintTest)
+        executeTranspilationTests("Print Cookies", allLanguageSetupsForPrintTest, commonExpectedPrintAst)
     }
 
     @Test
@@ -249,42 +239,20 @@ class TranspilationTest {
             )
         )
 
-        // JavaScript-specific AST if its parser produces floats for numbers, but generator should handle conversion if needed.
-        // For simplicity in this test, we might assume the generators can handle a common AST form (e.g. integer constants)
-        // or we adjust the common AST to use a more generic number type if the AST definition supports it.
-        // Here, we'll assume the common AST uses integers and JS generator/parser handles it.
-        // If JS strictly uses floats, the jsAstAdd would be:
-        val jsSpecificAstAdd = ModuleNode(
-            body = listOf(
-                PrintNode(
-                    expression = BinaryOpNode(
-                        left = ConstantNode(1.0),
-                        op = "+",
-                        right = ConstantNode(2.0)
-                    )
-                )
-            )
-        )
-
         // Define code snippets
         val pythonCodeAdd = "print(1 + 2)"
         val jsCodeAdd = "console.log(1 + 2);"
         val javaCodeAdd = "System.out.println(1 + 2);"
 
-        // Create language setups list
+        // Create language setups list - all use common AST now due to normalization
         val allLanguageSetupsForPrintAddTest = listOf(
-            Triple(pythonConfig, pythonCodeAdd, commonAstAdd),
-            // For JavaScript, if its parser *always* creates float ConstantNodes for numbers,
-            // then its specific AST (jsSpecificAstAdd) should be used here.
-            // However, if the goal is a common intermediate AST, then commonAstAdd is preferred,
-            // and the JS parser/generator must align.
-            // Assuming JS parser produces floats, and we want to test that specific behavior:
-            Triple(javaScriptConfig, jsCodeAdd, jsSpecificAstAdd),
-            Triple(javaConfig, javaCodeAdd, commonAstAdd) // Java uses the common AST with Integers
-            // To add a new language for the print with addition test, add its Triple here
+            Pair(pythonConfig, pythonCodeAdd),
+            Pair(javaScriptConfig, jsCodeAdd),
+            Pair(javaConfig, javaCodeAdd)
+            // To add a new language for the print with addition test, add its Pair here
         )
 
-        executeTranspilationTests("Print Addition", allLanguageSetupsForPrintAddTest)
+        executeTranspilationTests("Print Addition", allLanguageSetupsForPrintAddTest, commonAstAdd)
     }
 
     @Test
@@ -307,6 +275,14 @@ class TranspilationTest {
             }
             fib(0, 1);
         """.trimIndent().trim()
+
+        // Java code for recursive fibonacci
+        val javaCode = """public static void fib(Object a, Object b) {
+        c = a + b;
+        System.out.println(c);
+        fib(b, c);
+    }
+fib(0, 1);"""
 
         // Define expected function body for both languages
         val functionBody = listOf(
@@ -334,11 +310,11 @@ class TranspilationTest {
         )
 
         // Define expected AST structure for Python (integers for constants)
-        val expectedPyAst = ModuleNode(
+        val expectedCommonAst = ModuleNode(
             body = listOf(
                 FunctionDefNode(
                     name = "fib",
-                    args = listOf(NameNode(id = "a", ctx = Load), NameNode(id = "b", ctx = Load)),
+                    args = listOf(NameNode(id = "a", ctx = Param), NameNode(id = "b", ctx = Param)),
                     body = functionBody,
                     decorator_list = emptyList()
                 ),
@@ -355,68 +331,14 @@ class TranspilationTest {
             )
         )
 
-        // Define expected AST structure for JavaScript (floats for constants)
-        val expectedJsAst = ModuleNode(
-            body = listOf(
-                FunctionDefNode(
-                    name = "fib",
-                    args = listOf(NameNode(id = "a", ctx = Load), NameNode(id = "b", ctx = Load)),
-                    body = functionBody // functionBody is the same
-                    , decorator_list = emptyList()
-                ),
-                CallStatementNode(
-                    call = CallNode(
-                        func = NameNode(id = "fib", ctx = Load),
-                        args = listOf(
-                            ConstantNode(0.0), // JavaScript uses Float
-                            ConstantNode(1.0)  // JavaScript uses Float
-                        ),
-                        keywords = emptyList()
-                    )
-                )
-            )
-        )
-
-        // Java code for recursive fibonacci
-        val javaCode = """public static void fib(Object a, Object b) {
-        c = a + b;
-        System.out.println(c);
-        fib(b, c);
-    }
-fib(0, 1);"""
-
-        // Define expected AST structure for Java (integers for constants)
-        // This assumes the Java parser/generator can map the class structure to/from this common AST form
-        // for the purpose of this test, to align with Python/JS ASTs.
-        val expectedJavaAst = ModuleNode(
-            body = listOf(
-                FunctionDefNode(
-                    name = "fib",
-                    args = listOf(NameNode(id = "a", ctx = Param), NameNode(id = "b", ctx = Param)),
-                    body = functionBody, // functionBody is the same
-                    decorator_list = emptyList()
-                ),
-                CallStatementNode(
-                    call = CallNode(
-                        func = NameNode(id = "fib", ctx = Load),
-                        args = listOf(
-                            ConstantNode(0), // Java uses Integer
-                            ConstantNode(1)  // Java uses Integer
-                        ),
-                        keywords = emptyList()
-                    )
-                )
-            )
-        )
-
         val allLanguageSetupsForFibonacciTest = listOf(
-            Triple(pythonConfig, pythonCode, expectedPyAst),
-            Triple(javaScriptConfig, javascriptCode, expectedJsAst),
-            Triple(javaConfig, javaCode, expectedJavaAst)
-            // To add a new language for the fibonacci test, add its Triple here
+            Pair(pythonConfig, pythonCode),
+            Pair(javaScriptConfig, javascriptCode),
+            Pair(javaConfig, javaCode)
+            // To add a new language for the fibonacci test, add its Pair here
         )
 
-        executeTranspilationTests("Recursive Fibonacci", allLanguageSetupsForFibonacciTest)
+        executeTranspilationTests("Recursive Fibonacci", allLanguageSetupsForFibonacciTest, expectedCommonAst)
     }
 
     @Test
@@ -464,33 +386,14 @@ fib(0, 1);"""
             )
         )
 
-        // JavaScript-specific AST (uses doubles for numbers)
-        val expectedJavaScriptAst = ModuleNode(
-            body = listOf(
-                IfNode(
-                    test = CompareNode(
-                        left = NameNode(id = "x", ctx = Load),
-                        op = ">",
-                        right = ConstantNode(5.0)
-                    ),
-                    body = listOf(
-                        PrintNode(expression = ConstantNode("greater"))
-                    ),
-                    orelse = listOf(
-                        PrintNode(expression = ConstantNode("lesser"))
-                    )
-                )
-            )
-        )
-
         val allLanguageSetupsForIfElseTest = listOf(
-            Triple(pythonConfig, pythonCode, expectedAst),
-            Triple(javaScriptConfig, javascriptCode, expectedJavaScriptAst),
-            Triple(javaConfig, javaCode, expectedAst)
-            // To add a new language for the if-else test, add its Triple here
+            Pair(pythonConfig, pythonCode),
+            Pair(javaScriptConfig, javascriptCode),
+            Pair(javaConfig, javaCode)
+            // To add a new language for the if-else test, add its Pair here
         )
 
-        executeTranspilationTests("If-Else Statement", allLanguageSetupsForIfElseTest)
+        executeTranspilationTests("If-Else Statement", allLanguageSetupsForIfElseTest, expectedAst)
     }
 
     @Test
@@ -513,31 +416,15 @@ fib(0, 1);"""
             }
         """.trimIndent().trim()
 
-        // Expected AST structure for simple if statement
-        val expectedPythonAst = ModuleNode(
+        // Expected common AST structure for simple if statement
+        // All languages should produce this same AST due to normalization
+        val expectedCommonAst = ModuleNode(
             body = listOf(
                 IfNode(
                     test = CompareNode(
                         left = NameNode(id = "a", ctx = Load),
-                        op = "==",
-                        right = ConstantNode(1)
-                    ),
-                    body = listOf(
-                        PrintNode(expression = ConstantNode("one"))
-                    ),
-                    orelse = emptyList()
-                )
-            )
-        )
-
-        // JavaScript uses strict equality ===
-        val expectedJSAst = ModuleNode(
-            body = listOf(
-                IfNode(
-                    test = CompareNode(
-                        left = NameNode(id = "a", ctx = Load),
-                        op = "===",
-                        right = ConstantNode(1.0) // JS numbers are doubles
+                        op = "==", // Canonical equality operator
+                        right = ConstantNode(1) // Use integer for consistency
                     ),
                     body = listOf(
                         PrintNode(expression = ConstantNode("one"))
@@ -548,12 +435,12 @@ fib(0, 1);"""
         )
 
         val allLanguageSetupsForSimpleIfTest = listOf(
-            Triple(pythonConfig, pythonCode, expectedPythonAst),
-            Triple(javaScriptConfig, javascriptCode, expectedJSAst),
-            Triple(javaConfig, javaCode, expectedPythonAst) // Java uses == and integers like Python
-            // To add a new language for the simple if test, add its Triple here
+            Pair(pythonConfig, pythonCode),
+            Pair(javaScriptConfig, javascriptCode),
+            Pair(javaConfig, javaCode)
+            // To add a new language for the simple if test, add its Pair here
         )
 
-        executeTranspilationTests("Simple If Statement", allLanguageSetupsForSimpleIfTest)
+        executeTranspilationTests("Simple If Statement", allLanguageSetupsForSimpleIfTest, expectedCommonAst)
     }
 }

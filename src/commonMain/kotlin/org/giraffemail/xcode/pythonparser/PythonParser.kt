@@ -209,7 +209,7 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
         val parameters = mutableListOf<NameNode>()
         ctx.parameters()?.parameter()?.forEach { paramCtx ->
             val paramId = paramCtx.IDENTIFIER().text // Removed !!
-            parameters.add(NameNode(id = paramId, ctx = Load))
+            parameters.add(NameNode(id = paramId, ctx = Param))
         }
 
         // Parse function body - now visits the optional function_body rule
