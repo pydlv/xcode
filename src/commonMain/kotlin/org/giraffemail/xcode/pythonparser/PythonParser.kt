@@ -213,35 +213,25 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
     // Handle function calls as statements
     override fun visitFunctionCallStatement(ctx: AntlrPythonParser.FunctionCallStatementContext): AstNode {
         val funcName = ctx.IDENTIFIER().text // Removed ?. and ?: ""
-        val funcNameNode = NameNode(id = funcName, ctx = Load)
-
-        // Parse arguments
-        val args = mutableListOf<ExpressionNode>()
-        ctx.arguments()?.expression()?.forEach { exprCtx ->
-            val arg = visit(exprCtx) as? ExpressionNode
-            if (arg != null) {
-                args.add(arg)
-            }
-        }
-
-        val callNode = CallNode(func = funcNameNode, args = args)
+        val callNode = createCallNode(funcName, ctx.arguments())
         return CallStatementNode(call = callNode)
     }
 
     // Handle function calls in expressions - UPDATED for FunctionCallInExpression label
     override fun visitFunctionCallInExpression(ctx: AntlrPythonParser.FunctionCallInExpressionContext): AstNode {
         val funcName = ctx.IDENTIFIER().text // Removed !!
-        val funcNameNode = NameNode(id = funcName, ctx = Load)
+        return createCallNode(funcName, ctx.arguments())
+    }
 
-        // Parse arguments
+    private fun createCallNode(funcName: String, argumentsCtx: AntlrPythonParser.ArgumentsContext?): CallNode {
+        val funcNameNode = NameNode(id = funcName, ctx = Load)
         val args = mutableListOf<ExpressionNode>()
-        ctx.arguments()?.expression()?.forEach { exprCtx ->
+        argumentsCtx?.expression()?.forEach { exprCtx ->
             val arg = visit(exprCtx) as? ExpressionNode
             if (arg != null) {
                 args.add(arg)
             }
         }
-
         return CallNode(func = funcNameNode, args = args)
     }
 

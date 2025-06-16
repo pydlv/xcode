@@ -54,7 +54,7 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
     }
 
     override fun visitFunctionDeclaration(ctx: AntlrJavaScriptParser.FunctionDeclarationContext): AstNode {
-        val funcName = ctx.IDENTIFIER()?.text ?: "" // Keep null check for safety, though grammar might ensure IDENTIFIER exists
+        val funcName = ctx.IDENTIFIER().text // Keep null check for safety, though grammar might ensure IDENTIFIER exists
 
         // Parse parameters
         val parameters = mutableListOf<NameNode>()
@@ -78,7 +78,7 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
 
     // Handle variable assignment statements
     override fun visitAssignStatement(ctx: AntlrJavaScriptParser.AssignStatementContext): AstNode {
-        val targetId = ctx.IDENTIFIER()?.text ?: "" // Keep null check for safety
+        val targetId = ctx.IDENTIFIER().text // Keep null check for safety
         val targetNode = NameNode(id = targetId, ctx = Store)
 
         val valueExpr = visit(ctx.expression()) as? ExpressionNode
@@ -89,36 +89,28 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
 
     // Handle function calls as statements
     override fun visitFunctionCallStatement(ctx: AntlrJavaScriptParser.FunctionCallStatementContext): AstNode {
-        val funcName = ctx.IDENTIFIER()?.text ?: "" // Keep null check for safety
-        val funcNameNode = NameNode(id = funcName, ctx = Load)
-
-        // Parse arguments
-        val args = mutableListOf<ExpressionNode>()
-        ctx.arguments()?.expression()?.forEach { exprCtx ->
-            val arg = visit(exprCtx) as? ExpressionNode
-            if (arg != null) {
-                args.add(arg)
-            }
-        }
-
-        val callNode = CallNode(func = funcNameNode, args = args)
+        val funcName = ctx.IDENTIFIER().text // Keep null check for safety
+        val callNode = createCallNode(funcName, ctx.arguments())
         return CallStatementNode(call = callNode)
     }
 
     // Handle function calls in expressions
     override fun visitFunctionCall(ctx: AntlrJavaScriptParser.FunctionCallContext): AstNode {
-        val funcName = ctx.IDENTIFIER()?.text ?: "" // Keep null check for safety
-        val funcNameNode = NameNode(id = funcName, ctx = Load)
+        val funcName = ctx.IDENTIFIER().text // Keep null check for safety
+        return createCallNode(funcName, ctx.arguments())
+    }
 
-        // Parse arguments
+    private fun createCallNode(funcName: String, argumentsCtx: AntlrJavaScriptParser.ArgumentsContext?): CallNode {
+        val funcNameNode = NameNode(id = funcName, ctx = Load)
         val args = mutableListOf<ExpressionNode>()
-        ctx.arguments()?.expression()?.forEach { exprCtx ->
-            val arg = visit(exprCtx) as? ExpressionNode
-            if (arg != null) {
-                args.add(arg)
+        argumentsCtx?.expression()?.forEach { exprCtx -> // argumentsCtx can be null, and expression() can be null within argumentsCtx
+            (exprCtx as? AntlrJavaScriptParser.ExpressionContext)?.let {
+                val arg = visit(it) as? ExpressionNode
+                if (arg != null) {
+                    args.add(arg)
+                }
             }
         }
-
         return CallNode(func = funcNameNode, args = args)
     }
 
