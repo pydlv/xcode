@@ -115,7 +115,6 @@ class TranspilationTest {
         try {
             for (i in languageSequence.indices) {
                 val currentLangConfig = languageSequence[i]
-                val nextLangConfig = languageSequence.getOrNull((i + 1) % languageSequence.size)!! // Wraps around for the last step to initial
 
                 println("\\nStep ${i + 1}: Parsing ${currentLangConfig.name} to AST...")
                 currentAst = currentLangConfig.parseFn(currentCode)
