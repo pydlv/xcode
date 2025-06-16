@@ -1,1 +1,1 @@
-To quickly run tests, run the Gradle nativeLinuxTest task.
+If you want to quickly run tests then use the Gradle nativeLinuxTest task.
