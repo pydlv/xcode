@@ -272,7 +272,7 @@ class TranspilationTest {
         executeTranspilationTests("Print Addition", allLanguageSetupsForPrintAddTest, commonAstAdd)
     }
 
-    //@Test // Temporarily disabled due to parser inconsistencies 
+    @Test
     fun `test recursive fibonacci function transpilation`() {
         // Python code for recursive fibonacci
         val pythonCode = """
@@ -323,7 +323,7 @@ class TranspilationTest {
             body = listOf(
                 FunctionDefNode(
                     name = "fib",
-                    args = listOf(NameNode(id = "a", ctx = Load), NameNode(id = "b", ctx = Load)),
+                    args = listOf(NameNode(id = "a", ctx = Param), NameNode(id = "b", ctx = Param)),
                     body = functionBody,
                     decorator_list = emptyList()
                 ),
@@ -345,7 +345,7 @@ class TranspilationTest {
             body = listOf(
                 FunctionDefNode(
                     name = "fib",
-                    args = listOf(NameNode(id = "a", ctx = Load), NameNode(id = "b", ctx = Load)),
+                    args = listOf(NameNode(id = "a", ctx = Param), NameNode(id = "b", ctx = Param)),
                     body = functionBody // functionBody is the same
                     , decorator_list = emptyList()
                 ),
@@ -353,8 +353,8 @@ class TranspilationTest {
                     call = CallNode(
                         func = NameNode(id = "fib", ctx = Load),
                         args = listOf(
-                            ConstantNode(0.0), // JavaScript uses Float
-                            ConstantNode(1.0)  // JavaScript uses Float
+                            ConstantNode(0), // JavaScript uses Integer now due to normalization
+                            ConstantNode(1)  // JavaScript uses Integer now due to normalization
                         ),
                         keywords = emptyList()
                     )

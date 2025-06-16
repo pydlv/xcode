@@ -60,7 +60,7 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
         val parameters = mutableListOf<NameNode>()
         ctx.parameterList()?.IDENTIFIER()?.forEach { paramIdent ->
             val paramName = paramIdent.text
-            parameters.add(NameNode(id = paramName, ctx = Load))
+            parameters.add(NameNode(id = paramName, ctx = Param))
         }
 
         // Parse function body statements
