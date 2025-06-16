@@ -91,6 +91,18 @@ class PythonGenerator : AbstractAstGenerator() {
         }
     }
 
+    override fun visitCompareNode(node: CompareNode): String {
+        val leftStr = generateExpression(node.left)
+        val rightStr = generateExpression(node.right)
+        // Convert JavaScript-style operators back to Python-style
+        val pythonOp = when (node.op) {
+            "===" -> "=="
+            "!==" -> "!="
+            else -> node.op
+        }
+        return "$leftStr $pythonOp $rightStr"
+    }
+
     // visitNameNode, visitBinaryOpNode, visitUnknownNode, visitExprNode, visitModuleNode
     // will use the open implementations from AbstractAstGenerator.
 }

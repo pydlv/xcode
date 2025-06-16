@@ -424,9 +424,9 @@ fib(0, 1);"""
         // Simple if-else statements with variable comparison
         val pythonCode = """
             if x > 5:
-                print("greater")
+                print('greater')
             else:
-                print("lesser")
+                print('lesser')
         """.trimIndent().trim()
 
         val javascriptCode = """
@@ -445,7 +445,7 @@ fib(0, 1);"""
             }
         """.trimIndent().trim()
 
-        // Expected AST structure for if-else statement
+        // Expected AST structure for if-else statement (Python/Java)
         val expectedAst = ModuleNode(
             body = listOf(
                 IfNode(
@@ -464,9 +464,28 @@ fib(0, 1);"""
             )
         )
 
+        // JavaScript-specific AST (uses doubles for numbers)
+        val expectedJavaScriptAst = ModuleNode(
+            body = listOf(
+                IfNode(
+                    test = CompareNode(
+                        left = NameNode(id = "x", ctx = Load),
+                        op = ">",
+                        right = ConstantNode(5.0)
+                    ),
+                    body = listOf(
+                        PrintNode(expression = ConstantNode("greater"))
+                    ),
+                    orelse = listOf(
+                        PrintNode(expression = ConstantNode("lesser"))
+                    )
+                )
+            )
+        )
+
         val allLanguageSetupsForIfElseTest = listOf(
             Triple(pythonConfig, pythonCode, expectedAst),
-            Triple(javaScriptConfig, javascriptCode, expectedAst),
+            Triple(javaScriptConfig, javascriptCode, expectedJavaScriptAst),
             Triple(javaConfig, javaCode, expectedAst)
             // To add a new language for the if-else test, add its Triple here
         )
@@ -479,7 +498,7 @@ fib(0, 1);"""
         // Simple if statement without else clause
         val pythonCode = """
             if a == 1:
-                print("one")
+                print('one')
         """.trimIndent().trim()
 
         val javascriptCode = """

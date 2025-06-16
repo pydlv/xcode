@@ -57,6 +57,7 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
             ctx.functionDefinition() != null -> ctx.functionDefinition()!!.accept(this)   // Added !!
             ctx.assignmentStatement() != null -> ctx.assignmentStatement()!!.accept(this) // Added !!
             ctx.callStatement() != null -> ctx.callStatement()!!.accept(this)           // Added !!
+            ctx.ifStatement() != null -> ctx.ifStatement()!!.accept(this)               // Added !! for if statements
             else -> {
                 // This case should ideally not be reached if the grammar is complete for 'statement' alternatives
                 // and all alternatives are handled above.

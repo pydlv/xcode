@@ -94,14 +94,26 @@ class JavaGenerator : AbstractAstGenerator() {
 
     override fun visitIfNode(node: IfNode): String {
         val condition = generateExpression(node.test)
-        val ifBody = node.body.joinToString("\n") { "        " + generateStatement(it) }
+        val ifBody = node.body.joinToString("\n") { "    " + generateStatement(it) }
         
         return if (node.orelse.isNotEmpty()) {
-            val elseBody = node.orelse.joinToString("\n") { "        " + generateStatement(it) }
-            "if ($condition) {\n$ifBody\n    } else {\n$elseBody\n    }"
+            val elseBody = node.orelse.joinToString("\n") { "    " + generateStatement(it) }
+            "if ($condition) {\n$ifBody\n} else {\n$elseBody\n}"
         } else {
-            "if ($condition) {\n$ifBody\n    }"
+            "if ($condition) {\n$ifBody\n}"
         }
+    }
+
+    override fun visitCompareNode(node: CompareNode): String {
+        val leftStr = generateExpression(node.left)
+        val rightStr = generateExpression(node.right)
+        // Convert JavaScript-style operators back to Java-style
+        val javaOp = when (node.op) {
+            "===" -> "=="
+            "!==" -> "!="
+            else -> node.op
+        }
+        return "$leftStr $javaOp $rightStr"
     }
 
     // Other visit methods (visitNameNode, visitUnknownNode, visitExprNode, visitModuleNode)
