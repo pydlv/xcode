@@ -149,6 +149,73 @@ class TranspilationTest {
     }
 
 
+    private fun executeTranspilationTests(
+        testName: String,
+        allLanguageSetups: List<Triple<LanguageConfig, String, AstNode>>
+    ) {
+        val nLanguages = allLanguageSetups.size
+        if (nLanguages >= 2) {
+            println("\\\\n--- Starting Pairwise Round-Trip Tests for \'$testName\' (n=${nLanguages}) ---")
+            for (i in allLanguageSetups.indices) {
+                for (j in allLanguageSetups.indices) {
+                    if (i == j) continue
+
+                    val (lang1Config, code1, ast1) = allLanguageSetups[i]
+                    val (lang2Config, code2, ast2) = allLanguageSetups[j]
+
+                    assertRoundTripTranspilation(
+                        originalCode = code1,
+                        expectedIntermediateCode = code2,
+                        lang1Config = lang1Config,
+                        lang2Config = lang2Config,
+                        expectedInitialAst = ast1,
+                        expectedIntermediateAst = ast2
+                    )
+                }
+            }
+            println("\\\\n--- Pairwise Round-Trip Tests for \'$testName\' Completed ---")
+
+            println("\\\\n--- Starting Sequential Transpilation Tests for \'$testName\' (n=${nLanguages}) ---")
+            for (startIndex in 0 until nLanguages) {
+                val currentLanguageSequence = mutableListOf<LanguageConfig>()
+                val currentExpectedIntermediateCodes = mutableListOf<String>()
+                val currentExpectedAsts = mutableListOf<AstNode>()
+
+                for (offset in 0 until nLanguages) {
+                    val currentIndex = (startIndex + offset) % nLanguages
+                    val (langConfig, _, ast) = allLanguageSetups[currentIndex]
+                    currentLanguageSequence.add(langConfig)
+                    currentExpectedAsts.add(ast)
+                    if (offset < nLanguages - 1) {
+                        val nextIndexInSequence = (startIndex + offset + 1) % nLanguages
+                        currentExpectedIntermediateCodes.add(allLanguageSetups[nextIndexInSequence].second)
+                    }
+                }
+                val initialCodeForSequence = allLanguageSetups[startIndex].second
+                assertSequentialTranspilation(
+                    initialCode = initialCodeForSequence,
+                    languageSequence = currentLanguageSequence,
+                    expectedIntermediateGeneratedCodes = currentExpectedIntermediateCodes,
+                    expectedAstsForEachStage = currentExpectedAsts
+                )
+            }
+            println("\\\\n--- Sequential Transpilation Tests for \'$testName\' (n=${nLanguages}) Completed ---")
+        } else if (nLanguages == 1) {
+            val (config, code, ast) = allLanguageSetups.first()
+            println("Testing single language parse/generate for \'$testName\': ${config.name}")
+            try {
+                val parsed = config.parseFn(code)
+                assertEquals(ast, parsed, "AST mismatch for single language parse ($testName).")
+                val generated = config.generateFn(parsed)
+                assertEquals(code, generated, "Code mismatch for single language generate ($testName).")
+            } catch (e: Exception) {
+                fail("Single language test for ${config.name} ($testName) failed: ${e.message}")
+            }
+        }
+        println("\\\\n\'Test $testName\' completed.")
+    }
+
+
     @Test
     fun `test bidirectional print statement transpilation`() {
         val pythonPrintCode = "print('cookies')"
@@ -162,83 +229,65 @@ class TranspilationTest {
             // To add a new language for the print test, add its Triple here
         )
 
-        val nLanguages = allLanguageSetupsForPrintTest.size
-        if (nLanguages >= 2) {
-            println("\\n--- Starting Pairwise Round-Trip Tests for 'Print Cookies' (n=${nLanguages}) ---")
-            for (i in allLanguageSetupsForPrintTest.indices) {
-                for (j in allLanguageSetupsForPrintTest.indices) {
-                    if (i == j) continue
-
-                    val (lang1Config, code1, ast1) = allLanguageSetupsForPrintTest[i]
-                    val (lang2Config, code2, ast2) = allLanguageSetupsForPrintTest[j]
-
-                    assertRoundTripTranspilation(
-                        originalCode = code1,
-                        expectedIntermediateCode = code2,
-                        lang1Config = lang1Config,
-                        lang2Config = lang2Config,
-                        expectedInitialAst = ast1,
-                        expectedIntermediateAst = ast2
-                    )
-                }
-            }
-            println("\\n--- Pairwise Round-Trip Tests for 'Print Cookies' Completed ---")
-
-            println("\\n--- Starting Sequential Transpilation Tests for 'Print Cookies' (n=${nLanguages}) ---")
-            for (startIndex in 0 until nLanguages) {
-                val currentLanguageSequence = mutableListOf<LanguageConfig>()
-                val currentExpectedIntermediateCodes = mutableListOf<String>()
-                val currentExpectedAsts = mutableListOf<AstNode>()
-
-                for (offset in 0 until nLanguages) {
-                    val currentIndex = (startIndex + offset) % nLanguages
-                    val (langConfig, code, ast) = allLanguageSetupsForPrintTest[currentIndex]
-                    currentLanguageSequence.add(langConfig)
-                    currentExpectedAsts.add(ast)
-                    if (offset < nLanguages - 1) {
-                        val nextIndexInSequence = (startIndex + offset + 1) % nLanguages
-                        currentExpectedIntermediateCodes.add(allLanguageSetupsForPrintTest[nextIndexInSequence].second)
-                    }
-                }
-                val initialCodeForSequence = allLanguageSetupsForPrintTest[startIndex].second
-                assertSequentialTranspilation(
-                    initialCode = initialCodeForSequence,
-                    languageSequence = currentLanguageSequence,
-                    expectedIntermediateGeneratedCodes = currentExpectedIntermediateCodes,
-                    expectedAstsForEachStage = currentExpectedAsts
-                )
-            }
-            println("\\n--- Sequential Transpilation Tests for 'Print Cookies' (n=${nLanguages}) Completed ---")
-        } else if (nLanguages == 1) {
-            val (config, code, ast) = allLanguageSetupsForPrintTest.first()
-            println("Testing single language parse/generate for 'Print Cookies': ${config.name}")
-            try {
-                val parsed = config.parseFn(code)
-                assertEquals(ast, parsed, "AST mismatch for single language parse (print cookies).")
-                val generated = config.generateFn(parsed)
-                assertEquals(code, generated, "Code mismatch for single language generate (print cookies).")
-            } catch (e: Exception) {
-                fail("Single language test for ${config.name} (print cookies) failed: ${e.message}")
-            }
-        }
-        println("\\n'test bidirectional print statement transpilation' completed.")
+        executeTranspilationTests("Print Cookies", allLanguageSetupsForPrintTest)
     }
 
     @Test
     fun `test bidirectional print with addition`() {
-        println("\\n--- Running Python <-> JavaScript 'Addition Expression' Test ---")
-        val pythonCode = "print(1 + 2)"
-        val jsCode = "console.log(1 + 2);"
-        // ASTs for addition are not checked in this simplified version for now.
-        assertRoundTripTranspilation(
-            originalCode = pythonCode,
-            expectedIntermediateCode = jsCode,
-            lang1Config = pythonConfig,
-            lang2Config = javaScriptConfig
-            // expectedInitialAst = expectedPyAdditionAst, // Define these if needed
-            // expectedIntermediateAst = expectedJsAdditionAst
+        // Define ASTs for "print(1 + 2)" for each language
+        // Python: print(1 + 2) -> AST with ConstantNode(1), ConstantNode(2)
+        val pyAstAdd = ModuleNode(
+            body = listOf(
+                PrintNode(
+                    expression = BinaryOpNode(
+                        left = ConstantNode(1),
+                        op = "+",
+                        right = ConstantNode(2)
+                    )
+                )
+            )
         )
-        println("\\n'test bidirectional print with addition' completed.")
+
+        // JavaScript: console.log(1 + 2); -> AST with ConstantNode(1.0), ConstantNode(2.0)
+        val jsAstAdd = ModuleNode(
+            body = listOf(
+                PrintNode(
+                    expression = BinaryOpNode(
+                        left = ConstantNode(1.0),
+                        op = "+",
+                        right = ConstantNode(2.0)
+                    )
+                )
+            )
+        )
+
+        // Java: System.out.println(1 + 2); -> AST with ConstantNode(1), ConstantNode(2) (assuming int)
+        val javaAstAdd = ModuleNode(
+            body = listOf(
+                PrintNode(
+                    expression = BinaryOpNode(
+                        left = ConstantNode(1), // Assuming Java parser treats 1 and 2 as integers here
+                        op = "+",
+                        right = ConstantNode(2)
+                    )
+                )
+            )
+        )
+
+        // Define code snippets
+        val pythonCodeAdd = "print(1 + 2)"
+        val jsCodeAdd = "console.log(1 + 2);"
+        val javaCodeAdd = "System.out.println(1 + 2);"
+
+        // Create language setups list
+        val allLanguageSetupsForPrintAddTest = listOf(
+            Triple(pythonConfig, pythonCodeAdd, pyAstAdd),
+            Triple(javaScriptConfig, jsCodeAdd, jsAstAdd),
+            Triple(javaConfig, javaCodeAdd, javaAstAdd)
+            // To add a new language for the print with addition test, add its Triple here
+        )
+
+        executeTranspilationTests("Print Addition", allLanguageSetupsForPrintAddTest)
     }
 
     @Test
