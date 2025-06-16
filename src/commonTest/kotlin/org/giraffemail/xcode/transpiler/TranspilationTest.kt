@@ -222,10 +222,16 @@ class TranspilationTest {
         val jsPrintCode = "console.log('cookies');"
         val javaPrintCode = "System.out.println(\"cookies\");"
 
+        // Corrected expected AST for Java to match the others for this simple print case.
+        // The Java parser should produce a ConstantNode with a string value, identical to Python/JS.
+        val commonExpectedPrintAst = ModuleNode(
+            body = listOf(PrintNode(expression = ConstantNode("cookies")))
+        )
+
         val allLanguageSetupsForPrintTest = listOf(
-            Triple(pythonConfig, pythonPrintCode, expectedPrintCookiesAst),
-            Triple(javaScriptConfig, jsPrintCode, expectedPrintCookiesAst),
-            Triple(javaConfig, javaPrintCode, expectedPrintCookiesAst)
+            Triple(pythonConfig, pythonPrintCode, commonExpectedPrintAst),
+            Triple(javaScriptConfig, jsPrintCode, commonExpectedPrintAst),
+            Triple(javaConfig, javaPrintCode, commonExpectedPrintAst) // Using the common AST
             // To add a new language for the print test, add its Triple here
         )
 
@@ -235,40 +241,30 @@ class TranspilationTest {
     @Test
     fun `test bidirectional print with addition`() {
         // Define ASTs for "print(1 + 2)" for each language
-        // Python: print(1 + 2) -> AST with ConstantNode(1), ConstantNode(2)
-        val pyAstAdd = ModuleNode(
+        val commonAstAdd = ModuleNode(
             body = listOf(
                 PrintNode(
                     expression = BinaryOpNode(
-                        left = ConstantNode(1),
+                        left = ConstantNode(1), // Standardized to Integer for cross-language AST
                         op = "+",
-                        right = ConstantNode(2)
+                        right = ConstantNode(2)  // Standardized to Integer for cross-language AST
                     )
                 )
             )
         )
 
-        // JavaScript: console.log(1 + 2); -> AST with ConstantNode(1.0), ConstantNode(2.0)
-        val jsAstAdd = ModuleNode(
+        // JavaScript-specific AST if its parser produces floats for numbers, but generator should handle conversion if needed.
+        // For simplicity in this test, we might assume the generators can handle a common AST form (e.g. integer constants)
+        // or we adjust the common AST to use a more generic number type if the AST definition supports it.
+        // Here, we'll assume the common AST uses integers and JS generator/parser handles it.
+        // If JS strictly uses floats, the jsAstAdd would be:
+        val jsSpecificAstAdd = ModuleNode(
             body = listOf(
                 PrintNode(
                     expression = BinaryOpNode(
                         left = ConstantNode(1.0),
                         op = "+",
                         right = ConstantNode(2.0)
-                    )
-                )
-            )
-        )
-
-        // Java: System.out.println(1 + 2); -> AST with ConstantNode(1), ConstantNode(2) (assuming int)
-        val javaAstAdd = ModuleNode(
-            body = listOf(
-                PrintNode(
-                    expression = BinaryOpNode(
-                        left = ConstantNode(1), // Assuming Java parser treats 1 and 2 as integers here
-                        op = "+",
-                        right = ConstantNode(2)
                     )
                 )
             )
@@ -281,9 +277,14 @@ class TranspilationTest {
 
         // Create language setups list
         val allLanguageSetupsForPrintAddTest = listOf(
-            Triple(pythonConfig, pythonCodeAdd, pyAstAdd),
-            Triple(javaScriptConfig, jsCodeAdd, jsAstAdd),
-            Triple(javaConfig, javaCodeAdd, javaAstAdd)
+            Triple(pythonConfig, pythonCodeAdd, commonAstAdd),
+            // For JavaScript, if its parser *always* creates float ConstantNodes for numbers,
+            // then its specific AST (jsSpecificAstAdd) should be used here.
+            // However, if the goal is a common intermediate AST, then commonAstAdd is preferred,
+            // and the JS parser/generator must align.
+            // Assuming JS parser produces floats, and we want to test that specific behavior:
+            Triple(javaScriptConfig, jsCodeAdd, jsSpecificAstAdd),
+            Triple(javaConfig, javaCodeAdd, commonAstAdd) // Java uses the common AST with Integers
             // To add a new language for the print with addition test, add its Triple here
         )
 
