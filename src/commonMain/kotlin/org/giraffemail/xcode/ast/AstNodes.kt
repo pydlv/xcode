@@ -35,6 +35,9 @@ data class CallStatementNode(
 
 data class PrintNode(val expression: ExpressionNode) : StatementNode // For print and console.log statements
 
+// Expression statement node (for when expressions need to be treated as statements)
+data class ExpressionStatementNode(val expression: ExpressionNode) : StatementNode
+
 // If statement node for conditional execution
 data class IfNode(
     val test: ExpressionNode,           // The condition to test

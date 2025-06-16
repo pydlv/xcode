@@ -22,6 +22,7 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
             is AssignNode -> visitAssignNode(statement)
             is CallStatementNode -> visitCallStatementNode(statement)
             is IfNode -> visitIfNode(statement)
+            is ExpressionStatementNode -> generateExpression(statement.expression) + getStatementTerminator()
             is UnknownNode -> visitUnknownNode(statement)
         }
     }

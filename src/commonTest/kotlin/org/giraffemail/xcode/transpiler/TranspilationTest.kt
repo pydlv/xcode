@@ -7,6 +7,8 @@ import org.giraffemail.xcode.javascriptparser.JavaScriptGenerator
 import org.giraffemail.xcode.javascriptparser.JavaScriptParser
 import org.giraffemail.xcode.pythonparser.PythonGenerator
 import org.giraffemail.xcode.pythonparser.PythonParser
+import org.giraffemail.xcode.haskellparser.HaskellGenerator
+import org.giraffemail.xcode.haskellparser.HaskellParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.fail
@@ -28,6 +30,7 @@ class TranspilationTest {
     private val pythonConfig = LanguageConfig("Python", PythonParser::parse, { ast -> PythonGenerator().generate(ast) }) // Changed
     private val javaScriptConfig = LanguageConfig("JavaScript", JavaScriptParser::parse, { ast -> JavaScriptGenerator().generate(ast) }) // Changed
     private val javaConfig = LanguageConfig("Java", JavaParser::parse, { ast -> JavaGenerator().generate(ast) }) // Changed
+    private val haskellConfig = LanguageConfig("Haskell", HaskellParser::parse, { ast -> HaskellGenerator().generate(ast) })
 
     private fun assertRoundTripTranspilation(
         originalCode: String,
@@ -207,6 +210,7 @@ class TranspilationTest {
         val pythonPrintCode = "print('cookies')"
         val jsPrintCode = "console.log('cookies');"
         val javaPrintCode = "System.out.println(\"cookies\");"
+        val haskellPrintCode = "putStrLn \"cookies\""
 
         // Corrected expected AST for Java to match the others for this simple print case.
         // The Java parser should produce a ConstantNode with a string value, identical to Python/JS.
@@ -217,7 +221,8 @@ class TranspilationTest {
         val allLanguageSetupsForPrintTest = listOf(
             Pair(pythonConfig, pythonPrintCode),
             Pair(javaScriptConfig, jsPrintCode),
-            Pair(javaConfig, javaPrintCode)
+            Pair(javaConfig, javaPrintCode),
+            Pair(haskellConfig, haskellPrintCode)
             // To add a new language for the print test, add its Pair here
         )
 
@@ -243,12 +248,14 @@ class TranspilationTest {
         val pythonCodeAdd = "print(1 + 2)"
         val jsCodeAdd = "console.log(1 + 2);"
         val javaCodeAdd = "System.out.println(1 + 2);"
+        val haskellCodeAdd = "putStrLn (1 + 2)"
 
         // Create language setups list - all use common AST now due to normalization
         val allLanguageSetupsForPrintAddTest = listOf(
             Pair(pythonConfig, pythonCodeAdd),
             Pair(javaScriptConfig, jsCodeAdd),
-            Pair(javaConfig, javaCodeAdd)
+            Pair(javaConfig, javaCodeAdd),
+            Pair(haskellConfig, haskellCodeAdd)
             // To add a new language for the print with addition test, add its Pair here
         )
 
@@ -283,6 +290,10 @@ class TranspilationTest {
         fib(b, c);
     }
 fib(0, 1);"""
+
+        // Haskell code for recursive fibonacci
+        val haskellCode = """fib a b = let c = a + b in putStrLn c
+fib 0 1"""
 
         // Define expected function body for both languages
         val functionBody = listOf(
@@ -334,7 +345,8 @@ fib(0, 1);"""
         val allLanguageSetupsForFibonacciTest = listOf(
             Pair(pythonConfig, pythonCode),
             Pair(javaScriptConfig, javascriptCode),
-            Pair(javaConfig, javaCode)
+            Pair(javaConfig, javaCode),
+            Pair(haskellConfig, haskellCode)
             // To add a new language for the fibonacci test, add its Pair here
         )
 
@@ -367,6 +379,8 @@ fib(0, 1);"""
             }
         """.trimIndent().trim()
 
+        val haskellCode = """if x > 5 then putStrLn "greater" else putStrLn "lesser""""
+
         // Expected AST structure for if-else statement (Python/Java)
         val expectedAst = ModuleNode(
             body = listOf(
@@ -389,7 +403,8 @@ fib(0, 1);"""
         val allLanguageSetupsForIfElseTest = listOf(
             Pair(pythonConfig, pythonCode),
             Pair(javaScriptConfig, javascriptCode),
-            Pair(javaConfig, javaCode)
+            Pair(javaConfig, javaCode),
+            Pair(haskellConfig, haskellCode)
             // To add a new language for the if-else test, add its Pair here
         )
 
@@ -416,6 +431,8 @@ fib(0, 1);"""
             }
         """.trimIndent().trim()
 
+        val haskellCode = """if a == 1 then putStrLn "one" else undefined"""
+
         // Expected common AST structure for simple if statement
         // All languages should produce this same AST due to normalization
         val expectedCommonAst = ModuleNode(
@@ -437,7 +454,8 @@ fib(0, 1);"""
         val allLanguageSetupsForSimpleIfTest = listOf(
             Pair(pythonConfig, pythonCode),
             Pair(javaScriptConfig, javascriptCode),
-            Pair(javaConfig, javaCode)
+            Pair(javaConfig, javaCode),
+            Pair(haskellConfig, haskellCode)
             // To add a new language for the simple if test, add its Pair here
         )
 
