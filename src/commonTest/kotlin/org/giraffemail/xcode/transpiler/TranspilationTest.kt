@@ -418,4 +418,123 @@ fib(0, 1);"""
 
         executeTranspilationTests("Recursive Fibonacci", allLanguageSetupsForFibonacciTest)
     }
+
+    @Test
+    fun `test if else statement transpilation`() {
+        // Simple if-else statements with variable comparison
+        val pythonCode = """
+            if x > 5:
+                print("greater")
+            else:
+                print("lesser")
+        """.trimIndent().trim()
+
+        val javascriptCode = """
+            if (x > 5) {
+                console.log("greater");
+            } else {
+                console.log("lesser");
+            }
+        """.trimIndent().trim()
+
+        val javaCode = """
+            if (x > 5) {
+                System.out.println("greater");
+            } else {
+                System.out.println("lesser");
+            }
+        """.trimIndent().trim()
+
+        // Expected AST structure for if-else statement
+        val expectedAst = ModuleNode(
+            body = listOf(
+                IfNode(
+                    test = CompareNode(
+                        left = NameNode(id = "x", ctx = Load),
+                        op = ">",
+                        right = ConstantNode(5)
+                    ),
+                    body = listOf(
+                        PrintNode(expression = ConstantNode("greater"))
+                    ),
+                    orelse = listOf(
+                        PrintNode(expression = ConstantNode("lesser"))
+                    )
+                )
+            )
+        )
+
+        val allLanguageSetupsForIfElseTest = listOf(
+            Triple(pythonConfig, pythonCode, expectedAst),
+            Triple(javaScriptConfig, javascriptCode, expectedAst),
+            Triple(javaConfig, javaCode, expectedAst)
+            // To add a new language for the if-else test, add its Triple here
+        )
+
+        executeTranspilationTests("If-Else Statement", allLanguageSetupsForIfElseTest)
+    }
+
+    @Test
+    fun `test simple if statement transpilation`() {
+        // Simple if statement without else clause
+        val pythonCode = """
+            if a == 1:
+                print("one")
+        """.trimIndent().trim()
+
+        val javascriptCode = """
+            if (a === 1) {
+                console.log("one");
+            }
+        """.trimIndent().trim()
+
+        val javaCode = """
+            if (a == 1) {
+                System.out.println("one");
+            }
+        """.trimIndent().trim()
+
+        // Expected AST structure for simple if statement
+        val expectedPythonAst = ModuleNode(
+            body = listOf(
+                IfNode(
+                    test = CompareNode(
+                        left = NameNode(id = "a", ctx = Load),
+                        op = "==",
+                        right = ConstantNode(1)
+                    ),
+                    body = listOf(
+                        PrintNode(expression = ConstantNode("one"))
+                    ),
+                    orelse = emptyList()
+                )
+            )
+        )
+
+        // JavaScript uses strict equality ===
+        val expectedJSAst = ModuleNode(
+            body = listOf(
+                IfNode(
+                    test = CompareNode(
+                        left = NameNode(id = "a", ctx = Load),
+                        op = "===",
+                        right = ConstantNode(1.0) // JS numbers are doubles
+                    ),
+                    body = listOf(
+                        PrintNode(expression = ConstantNode("one"))
+                    ),
+                    orelse = emptyList()
+                )
+            )
+        )
+
+        val allLanguageSetupsForSimpleIfTest = listOf(
+            Triple(pythonConfig, pythonCode, expectedPythonAst),
+            Triple(javaScriptConfig, javascriptCode, expectedJSAst),
+            Triple(javaConfig, javaCode, expectedPythonAst) // Java uses == and integers like Python
+            // To add a new language for the simple if test, add its Triple here
+        )
+
+        executeTranspilationTests("Simple If Statement", allLanguageSetupsForSimpleIfTest)
+    }
 }
