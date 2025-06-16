@@ -1,0 +1,1 @@
+To quickly run tests, run the Gradle nativeLinuxTest task.
