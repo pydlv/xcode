@@ -9,6 +9,7 @@ statement
     | functionDeclaration
     | assignStatement
     | functionCallStatement
+    | ifStatement
     ;
 
 consoleLogStatement: 'console' '.' 'log' '(' expression ')' ';'? ; // Using literal chars
@@ -24,10 +25,13 @@ assignStatement: 'let'? IDENTIFIER '=' expression ';'? ; // Using literal chars
 
 functionCallStatement: IDENTIFIER '(' arguments? ')' ';'? ; // Using literal chars
 
+ifStatement: 'if' '(' expression ')' '{' functionBody '}' ('else' '{' functionBody '}')? ; // Using literal chars
+
 arguments: expression (',' expression)* ; // Using literal chars
 
 expression
     : expression '+' expression  # Addition
+    | expression ('===' | '!==' | '==' | '!=' | '<' | '>' | '<=' | '>=') expression # Comparison
     | IDENTIFIER '(' arguments? ')'  # FunctionCall
     | STRING_LITERAL            # StringLiteral // Uses common STRING_LITERAL
     | IDENTIFIER                # Identifier    // Uses common IDENTIFIER

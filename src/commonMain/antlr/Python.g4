@@ -17,6 +17,7 @@ statement // Basic statements
     : printStatement
     | assignStatement
     | functionCallStatement
+    | ifStatement
     ;
 
 printStatement: 'print' '(' expression ')' ; // Using literal parens
@@ -34,10 +35,13 @@ assignStatement: IDENTIFIER '=' expression ;
 
 functionCallStatement: IDENTIFIER '(' arguments? ')' ; // Using literal parens
 
+ifStatement: 'if' expression ':' NEWLINE INDENT function_body? DEDENT (NEWLINE* 'else' ':' NEWLINE INDENT function_body? DEDENT)? ;
+
 arguments: expression (',' expression)* ;
 
 expression
     : expression '+' expression          # Addition
+    | expression ('==' | '!=' | '<' | '>' | '<=' | '>=') expression # Comparison
     | IDENTIFIER '(' arguments? ')'      # FunctionCallInExpression // Using literal parens
     | STRING_LITERAL                     # StringLiteral // Uses common STRING_LITERAL
     | IDENTIFIER                         # Identifier    // Uses common IDENTIFIER

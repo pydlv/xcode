@@ -1,6 +1,7 @@
 package org.giraffemail.xcode.pythonparser
 
 import org.giraffemail.xcode.ast.*
+import org.giraffemail.xcode.common.ParserUtils
 import org.giraffemail.xcode.generated.PythonLexer
 import org.giraffemail.xcode.generated.PythonParser as AntlrPythonParser
 import org.antlr.v4.kotlinruntime.CharStream
@@ -172,6 +173,35 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
         }
     }
 
+    // Handle Comparison expression
+    override fun visitComparison(ctx: AntlrPythonParser.ComparisonContext): AstNode {
+        val leftOperandCtx = ctx.expression(0)
+        val rightOperandCtx = ctx.expression(1)
+
+        // Use the shared utility method to extract comparison operator
+        val operator = ParserUtils.extractComparisonOperator(ctx.text)
+
+        // Ensure operands are not null before visiting
+        if (leftOperandCtx == null || rightOperandCtx == null) {
+            println("Error in Python visitComparison: one or both operands are null for input '${ctx.text}'")
+            val errorLeft = UnknownNode("Missing left operand in comparison: ${leftOperandCtx?.text ?: "null"}")
+            val errorRight = UnknownNode("Missing right operand in comparison: ${rightOperandCtx?.text ?: "null"}")
+            return CompareNode(errorLeft, operator, errorRight)
+        }
+
+        val visitedLeft = visit(leftOperandCtx)
+        val visitedRight = visit(rightOperandCtx)
+
+        if (visitedLeft is ExpressionNode && visitedRight is ExpressionNode) {
+            return CompareNode(visitedLeft, operator, visitedRight)
+        } else {
+            println("Error in Python visitComparison: operands are not valid ExpressionNodes. Left: $visitedLeft, Right: $visitedRight for input '${ctx.text}'")
+            val errorLeft = visitedLeft as? ExpressionNode ?: UnknownNode("Invalid left operand in comparison: ${leftOperandCtx.text}")
+            val errorRight = visitedRight as? ExpressionNode ?: UnknownNode("Invalid right operand in comparison: ${rightOperandCtx.text}")
+            return CompareNode(errorLeft, operator, errorRight)
+        }
+    }
+
     override fun visitFunctionDef(ctx: AntlrPythonParser.FunctionDefContext): AstNode {
         val name = ctx.IDENTIFIER().text // Removed !! as IDENTIFIER is not optional in grammar
 
@@ -215,6 +245,24 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
         val funcName = ctx.IDENTIFIER().text // Removed ?. and ?: ""
         val callNode = createCallNode(funcName, ctx.arguments())
         return CallStatementNode(call = callNode)
+    }
+
+    // Handle if statements
+    override fun visitIfStatement(ctx: AntlrPythonParser.IfStatementContext): AstNode {
+        val condition = visit(ctx.expression()) as? ExpressionNode
+            ?: UnknownNode("Invalid condition in if statement")
+
+        // Get the if body (first function_body)
+        val ifBody = ctx.function_body(0)?.let { visit(it) as? ModuleNode }?.body ?: emptyList()
+
+        // Get the else body if present (second function_body)
+        val elseBody = if (ctx.function_body().size > 1) {
+            ctx.function_body(1)?.let { visit(it) as? ModuleNode }?.body ?: emptyList()
+        } else {
+            emptyList()
+        }
+
+        return IfNode(test = condition, body = ifBody, orelse = elseBody)
     }
 
     // Handle function calls in expressions - UPDATED for FunctionCallInExpression label

@@ -60,6 +60,30 @@ class JavaScriptGenerator : AbstractAstGenerator() {
         return "$objStr.$propStr"
     }
 
+    override fun visitIfNode(node: IfNode): String {
+        val condition = generateExpression(node.test)
+        val ifBody = node.body.joinToString("\n") { "    " + generateStatement(it) }
+        
+        return if (node.orelse.isNotEmpty()) {
+            val elseBody = node.orelse.joinToString("\n") { "    " + generateStatement(it) }
+            "if ($condition) {\n$ifBody\n} else {\n$elseBody\n}"
+        } else {
+            "if ($condition) {\n$ifBody\n}"
+        }
+    }
+
+    override fun visitCompareNode(node: CompareNode): String {
+        val leftStr = generateExpression(node.left)
+        val rightStr = generateExpression(node.right)
+        // Convert == to === for JavaScript strict equality
+        val jsOp = when (node.op) {
+            "==" -> "==="
+            "!=" -> "!=="
+            else -> node.op
+        }
+        return "$leftStr $jsOp $rightStr"
+    }
+
     // visitConstantNode will use the base implementation which calls formatStringLiteral for strings.
     // Numbers and booleans will be formatted by the base class's visitConstantNode.
     // If JS needs specific boolean (true/false) or number formatting different from base, override visitConstantNode.
