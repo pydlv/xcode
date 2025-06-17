@@ -101,6 +101,58 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         return "$objStr.$propStr"
     }
 
+    override fun generateWithoutMetadataComments(ast: AstNode): String {
+        // Generate TypeScript without metadata comments
+        return when (ast) {
+            is ModuleNode -> ast.body.joinToString(separator = getStatementSeparator()) { 
+                generateStatementWithoutMetadata(it) 
+            }
+            is StatementNode -> generateStatementWithoutMetadata(ast)
+            is ExpressionNode -> generateExpression(ast)
+            else -> generate(ast) // Fallback to default generation
+        }
+    }
+    
+    private fun generateStatementWithoutMetadata(statement: StatementNode): String {
+        return when (statement) {
+            is FunctionDefNode -> visitFunctionDefNodeWithoutMetadata(statement)
+            is AssignNode -> visitAssignNodeWithoutMetadata(statement)
+            else -> generateStatement(statement)
+        }
+    }
+    
+    private fun visitFunctionDefNodeWithoutMetadata(node: FunctionDefNode): String {
+        val funcName = node.name
+        val (returnType, paramTypes, _) = extractFunctionMetadata(node)
+        
+        // Generate parameters with type annotations from metadata
+        val params = node.args.joinToString(", ") { param ->
+            val paramType = paramTypes[param.id]
+            if (paramType != null) {
+                "${param.id}: $paramType"
+            } else {
+                param.id
+            }
+        }
+        
+        // Generate return type annotation from metadata
+        val returnTypeAnnotation = if (returnType != null) ": $returnType" else ""
+        
+        val body = node.body.joinToString("\n") { "    " + generateStatementWithoutMetadata(it) }
+        return "function $funcName($params)$returnTypeAnnotation {\n$body\n}"
+    }
+    
+    private fun visitAssignNodeWithoutMetadata(node: AssignNode): String {
+        val targetName = node.target.id
+        val valueExpr = generateExpression(node.value)
+        
+        // Generate type annotation from metadata
+        val variableType = node.metadata?.get("variableType") as? String
+        val typeAnnotation = if (variableType != null) ": $variableType" else ""
+        
+        return "let $targetName$typeAnnotation = $valueExpr${getStatementTerminator()}"
+    }
+
     override fun visitCompareNode(node: CompareNode): String {
         // Convert == to === for TypeScript strict equality
         val tsOp = when (node.op) {
