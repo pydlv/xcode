@@ -17,10 +17,9 @@ data class LanguageMetadata(
 /**
  * Data class representing code and metadata as separate parts
  */
-@Serializable
 data class CodeWithMetadata(
     val code: String,
-    val metadata: String
+    val metadata: List<LanguageMetadata>
 )
 
 /**
@@ -80,34 +79,12 @@ object MetadataSerializer {
     }
     
     /**
-     * Serializes a list of metadata to a JSON string (metadata part)
-     */
-    fun serializeMetadataList(metadata: List<LanguageMetadata>): String {
-        return json.encodeToString(metadata)
-    }
-    
-    /**
-     * Deserializes a list of metadata from a JSON string (metadata part)
-     */
-    fun deserializeMetadataList(metadataPart: String): List<LanguageMetadata> {
-        return try {
-            if (metadataPart.isBlank()) {
-                emptyList()
-            } else {
-                json.decodeFromString<List<LanguageMetadata>>(metadataPart)
-            }
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
-    
-    /**
      * Creates a CodeWithMetadata object from code and metadata parts
      */
     fun createCodeWithMetadata(code: String, metadata: List<LanguageMetadata>): CodeWithMetadata {
         return CodeWithMetadata(
             code = code,
-            metadata = serializeMetadataList(metadata)
+            metadata = metadata
         )
     }
 }

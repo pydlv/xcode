@@ -58,7 +58,7 @@ object PythonParser : AbstractAntlrParser<PythonLexer, AntlrPythonParser, AntlrP
     /**
      * Parse method that supports parts-based metadata
      */
-    fun parseWithMetadata(code: String, metadataPart: String): AstNode {
+    fun parseWithMetadata(code: String, metadataPart: List<LanguageMetadata>): AstNode {
         return try {
             // Use parts-based metadata
             val processedCode = ParserUtils.extractMetadataFromPart(code, metadataPart, metadataQueue)
