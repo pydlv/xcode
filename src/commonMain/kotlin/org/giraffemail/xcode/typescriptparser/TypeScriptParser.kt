@@ -1,6 +1,7 @@
 package org.giraffemail.xcode.typescriptparser
 
 import org.giraffemail.xcode.ast.*
+import org.giraffemail.xcode.common.ParserUtils
 import org.giraffemail.xcode.generated.TypeScriptLexer
 import org.giraffemail.xcode.generated.TypeScriptParser as AntlrTypeScriptParser
 import org.antlr.v4.kotlinruntime.CharStream
@@ -133,8 +134,7 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
 
     // Handle if statements
     override fun visitIfStatement(ctx: AntlrTypeScriptParser.IfStatementContext): AstNode {
-        val condition = visit(ctx.expression()) as? ExpressionNode
-            ?: UnknownNode("Invalid condition in if statement")
+        val condition = ParserUtils.visitAsExpressionNode(visit(ctx.expression()), "Invalid condition in if statement")
 
         // Get the if body (first functionBody)
         val ifBody = ctx.functionBody(0)?.let { visit(it) as? ModuleNode }?.body ?: emptyList()
@@ -171,11 +171,9 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
 
     override fun visitComparison(ctx: AntlrTypeScriptParser.ComparisonContext): AstNode {
         try {
-            val left = visit(ctx.getChild(0)!!) as? ExpressionNode
-                ?: UnknownNode("Invalid left expression in comparison")
+            val left = ParserUtils.visitAsExpressionNode(visit(ctx.getChild(0)!!), "Invalid left expression in comparison")
 
-            val right = visit(ctx.getChild(2)!!) as? ExpressionNode
-                ?: UnknownNode("Invalid right expression in comparison")
+            val right = ParserUtils.visitAsExpressionNode(visit(ctx.getChild(2)!!), "Invalid right expression in comparison")
 
             // Get the comparison operator from the context and normalize to canonical form
             val rawOperator = ctx.getChild(1)!!.text
@@ -229,7 +227,7 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
 
     // Helper method to create call nodes
     private fun createCallNode(funcName: String, argumentsCtx: AntlrTypeScriptParser.ArgumentsContext?): CallNode {
-        val funcNameNode = NameNode(id = funcName, ctx = Load)
+        val funcNameNode = ParserUtils.createFunctionNameNode(funcName)
         val args = mutableListOf<ExpressionNode>()
         argumentsCtx?.expression()?.forEach { exprCtx ->
             val arg = visit(exprCtx) as? ExpressionNode

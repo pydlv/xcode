@@ -336,8 +336,7 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
 
     // Handle if statements
     override fun visitIfStatement(ctx: AntlrPythonParser.IfStatementContext): AstNode {
-        val condition = visit(ctx.expression()) as? ExpressionNode
-            ?: UnknownNode("Invalid condition in if statement")
+        val condition = ParserUtils.visitAsExpressionNode(visit(ctx.expression()), "Invalid condition in if statement")
 
         // Get the if body (first function_body)
         val ifBody = ctx.function_body(0)?.let { visit(it) as? ModuleNode }?.body ?: emptyList()
@@ -359,7 +358,7 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
     }
 
     private fun createCallNode(funcName: String, argumentsCtx: AntlrPythonParser.ArgumentsContext?): CallNode {
-        val funcNameNode = NameNode(id = funcName, ctx = Load)
+        val funcNameNode = ParserUtils.createFunctionNameNode(funcName)
         val args = mutableListOf<ExpressionNode>()
         argumentsCtx?.expression()?.forEach { exprCtx ->
             val arg = visit(exprCtx) as? ExpressionNode

@@ -200,8 +200,7 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
 
     // Handle if statements
     override fun visitIfStatement(ctx: AntlrJavaScriptParser.IfStatementContext): AstNode {
-        val condition = visit(ctx.expression()) as? ExpressionNode
-            ?: UnknownNode("Invalid condition in if statement")
+        val condition = ParserUtils.visitAsExpressionNode(visit(ctx.expression()), "Invalid condition in if statement")
 
         // Get the if body (first functionBody)
         val ifBody = ctx.functionBody(0)?.let { visit(it) as? ModuleNode }?.body ?: emptyList()
@@ -217,7 +216,7 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
     }
 
     private fun createCallNode(funcName: String, argumentsCtx: AntlrJavaScriptParser.ArgumentsContext?): CallNode {
-        val funcNameNode = NameNode(id = funcName, ctx = Load)
+        val funcNameNode = ParserUtils.createFunctionNameNode(funcName)
         val args = mutableListOf<ExpressionNode>()
         argumentsCtx?.expression()?.forEach { exprCtx -> // argumentsCtx can be null, and expression() can be null within argumentsCtx
             (exprCtx as? AntlrJavaScriptParser.ExpressionContext)?.let {
@@ -249,11 +248,9 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
     // Handle Comparison expression
     override fun visitComparison(ctx: AntlrJavaScriptParser.ComparisonContext): AstNode {
         try {
-            val left = visit(ctx.getChild(0)!!) as? ExpressionNode
-                ?: UnknownNode("Invalid left expression in comparison")
+            val left = ParserUtils.visitAsExpressionNode(visit(ctx.getChild(0)!!), "Invalid left expression in comparison")
 
-            val right = visit(ctx.getChild(2)!!) as? ExpressionNode
-                ?: UnknownNode("Invalid right expression in comparison")
+            val right = ParserUtils.visitAsExpressionNode(visit(ctx.getChild(2)!!), "Invalid right expression in comparison")
 
             // Get the comparison operator from the context and normalize to canonical form
             val rawOperator = ctx.getChild(1)!!.text

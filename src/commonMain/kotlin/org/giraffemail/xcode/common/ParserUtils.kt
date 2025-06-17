@@ -1,7 +1,6 @@
 package org.giraffemail.xcode.common
 
-import org.giraffemail.xcode.ast.LanguageMetadata
-import org.giraffemail.xcode.ast.MetadataSerializer
+import org.giraffemail.xcode.ast.*
 
 /**
  * Utility functions for parser implementations to avoid code duplication.
@@ -74,5 +73,21 @@ object ParserUtils {
      */
     fun filterAssignmentMetadata(metadataQueue: List<LanguageMetadata>): List<LanguageMetadata> {
         return metadataQueue.filter { it.variableType != null }
+    }
+    
+    /**
+     * Common utility for safely casting visit results to ExpressionNode with fallback.
+     * Used across multiple parsers for condition parsing.
+     */
+    fun visitAsExpressionNode(node: Any?, fallbackMessage: String): ExpressionNode {
+        return node as? ExpressionNode ?: UnknownNode(fallbackMessage)
+    }
+    
+    /**
+     * Common utility for creating function name nodes.
+     * Used across multiple parsers.
+     */
+    fun createFunctionNameNode(funcName: String): NameNode {
+        return NameNode(id = funcName, ctx = Load)
     }
 }
