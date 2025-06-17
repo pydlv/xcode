@@ -11,20 +11,11 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
         // Collect metadata from the AST
         val metadata = collectMetadataFromAst(ast)
         
-        // Generate code without metadata comments
-        val code = generateWithoutMetadataComments(ast)
+        // Generate code
+        val code = generateCode(ast)
         
         // Return both parts
         return MetadataSerializer.createCodeWithMetadata(code, metadata)
-    }
-    
-    /**
-     * Generate code without metadata comments (for file-based metadata)
-     */
-    protected open fun generateWithoutMetadataComments(ast: AstNode): String {
-        // Default implementation calls the main code generation dispatch
-        // Subclasses can override to remove metadata comment generation
-        return generateCode(ast)
     }
     
     /**

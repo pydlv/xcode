@@ -61,39 +61,6 @@ class JavaScriptGenerator : AbstractAstGenerator() {
         return "$objStr.$propStr"
     }
 
-    override fun generateWithoutMetadataComments(ast: AstNode): String {
-        // Generate JavaScript without metadata comments
-        return when (ast) {
-            is ModuleNode -> ast.body.joinToString(separator = getStatementSeparator()) { 
-                generateStatementWithoutMetadata(it) 
-            }
-            is StatementNode -> generateStatementWithoutMetadata(ast)
-            is ExpressionNode -> generateExpression(ast)
-            else -> generateCode(ast) // Fallback to default generation
-        }
-    }
-    
-    private fun generateStatementWithoutMetadata(statement: StatementNode): String {
-        return when (statement) {
-            is FunctionDefNode -> visitFunctionDefNodeWithoutMetadata(statement)
-            is AssignNode -> visitAssignNodeWithoutMetadata(statement)
-            else -> generateStatement(statement)
-        }
-    }
-    
-    private fun visitFunctionDefNodeWithoutMetadata(node: FunctionDefNode): String {
-        val funcName = node.name
-        val params = node.args.joinToString(", ") { it.id }
-        val body = node.body.joinToString("\n") { "    " + generateStatementWithoutMetadata(it) }
-        return "function $funcName($params) {\n$body\n}"
-    }
-    
-    private fun visitAssignNodeWithoutMetadata(node: AssignNode): String {
-        val targetName = node.target.id
-        val valueExpr = generateExpression(node.value)
-        return "let $targetName = $valueExpr${getStatementTerminator()}"
-    }
-
     override fun visitCompareNode(node: CompareNode): String {
         // Convert == to === for JavaScript strict equality
         val jsOp = when (node.op) {
