@@ -48,3 +48,7 @@ jobs:
         # or `./gradlew :shared:dependencies` if you have a specific module and task.
         # Ensure your project's build.gradle(.kts) files are configured to use
         # download.jetbrains.com or other necessary repositories.
+
+      - name: Install Qodana CLI
+        run: bash .github/setup-qodana.sh
+        # Install Qodana CLI for code quality analysis as referenced in copilot-instructions.md
