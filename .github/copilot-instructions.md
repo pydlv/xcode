@@ -1,1 +1,2 @@
-If you want to quickly run tests, then use the Gradle `nativeLinuxTest` task.
+- If you want to quickly run tests, then use the Gradle `nativeLinuxTest` task.
+- If you are unable to complete the requested work entirely, then be sure to clearly communicate the remaining items to the user.
