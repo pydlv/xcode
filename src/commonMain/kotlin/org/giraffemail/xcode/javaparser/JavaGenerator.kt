@@ -80,7 +80,11 @@ class JavaGenerator : AbstractAstGenerator() {
             } else ""
         } else ""
         
-        return "public static void $funcName($params) {$metadataComment\n$bodyStatements\n    }"
+        return if (metadataComment.isNotEmpty()) {
+            "$metadataComment\npublic static void $funcName($params) {\n$bodyStatements\n    }"
+        } else {
+            "public static void $funcName($params) {\n$bodyStatements\n    }"
+        }
         // For a more complete solution, return type and parameter types are needed from AST.
         // throw NotImplementedError("Function definition generation for Java needs more AST details (return type, param types).")
     }
@@ -96,7 +100,7 @@ class JavaGenerator : AbstractAstGenerator() {
         val metadataComment = if (node.metadata?.get("variableType") != null) {
             val variableType = node.metadata["variableType"] as String
             val metadata = TypescriptMetadata(variableType = variableType)
-            " " + MetadataSerializer.createMetadataComment(metadata, "java")
+            "\n" + MetadataSerializer.createMetadataComment(metadata, "java")
         } else ""
         
         // Simplified: Assumes variable is already declared or type inference is not handled.

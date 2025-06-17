@@ -48,7 +48,11 @@ class JavaScriptGenerator : AbstractAstGenerator() {
             } else ""
         } else ""
         
-        return "function $funcName($params) {\n$body\n}$metadataComment"
+        return if (metadataComment.isNotEmpty()) {
+            "$metadataComment\nfunction $funcName($params) {\n$body\n}"
+        } else {
+            "function $funcName($params) {\n$body\n}"
+        }
     }
 
     override fun visitAssignNode(node: AssignNode): String {
@@ -61,7 +65,7 @@ class JavaScriptGenerator : AbstractAstGenerator() {
         val metadataComment = if (node.metadata?.get("variableType") != null) {
             val variableType = node.metadata["variableType"] as String
             val metadata = TypescriptMetadata(variableType = variableType)
-            " " + MetadataSerializer.createMetadataComment(metadata, "javascript")
+            "\n" + MetadataSerializer.createMetadataComment(metadata, "javascript")
         } else ""
         
         return "let $targetName = $valueExpr${getStatementTerminator()}$metadataComment"
