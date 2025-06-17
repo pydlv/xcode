@@ -7,6 +7,8 @@ import org.giraffemail.xcode.javascriptparser.JavaScriptGenerator
 import org.giraffemail.xcode.javascriptparser.JavaScriptParser
 import org.giraffemail.xcode.pythonparser.PythonGenerator
 import org.giraffemail.xcode.pythonparser.PythonParser
+import org.giraffemail.xcode.typescriptparser.TypeScriptGenerator
+import org.giraffemail.xcode.typescriptparser.TypeScriptParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.fail
@@ -28,6 +30,7 @@ class TranspilationTest {
     private val pythonConfig = LanguageConfig("Python", PythonParser::parse, { ast -> PythonGenerator().generate(ast) }) // Changed
     private val javaScriptConfig = LanguageConfig("JavaScript", JavaScriptParser::parse, { ast -> JavaScriptGenerator().generate(ast) }) // Changed
     private val javaConfig = LanguageConfig("Java", JavaParser::parse, { ast -> JavaGenerator().generate(ast) }) // Changed
+    private val typeScriptConfig = LanguageConfig("TypeScript", TypeScriptParser::parse, { ast -> TypeScriptGenerator().generate(ast) }) // New
 
     private fun assertRoundTripTranspilation(
         originalCode: String,
@@ -207,6 +210,7 @@ class TranspilationTest {
         val pythonPrintCode = "print('cookies')"
         val jsPrintCode = "console.log('cookies');"
         val javaPrintCode = "System.out.println(\"cookies\");"
+        val tsPrintCode = "console.log('cookies');"
 
         // Corrected expected AST for Java to match the others for this simple print case.
         // The Java parser should produce a ConstantNode with a string value, identical to Python/JS.
@@ -217,7 +221,8 @@ class TranspilationTest {
         val allLanguageSetupsForPrintTest = listOf(
             Pair(pythonConfig, pythonPrintCode),
             Pair(javaScriptConfig, jsPrintCode),
-            Pair(javaConfig, javaPrintCode)
+            Pair(javaConfig, javaPrintCode),
+            Pair(typeScriptConfig, tsPrintCode)
             // To add a new language for the print test, add its Pair here
         )
 
@@ -243,12 +248,14 @@ class TranspilationTest {
         val pythonCodeAdd = "print(1 + 2)"
         val jsCodeAdd = "console.log(1 + 2);"
         val javaCodeAdd = "System.out.println(1 + 2);"
+        val tsCodeAdd = "console.log(1 + 2);"
 
         // Create language setups list - all use common AST now due to normalization
         val allLanguageSetupsForPrintAddTest = listOf(
             Pair(pythonConfig, pythonCodeAdd),
             Pair(javaScriptConfig, jsCodeAdd),
-            Pair(javaConfig, javaCodeAdd)
+            Pair(javaConfig, javaCodeAdd),
+            Pair(typeScriptConfig, tsCodeAdd)
             // To add a new language for the print with addition test, add its Pair here
         )
 
@@ -283,6 +290,16 @@ class TranspilationTest {
         fib(b, c);
     }
 fib(0, 1);"""
+
+        // TypeScript code for recursive fibonacci
+        val typeScriptCode = """
+            function fib(a, b) {
+                let c = a + b;
+                console.log(c);
+                fib(b, c);
+            }
+            fib(0, 1);
+        """.trimIndent().trim()
 
         // Define expected function body for both languages
         val functionBody = listOf(
@@ -334,7 +351,8 @@ fib(0, 1);"""
         val allLanguageSetupsForFibonacciTest = listOf(
             Pair(pythonConfig, pythonCode),
             Pair(javaScriptConfig, javascriptCode),
-            Pair(javaConfig, javaCode)
+            Pair(javaConfig, javaCode),
+            Pair(typeScriptConfig, typeScriptCode)
             // To add a new language for the fibonacci test, add its Pair here
         )
 
@@ -367,6 +385,14 @@ fib(0, 1);"""
             }
         """.trimIndent().trim()
 
+        val typeScriptCode = """
+            if (x > 5) {
+                console.log('greater');
+            } else {
+                console.log('lesser');
+            }
+        """.trimIndent().trim()
+
         // Expected AST structure for if-else statement (Python/Java)
         val expectedAst = ModuleNode(
             body = listOf(
@@ -389,7 +415,8 @@ fib(0, 1);"""
         val allLanguageSetupsForIfElseTest = listOf(
             Pair(pythonConfig, pythonCode),
             Pair(javaScriptConfig, javascriptCode),
-            Pair(javaConfig, javaCode)
+            Pair(javaConfig, javaCode),
+            Pair(typeScriptConfig, typeScriptCode)
             // To add a new language for the if-else test, add its Pair here
         )
 
@@ -416,6 +443,12 @@ fib(0, 1);"""
             }
         """.trimIndent().trim()
 
+        val typeScriptCode = """
+            if (a === 1) {
+                console.log('one');
+            }
+        """.trimIndent().trim()
+
         // Expected common AST structure for simple if statement
         // All languages should produce this same AST due to normalization
         val expectedCommonAst = ModuleNode(
@@ -437,7 +470,8 @@ fib(0, 1);"""
         val allLanguageSetupsForSimpleIfTest = listOf(
             Pair(pythonConfig, pythonCode),
             Pair(javaScriptConfig, javascriptCode),
-            Pair(javaConfig, javaCode)
+            Pair(javaConfig, javaCode),
+            Pair(typeScriptConfig, typeScriptCode)
             // To add a new language for the simple if test, add its Pair here
         )
 
