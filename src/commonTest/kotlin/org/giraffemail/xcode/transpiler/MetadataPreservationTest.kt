@@ -175,7 +175,7 @@ class MetadataPreservationTest {
 
     @Test
     fun `test MetadataSerializer serialization and deserialization`() {
-        val metadata = TypescriptMetadata(
+        val metadata = LanguageMetadata(
             returnType = "void",
             paramTypes = mapOf("name" to "string", "age" to "number")
         )

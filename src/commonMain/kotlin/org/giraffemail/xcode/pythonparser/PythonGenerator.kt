@@ -40,7 +40,7 @@ class PythonGenerator : AbstractAstGenerator() {
             }.filterValues { it.isNotEmpty() }
             
             if (returnType != null || paramTypes.isNotEmpty() || individualParamMetadata.isNotEmpty()) {
-                val metadata = TypescriptMetadata(
+                val metadata = LanguageMetadata(
                     returnType = returnType,
                     paramTypes = paramTypes,
                     individualParamMetadata = individualParamMetadata
@@ -62,7 +62,7 @@ class PythonGenerator : AbstractAstGenerator() {
         // Create metadata comment if TypeScript variable type exists
         val metadataComment = if (node.metadata?.get("variableType") != null) {
             val variableType = node.metadata["variableType"] as String
-            val metadata = TypescriptMetadata(variableType = variableType)
+            val metadata = LanguageMetadata(variableType = variableType)
             "\n" + MetadataSerializer.createMetadataComment(metadata, "python")
         } else ""
         

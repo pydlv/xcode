@@ -45,7 +45,7 @@ object PythonParser : AbstractAntlrParser<PythonLexer, AntlrPythonParser, AntlrP
         return injectMetadataIntoAst(ast)
     }
     
-    private val metadataQueue = mutableListOf<TypescriptMetadata>()
+    private val metadataQueue = mutableListOf<LanguageMetadata>()
     
     private fun extractMetadataFromCode(code: String): String {
         metadataQueue.clear()

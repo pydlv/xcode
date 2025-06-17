@@ -40,7 +40,7 @@ object JavaScriptParser : AbstractAntlrParser<JavaScriptLexer, AntlrJavaScriptPa
         return extractMetadataFromCode(code)
     }
     
-    private val metadataQueue = mutableListOf<TypescriptMetadata>()
+    private val metadataQueue = mutableListOf<LanguageMetadata>()
     
     private fun extractMetadataFromCode(code: String): String {
         metadataQueue.clear()

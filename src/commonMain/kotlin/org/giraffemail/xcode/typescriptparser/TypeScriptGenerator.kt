@@ -48,16 +48,16 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         
         // Create metadata comment for non-TypeScript languages that need preservation
         val metadataComment = if (node.metadata != null) {
-            val metadata = TypescriptMetadata(
+            val metadata = LanguageMetadata(
                 returnType = returnType,
                 paramTypes = (node.metadata["paramTypes"] as? Map<String, String>) ?: emptyMap()
             )
             if (metadata.returnType != null || metadata.paramTypes.isNotEmpty()) {
-                " " + MetadataSerializer.createMetadataComment(metadata, "typescript")
+                "\n" + MetadataSerializer.createMetadataComment(metadata, "typescript")
             } else ""
         } else ""
         
-        return functionDeclaration.dropLast(1) + metadataComment + "}"
+        return functionDeclaration + metadataComment
     }
 
     override fun visitAssignNode(node: AssignNode): String {
@@ -72,7 +72,7 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         
         // Create metadata comment for non-TypeScript languages that need preservation
         val metadataComment = if (variableType != null) {
-            val metadata = TypescriptMetadata(variableType = variableType)
+            val metadata = LanguageMetadata(variableType = variableType)
             " " + MetadataSerializer.createMetadataComment(metadata, "typescript")
         } else ""
         

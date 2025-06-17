@@ -7,7 +7,7 @@ import kotlinx.serialization.json.*
  * Data classes for metadata serialization using kotlinx.serialization
  */
 @Serializable
-data class TypescriptMetadata(
+data class LanguageMetadata(
     val returnType: String? = null,
     val paramTypes: Map<String, String> = emptyMap(),
     val variableType: String? = null,
@@ -27,18 +27,18 @@ object MetadataSerializer {
     }
     
     /**
-     * Serializes TypeScript metadata to a JSON string
+     * Serializes language metadata to a JSON string
      */
-    fun serialize(metadata: TypescriptMetadata): String {
+    fun serialize(metadata: LanguageMetadata): String {
         return json.encodeToString(metadata)
     }
     
     /**
-     * Deserializes TypeScript metadata from a JSON string
+     * Deserializes language metadata from a JSON string
      */
-    fun deserialize(jsonString: String): TypescriptMetadata? {
+    fun deserialize(jsonString: String): LanguageMetadata? {
         return try {
-            json.decodeFromString<TypescriptMetadata>(jsonString)
+            json.decodeFromString<LanguageMetadata>(jsonString)
         } catch (e: Exception) {
             null
         }
@@ -47,7 +47,7 @@ object MetadataSerializer {
     /**
      * Extracts metadata JSON from a metadata comment token
      */
-    fun extractMetadataFromComment(commentText: String): TypescriptMetadata? {
+    fun extractMetadataFromComment(commentText: String): LanguageMetadata? {
         val metadataIndex = commentText.indexOf(METADATA_PREFIX)
         if (metadataIndex == -1) return null
         
@@ -62,7 +62,7 @@ object MetadataSerializer {
     /**
      * Creates a metadata comment string for the given language
      */
-    fun createMetadataComment(metadata: TypescriptMetadata, language: String): String {
+    fun createMetadataComment(metadata: LanguageMetadata, language: String): String {
         val jsonStr = serialize(metadata)
         return when (language.lowercase()) {
             "python" -> "# $METADATA_PREFIX $jsonStr"
