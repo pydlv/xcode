@@ -29,21 +29,7 @@ class PythonGenerator : AbstractAstGenerator() {
         // Each statement in the body needs to be indented.
         val body = node.body.joinToString("\n") { "    " + generateStatement(it) }
         
-        // Create metadata comment if TypeScript metadata exists
-        val metadataComment = if (node.metadata != null || node.args.any { it.metadata != null }) {
-            val (returnType, paramTypes, individualParamMetadata) = extractFunctionMetadata(node)
-            
-            if (returnType != null || paramTypes.isNotEmpty() || individualParamMetadata.isNotEmpty()) {
-                val metadata = LanguageMetadata(
-                    returnType = returnType,
-                    paramTypes = paramTypes,
-                    individualParamMetadata = individualParamMetadata
-                )
-                "\n" + MetadataSerializer.createMetadataComment(metadata, "python")
-            } else ""
-        } else ""
-        
-        return "def $funcName($params):$metadataComment\n$body"
+        return "def $funcName($params):\n$body"
     }
 
     override fun visitAssignNode(node: AssignNode): String {
@@ -53,14 +39,7 @@ class PythonGenerator : AbstractAstGenerator() {
         val targetName = node.target.id // Assuming node.target is of type NameNode
         val valueExpr = generateExpression(node.value)
         
-        // Create metadata comment if TypeScript variable type exists
-        val metadataComment = if (node.metadata?.get("variableType") != null) {
-            val variableType = node.metadata["variableType"] as String
-            val metadata = LanguageMetadata(variableType = variableType)
-            "\n" + MetadataSerializer.createMetadataComment(metadata, "python")
-        } else ""
-        
-        return "$targetName = $valueExpr$metadataComment"
+        return "$targetName = $valueExpr"
     }
 
     override fun visitCallStatementNode(node: CallStatementNode): String {

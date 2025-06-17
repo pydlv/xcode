@@ -15,10 +15,9 @@ object PythonParser : AbstractAntlrParser<PythonLexer, AntlrPythonParser, AntlrP
     private val indentationHandler = PythonIndentationHandler()
 
     override fun preprocessCode(code: String): String {
-        // First extract metadata comments and store them for processing
-        val codeWithoutMetadata = extractMetadataFromCode(code)
-        // Then apply indentation processing
-        return indentationHandler.processIndentation(codeWithoutMetadata)
+        // No comment-based metadata extraction, just apply indentation processing
+        metadataQueue.clear()
+        return indentationHandler.processIndentation(code)
     }
 
     override fun createLexer(charStream: CharStream): PythonLexer {
@@ -47,10 +46,6 @@ object PythonParser : AbstractAntlrParser<PythonLexer, AntlrPythonParser, AntlrP
     
     private val metadataQueue = mutableListOf<LanguageMetadata>()
     
-    private fun extractMetadataFromCode(code: String): String {
-        return ParserUtils.extractMetadataFromCode(code, metadataQueue, "#")
-    }
-    
     private fun injectMetadataIntoAst(ast: AstNode): AstNode {
         return ParserUtils.injectMetadataIntoAst(ast, metadataQueue)
     }
@@ -59,21 +54,17 @@ object PythonParser : AbstractAntlrParser<PythonLexer, AntlrPythonParser, AntlrP
      * Parse method that supports parts-based metadata
      */
     fun parseWithMetadata(code: String, metadataPart: List<LanguageMetadata>): AstNode {
-        return try {
-            // Use parts-based metadata
-            val processedCode = ParserUtils.extractMetadataFromPart(code, metadataPart, metadataQueue)
-            
-            val lexer = createLexer(org.antlr.v4.kotlinruntime.CharStreams.fromString(processedCode))
-            val tokens = org.antlr.v4.kotlinruntime.CommonTokenStream(lexer)
-            val parser = createAntlrParser(tokens)
-            val parseTree = invokeEntryPoint(parser)
-            val visitor = createAstBuilder()
-            val ast = parseTree.accept(visitor)
-            postprocessAst(ast)
-        } catch (e: Exception) {
-            // Fallback to comment-based parsing if parts-based fails
-            parse(code)
-        }
+        // Use parts-based metadata
+        val processedCode = ParserUtils.extractMetadataFromPart(code, metadataPart, metadataQueue)
+        val codeWithIndentation = indentationHandler.processIndentation(processedCode)
+        
+        val lexer = createLexer(org.antlr.v4.kotlinruntime.CharStreams.fromString(codeWithIndentation))
+        val tokens = org.antlr.v4.kotlinruntime.CommonTokenStream(lexer)
+        val parser = createAntlrParser(tokens)
+        val parseTree = invokeEntryPoint(parser)
+        val visitor = createAstBuilder()
+        val ast = parseTree.accept(visitor)
+        return postprocessAst(ast)
     }
 
     // The main parse method is now inherited from AbstractAntlrParser.

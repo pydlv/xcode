@@ -241,8 +241,8 @@ class PartsBasedMetadataTest {
     }
 
     @Test
-    fun `test backward compatibility with comment-based metadata`() {
-        // Create JavaScript code with traditional metadata comments (like the existing system)
+    fun `test comment-based metadata is no longer supported`() {
+        // Create JavaScript code with traditional metadata comments (like the old system)
         val jsCodeWithComments = """
             function greet(name) { // __META__: {"returnType":"void","paramTypes":{"name":"string"}}
                 let message = 'Hello'; // __META__: {"variableType":"string"}
@@ -250,20 +250,18 @@ class PartsBasedMetadataTest {
             }
         """.trimIndent()
         
-        // Parse using the traditional comment-based method
+        // Parse using the regular parser (comment-based extraction removed)
         val ast = JavaScriptParser.parse(jsCodeWithComments) as ModuleNode
         val functionDef = ast.body[0] as FunctionDefNode
         
-        // Verify metadata was extracted from comments
+        // Verify metadata was NOT extracted from comments (since we removed that functionality)
         assertEquals("greet", functionDef.name)
-        assertEquals("void", functionDef.metadata?.get("returnType"))
-        val paramTypes = functionDef.metadata?.get("paramTypes") as? Map<*, *>
-        assertEquals("string", paramTypes?.get("name"))
+        assertEquals(null, functionDef.metadata?.get("returnType"))
         
-        // Verify assignment metadata
+        // Verify assignment has no metadata from comments
         val assignment = functionDef.body[0] as AssignNode
-        assertEquals("string", assignment.metadata?.get("variableType"))
+        assertEquals(null, assignment.metadata?.get("variableType"))
         
-        println("✓ Backward compatibility with comment-based metadata verified")
+        println("✓ Comment-based metadata is no longer supported (expected behavior)")
     }
 }

@@ -40,35 +40,27 @@ object JavaParser : AbstractAntlrParser<JavaLexer, AntlrJavaParser, AntlrJavaPar
     }
     
     override fun preprocessCode(code: String): String {
-        // Extract metadata comments and store them for processing
-        return extractMetadataFromCode(code)
+        // No preprocessing needed since we don't support comment-based metadata
+        metadataQueue.clear()
+        return code
     }
     
     private val metadataQueue = mutableListOf<LanguageMetadata>()
-    
-    private fun extractMetadataFromCode(code: String): String {
-        return ParserUtils.extractMetadataFromCode(code, metadataQueue)
-    }
     
     /**
      * Parse method that supports parts-based metadata
      */
     fun parseWithMetadata(code: String, metadataPart: List<LanguageMetadata>): AstNode {
-        return try {
-            // Use parts-based metadata
-            val processedCode = ParserUtils.extractMetadataFromPart(code, metadataPart, metadataQueue)
-            
-            val lexer = createLexer(org.antlr.v4.kotlinruntime.CharStreams.fromString(processedCode))
-            val tokens = org.antlr.v4.kotlinruntime.CommonTokenStream(lexer)
-            val parser = createAntlrParser(tokens)
-            val parseTree = invokeEntryPoint(parser)
-            val visitor = createAstBuilder()
-            val ast = parseTree.accept(visitor)
-            postprocessAst(ast)
-        } catch (e: Exception) {
-            // Fallback to comment-based parsing if parts-based fails
-            parse(code)
-        }
+        // Use parts-based metadata
+        val processedCode = ParserUtils.extractMetadataFromPart(code, metadataPart, metadataQueue)
+        
+        val lexer = createLexer(org.antlr.v4.kotlinruntime.CharStreams.fromString(processedCode))
+        val tokens = org.antlr.v4.kotlinruntime.CommonTokenStream(lexer)
+        val parser = createAntlrParser(tokens)
+        val parseTree = invokeEntryPoint(parser)
+        val visitor = createAstBuilder()
+        val ast = parseTree.accept(visitor)
+        return postprocessAst(ast)
     }
     
     private fun injectMetadataIntoAst(ast: AstNode): AstNode {
