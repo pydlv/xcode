@@ -87,7 +87,21 @@ object JavaScriptParser : AbstractAntlrParser<JavaScriptLexer, AntlrJavaScriptPa
                         if (metadata.paramTypes.isNotEmpty()) {
                             metadataMap["paramTypes"] = metadata.paramTypes
                         }
-                        node.copy(metadata = metadataMap.ifEmpty { null })
+                        
+                        // Restore individual parameter metadata
+                        val updatedArgs = node.args.map { param ->
+                            val paramMetadata = metadata.individualParamMetadata[param.id]
+                            if (paramMetadata != null && paramMetadata.isNotEmpty()) {
+                                param.copy(metadata = paramMetadata)
+                            } else {
+                                param
+                            }
+                        }
+                        
+                        node.copy(
+                            args = updatedArgs,
+                            metadata = metadataMap.ifEmpty { null }
+                        )
                     } else {
                         node
                     }

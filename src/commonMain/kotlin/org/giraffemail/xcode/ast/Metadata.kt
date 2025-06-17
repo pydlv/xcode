@@ -10,7 +10,8 @@ import kotlinx.serialization.json.*
 data class TypescriptMetadata(
     val returnType: String? = null,
     val paramTypes: Map<String, String> = emptyMap(),
-    val variableType: String? = null
+    val variableType: String? = null,
+    val individualParamMetadata: Map<String, Map<String, String>> = emptyMap() // param name -> metadata map
 )
 
 /**

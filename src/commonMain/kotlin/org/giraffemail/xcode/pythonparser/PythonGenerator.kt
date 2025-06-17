@@ -30,16 +30,22 @@ class PythonGenerator : AbstractAstGenerator() {
         val body = node.body.joinToString("\n") { "    " + generateStatement(it) }
         
         // Create metadata comment if TypeScript metadata exists
-        val metadataComment = if (node.metadata != null) {
-            val returnType = node.metadata["returnType"] as? String
-            val paramTypes = node.metadata["paramTypes"] as? Map<String, String>
+        val metadataComment = if (node.metadata != null || node.args.any { it.metadata != null }) {
+            val returnType = node.metadata?.get("returnType") as? String
+            val paramTypes = node.metadata?.get("paramTypes") as? Map<String, String> ?: emptyMap()
             
-            if (returnType != null || !paramTypes.isNullOrEmpty()) {
+            // Collect individual parameter metadata
+            val individualParamMetadata = node.args.associate { param ->
+                param.id to (param.metadata?.mapValues { it.value.toString() } ?: emptyMap())
+            }.filterValues { it.isNotEmpty() }
+            
+            if (returnType != null || paramTypes.isNotEmpty() || individualParamMetadata.isNotEmpty()) {
                 val metadata = TypescriptMetadata(
                     returnType = returnType,
-                    paramTypes = paramTypes ?: emptyMap()
+                    paramTypes = paramTypes,
+                    individualParamMetadata = individualParamMetadata
                 )
-                " " + MetadataSerializer.createMetadataComment(metadata, "python")
+                "\n" + MetadataSerializer.createMetadataComment(metadata, "python")
             } else ""
         } else ""
         
@@ -57,7 +63,7 @@ class PythonGenerator : AbstractAstGenerator() {
         val metadataComment = if (node.metadata?.get("variableType") != null) {
             val variableType = node.metadata["variableType"] as String
             val metadata = TypescriptMetadata(variableType = variableType)
-            " " + MetadataSerializer.createMetadataComment(metadata, "python")
+            "\n" + MetadataSerializer.createMetadataComment(metadata, "python")
         } else ""
         
         return "$targetName = $valueExpr$metadataComment"

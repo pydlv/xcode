@@ -36,9 +36,10 @@ class TranspilationTest {
 
     /**
      * Test round-trip transpilation for a given AST through all language pairs.
-     * Verifies that AST structure is preserved, and metadata is preserved when possible.
+     * Verifies that AST structure and metadata are preserved through all languages.
      */
-    private fun testAstRoundTrip(testName: String, originalAst: AstNode, expectMetadataPreservation: Boolean = false) {
+    private fun testAstRoundTrip(testName: String, originalAst: AstNode) {
+        val expectMetadataPreservation = hasMetadata(originalAst)
         println("\\n=== Testing AST Round-Trip for '$testName' ===")
         println("Original AST: $originalAst")
 
@@ -56,15 +57,14 @@ class TranspilationTest {
                     // Step 2: Parse back to AST to verify generation didn't lose information
                     val parsedFromSource = fromLang.parseFn(sourceCode)
                     
-                    // For metadata preservation, we need to be more flexible
-                    if (expectMetadataPreservation && fromLang.name in listOf("TypeScript", "JavaScript")) {
-                        // These languages should preserve metadata
+                    // All languages should preserve metadata through comment serialization
+                    if (expectMetadataPreservation) {
                         assertEquals(
                             originalAst, parsedFromSource,
                             "AST changed after ${fromLang.name} generation/parsing round-trip"
                         )
                     } else {
-                        // For other languages, compare structure but allow metadata loss
+                        // For cases where metadata preservation is not expected
                         assertEquals(
                             stripMetadata(originalAst), stripMetadata(parsedFromSource),
                             "AST structure changed after ${fromLang.name} generation/parsing round-trip"
@@ -85,11 +85,9 @@ class TranspilationTest {
                     // Step 6: Parse final code and verify AST preservation
                     val finalAst = fromLang.parseFn(finalCode)
                     
-                    // Compare structure, allowing for metadata differences based on language capabilities
-                    if (expectMetadataPreservation && 
-                        fromLang.name in listOf("TypeScript", "JavaScript") &&
-                        toLang.name in listOf("TypeScript", "JavaScript")) {
-                        // Both languages support metadata, so expect full preservation
+                    // Compare AST preservation through transpilation
+                    if (expectMetadataPreservation) {
+                        // All languages should preserve metadata through comment serialization
                         assertEquals(
                             originalAst, finalAst,
                             "AST not preserved in ${fromLang.name} -> ${toLang.name} -> ${fromLang.name} round-trip"
@@ -179,9 +177,53 @@ class TranspilationTest {
     }
 
     /**
+     * Check if an AST node has any metadata recursively.
+     */
+    private fun hasMetadata(node: AstNode): Boolean {
+        return when (node) {
+            is ModuleNode -> {
+                node.metadata != null || node.body.any { hasMetadata(it) }
+            }
+            is FunctionDefNode -> {
+                node.metadata != null || 
+                node.args.any { hasMetadata(it) } || 
+                node.body.any { hasMetadata(it) } || 
+                node.decorator_list.any { hasMetadata(it) }
+            }
+            is NameNode -> node.metadata != null
+            is AssignNode -> {
+                node.metadata != null || hasMetadata(node.target) || hasMetadata(node.value)
+            }
+            is BinaryOpNode -> {
+                node.metadata != null || hasMetadata(node.left) || hasMetadata(node.right)
+            }
+            is ConstantNode -> node.metadata != null
+            is PrintNode -> {
+                node.metadata != null || hasMetadata(node.expression)
+            }
+            is CallStatementNode -> {
+                node.metadata != null || hasMetadata(node.call)
+            }
+            is CallNode -> {
+                node.metadata != null || hasMetadata(node.func) || node.args.any { hasMetadata(it) }
+            }
+            is IfNode -> {
+                node.metadata != null || hasMetadata(node.test) || 
+                node.body.any { hasMetadata(it) } || 
+                node.orelse.any { hasMetadata(it) }
+            }
+            is CompareNode -> {
+                node.metadata != null || hasMetadata(node.left) || hasMetadata(node.right)
+            }
+            else -> false
+        }
+    }
+
+    /**
      * Test sequential transpilation through all languages in a chain.
      */
-    private fun testSequentialTranspilation(testName: String, originalAst: AstNode, expectMetadataPreservation: Boolean = false) {
+    private fun testSequentialTranspilation(testName: String, originalAst: AstNode) {
+        val expectMetadataPreservation = hasMetadata(originalAst)
         println("\\n=== Testing Sequential Transpilation for '$testName' ===")
         println("Original AST: $originalAst")
 
@@ -214,8 +256,8 @@ class TranspilationTest {
                     // Parse to verify AST preservation
                     val parsedAst = currentLang.parseFn(code)
                     
-                    // Compare based on metadata preservation expectations
-                    if (expectMetadataPreservation && currentLang.name in listOf("TypeScript", "JavaScript")) {
+                    // All languages should preserve metadata through comment serialization
+                    if (expectMetadataPreservation) {
                         assertEquals(
                             currentAst, parsedAst,
                             "AST changed during ${currentLang.name} generation/parsing at step ${i + 1}"
@@ -232,11 +274,18 @@ class TranspilationTest {
                     currentAst = nextLang.parseFn(nextCode)
                 }
 
-                // Verify we got back to the original AST (structure at minimum)
-                assertEquals(
-                    stripMetadata(originalAst), stripMetadata(currentAst),
-                    "AST structure not preserved through sequence: $sequenceNames -> ${sequence.first().name}"
-                )
+                // Verify we got back to the original AST including metadata
+                if (expectMetadataPreservation) {
+                    assertEquals(
+                        originalAst, currentAst,
+                        "AST not preserved through sequence: $sequenceNames -> ${sequence.first().name}"
+                    )
+                } else {
+                    assertEquals(
+                        stripMetadata(originalAst), stripMetadata(currentAst),
+                        "AST structure not preserved through sequence: $sequenceNames -> ${sequence.first().name}"
+                    )
+                }
 
                 println("✓ Sequential transpilation successful")
 
@@ -410,5 +459,53 @@ class TranspilationTest {
         assertEquals(functionWithMetadataAst, finalTsParsed, "Metadata should be preserved through JS round-trip")
 
         println("✓ TypeScript metadata preservation through JavaScript successful")
+    }
+
+    @Test
+    fun `test maximal metadata preservation through all languages`() {
+        // Define AST with maximum TypeScript metadata that should be preserved
+        val maximalMetadataAst = ModuleNode(
+            body = listOf(
+                FunctionDefNode(
+                    name = "processData",
+                    args = listOf(
+                        NameNode(id = "input", ctx = Param, metadata = mapOf("type" to "string")),
+                        NameNode(id = "count", ctx = Param, metadata = mapOf("type" to "number"))
+                    ),
+                    body = listOf(
+                        AssignNode(
+                            target = NameNode(id = "result", ctx = Store),
+                            value = BinaryOpNode(
+                                left = NameNode(id = "input", ctx = Load),
+                                op = "+",
+                                right = NameNode(id = "count", ctx = Load)
+                            ),
+                            metadata = mapOf("variableType" to "string")
+                        ),
+                        PrintNode(
+                            expression = NameNode(id = "result", ctx = Load)
+                        )
+                    ),
+                    decorator_list = emptyList(),
+                    metadata = mapOf(
+                        "returnType" to "void",
+                        "paramTypes" to mapOf("input" to "string", "count" to "number")
+                    )
+                ),
+                CallStatementNode(
+                    call = CallNode(
+                        func = NameNode(id = "processData", ctx = Load),
+                        args = listOf(
+                            ConstantNode("hello"),
+                            ConstantNode(42)
+                        ),
+                        keywords = emptyList()
+                    )
+                )
+            )
+        )
+
+        testAstRoundTrip("Maximal Metadata Preservation", maximalMetadataAst)
+        testSequentialTranspilation("Maximal Metadata Preservation", maximalMetadataAst)
     }
 }
