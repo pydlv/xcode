@@ -1,0 +1,40 @@
+name: "PR Tests"
+
+# Run tests on pull requests to ensure all tests are passing
+on:
+  pull_request:
+    # Run on all PRs except when only documentation files are changed
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  # Also allow manual triggering for testing
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK and Gradle cache
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build project and run tests
+        run: ./gradlew nativeLinuxTest
+        
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: build/test-results/
+          retention-days: 30
