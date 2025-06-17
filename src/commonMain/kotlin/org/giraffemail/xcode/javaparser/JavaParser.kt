@@ -35,6 +35,115 @@ object JavaParser : AbstractAntlrParser<JavaLexer, AntlrJavaParser, AntlrJavaPar
         return "Java"
     }
 
+    override fun postprocessAst(ast: AstNode): AstNode {
+        return injectMetadataIntoAst(ast)
+    }
+    
+    override fun preprocessCode(code: String): String {
+        // Extract metadata comments and store them for processing
+        return extractMetadataFromCode(code)
+    }
+    
+    private val metadataQueue = mutableListOf<LanguageMetadata>()
+    
+    private fun extractMetadataFromCode(code: String): String {
+        metadataQueue.clear()
+        val lines = code.split('\n')
+        val cleanedLines = mutableListOf<String>()
+        
+        for (line in lines) {
+            if (line.contains("__META__:")) {
+                // Extract metadata and add to queue
+                MetadataSerializer.extractMetadataFromComment(line)?.let { metadata ->
+                    metadataQueue.add(metadata)
+                }
+                // Remove the metadata comment line from code to be parsed
+                val cleanedLine = line.replace(Regex("//.*__META__:.*"), "").trim()
+                if (cleanedLine.isNotEmpty()) {
+                    cleanedLines.add(cleanedLine)
+                }
+            } else {
+                cleanedLines.add(line)
+            }
+        }
+        
+        return cleanedLines.joinToString("\n")
+    }
+    
+    private fun injectMetadataIntoAst(ast: AstNode): AstNode {
+        // Instead of using index, match metadata by type to appropriate nodes
+        val functionMetadata = metadataQueue.filter { it.returnType != null || it.paramTypes.isNotEmpty() }
+        val assignmentMetadata = metadataQueue.filter { it.variableType != null }
+        
+        var functionMetadataIndex = 0
+        var assignmentMetadataIndex = 0
+        
+        fun injectIntoNode(node: AstNode): AstNode {
+            return when (node) {
+                is ModuleNode -> {
+                    val processedBody = node.body.map { stmt ->
+                        injectIntoNode(stmt) as StatementNode
+                    }
+                    node.copy(body = processedBody)
+                }
+                is FunctionDefNode -> {
+                    if (functionMetadataIndex < functionMetadata.size) {
+                        val metadata = functionMetadata[functionMetadataIndex++]
+                        val metadataMap = mutableMapOf<String, Any>()
+                        if (metadata.returnType != null) {
+                            metadataMap["returnType"] = metadata.returnType
+                        }
+                        if (metadata.paramTypes.isNotEmpty()) {
+                            metadataMap["paramTypes"] = metadata.paramTypes
+                        }
+                        
+                        // Restore individual parameter metadata
+                        val updatedArgs = node.args.map { param ->
+                            val paramMetadata = metadata.individualParamMetadata[param.id]
+                            if (paramMetadata != null && paramMetadata.isNotEmpty()) {
+                                param.copy(metadata = paramMetadata)
+                            } else {
+                                param
+                            }
+                        }
+                        
+                        // Process function body recursively
+                        val updatedBody = node.body.map { stmt ->
+                            injectIntoNode(stmt) as StatementNode
+                        }
+                        
+                        node.copy(
+                            args = updatedArgs,
+                            body = updatedBody,
+                            metadata = metadataMap.ifEmpty { null }
+                        )
+                    } else {
+                        // No function metadata, but still need to process body
+                        val updatedBody = node.body.map { stmt ->
+                            injectIntoNode(stmt) as StatementNode
+                        }
+                        node.copy(body = updatedBody)
+                    }
+                }
+                is AssignNode -> {
+                    if (assignmentMetadataIndex < assignmentMetadata.size) {
+                        val metadata = assignmentMetadata[assignmentMetadataIndex++]
+                        if (metadata.variableType != null) {
+                            node.copy(metadata = mapOf("variableType" to metadata.variableType))
+                        } else {
+                            node
+                        }
+                    } else {
+                        node
+                    }
+                }
+                else -> node
+            }
+        }
+        
+        return injectIntoNode(ast)
+    }
+
     // The main parse method is now inherited from AbstractAntlrParser.
     // The original parse method's content is now handled by the abstract class
     // and the overrides above.

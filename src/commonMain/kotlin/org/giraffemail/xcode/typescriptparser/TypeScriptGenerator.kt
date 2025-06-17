@@ -1,9 +1,9 @@
-package org.giraffemail.xcode.javascriptparser
+package org.giraffemail.xcode.typescriptparser
 
 import org.giraffemail.xcode.ast.*
 import org.giraffemail.xcode.common.AbstractAstGenerator
 
-class JavaScriptGenerator : AbstractAstGenerator() {
+class TypeScriptGenerator : AbstractAstGenerator() {
 
     override fun getStatementSeparator(): String = "\n"
 
@@ -24,35 +24,40 @@ class JavaScriptGenerator : AbstractAstGenerator() {
 
     override fun visitFunctionDefNode(node: FunctionDefNode): String {
         val funcName = node.name
-        val params = node.args.joinToString(", ") { it.id } // Assuming args are NameNodes for params
+        
+        // Generate parameters with type annotations from metadata
+        val params = node.args.joinToString(", ") { param ->
+            val paramType = node.metadata?.get("paramTypes")?.let { types ->
+                (types as? Map<*, *>)?.get(param.id) as? String
+            }
+            if (paramType != null) {
+                "${param.id}: $paramType"
+            } else {
+                param.id
+            }
+        }
+        
+        // Generate return type annotation from metadata
+        val returnType = node.metadata?.get("returnType") as? String
+        val returnTypeAnnotation = if (returnType != null) ": $returnType" else ""
+        
         // Indent statements within the function body
         val body = node.body.joinToString("\n") { "    " + generateStatement(it) }
         
-        // Create metadata comment if TypeScript metadata exists
-        val metadataComment = if (node.metadata != null || node.args.any { it.metadata != null }) {
-            val returnType = node.metadata?.get("returnType") as? String
-            val paramTypes = node.metadata?.get("paramTypes") as? Map<String, String> ?: emptyMap()
-            
-            // Collect individual parameter metadata
-            val individualParamMetadata = node.args.associate { param ->
-                param.id to (param.metadata?.mapValues { it.value.toString() } ?: emptyMap())
-            }.filterValues { it.isNotEmpty() }
-            
-            if (returnType != null || paramTypes.isNotEmpty() || individualParamMetadata.isNotEmpty()) {
-                val metadata = LanguageMetadata(
-                    returnType = returnType,
-                    paramTypes = paramTypes,
-                    individualParamMetadata = individualParamMetadata
-                )
-                " " + MetadataSerializer.createMetadataComment(metadata, "javascript")
+        val functionDeclaration = "function $funcName($params)$returnTypeAnnotation {\n$body\n}"
+        
+        // Create metadata comment for non-TypeScript languages that need preservation
+        val metadataComment = if (node.metadata != null) {
+            val metadata = LanguageMetadata(
+                returnType = returnType,
+                paramTypes = (node.metadata["paramTypes"] as? Map<String, String>) ?: emptyMap()
+            )
+            if (metadata.returnType != null || metadata.paramTypes.isNotEmpty()) {
+                "\n" + MetadataSerializer.createMetadataComment(metadata, "typescript")
             } else ""
         } else ""
         
-        return if (metadataComment.isNotEmpty()) {
-            "$metadataComment\nfunction $funcName($params) {\n$body\n}"
-        } else {
-            "function $funcName($params) {\n$body\n}"
-        }
+        return functionDeclaration + metadataComment
     }
 
     override fun visitAssignNode(node: AssignNode): String {
@@ -61,14 +66,18 @@ class JavaScriptGenerator : AbstractAstGenerator() {
         val targetName = node.target.id // Assuming node.target is of type NameNode
         val valueExpr = generateExpression(node.value)
         
-        // Create metadata comment if TypeScript variable type exists
-        val metadataComment = if (node.metadata?.get("variableType") != null) {
-            val variableType = node.metadata["variableType"] as String
+        // Generate type annotation from metadata
+        val variableType = node.metadata?.get("variableType") as? String
+        val typeAnnotation = if (variableType != null) ": $variableType" else ""
+        
+        // Create metadata comment for non-TypeScript languages that need preservation
+        val metadataComment = if (variableType != null) {
             val metadata = LanguageMetadata(variableType = variableType)
-            "\n" + MetadataSerializer.createMetadataComment(metadata, "javascript")
+            " " + MetadataSerializer.createMetadataComment(metadata, "typescript")
         } else ""
         
-        return "let $targetName = $valueExpr${getStatementTerminator()}$metadataComment"
+        // Using 'let' for assignments, could be 'var' or 'const' based on further requirements
+        return "let $targetName$typeAnnotation = $valueExpr${getStatementTerminator()}$metadataComment"
     }
 
     override fun visitCallStatementNode(node: CallStatementNode): String {
@@ -92,21 +101,33 @@ class JavaScriptGenerator : AbstractAstGenerator() {
         return "$objStr.$propStr"
     }
 
+    override fun visitIfNode(node: IfNode): String {
+        val condition = generateExpression(node.test)
+        val ifBody = node.body.joinToString("\n") { "    " + generateStatement(it) }
+        
+        return if (node.orelse.isNotEmpty()) {
+            val elseBody = node.orelse.joinToString("\n") { "    " + generateStatement(it) }
+            "if ($condition) {\n$ifBody\n} else {\n$elseBody\n}"
+        } else {
+            "if ($condition) {\n$ifBody\n}"
+        }
+    }
+
     override fun visitCompareNode(node: CompareNode): String {
         val leftStr = generateExpression(node.left)
         val rightStr = generateExpression(node.right)
-        // Convert == to === for JavaScript strict equality
-        val jsOp = when (node.op) {
+        // Convert == to === for TypeScript strict equality
+        val tsOp = when (node.op) {
             "==" -> "==="
             "!=" -> "!=="
             else -> node.op
         }
-        return "$leftStr $jsOp $rightStr"
+        return "$leftStr $tsOp $rightStr"
     }
 
     // visitConstantNode will use the base implementation which calls formatStringLiteral for strings.
     // Numbers and booleans will be formatted by the base class's visitConstantNode.
-    // If JS needs specific boolean (true/false) or number formatting different from base, override visitConstantNode.
+    // If TypeScript needs specific boolean (true/false) or number formatting different from base, override visitConstantNode.
 
     // visitNameNode, visitBinaryOpNode, visitUnknownNode, visitExprNode, visitModuleNode
     // will use the open implementations from AbstractAstGenerator.

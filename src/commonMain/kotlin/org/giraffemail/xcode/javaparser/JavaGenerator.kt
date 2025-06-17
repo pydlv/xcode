@@ -59,7 +59,32 @@ class JavaGenerator : AbstractAstGenerator() {
         val funcName = node.name
         val params = node.args.joinToString(", ") { "Object ${it.id}" } // Assuming args are NameNodes, defaulting type to Object
         val bodyStatements = node.body.joinToString("\n") { "        " + generateStatement(it) }
-        return "public static void $funcName($params) {\n$bodyStatements\n    }"
+        
+        // Create metadata comment if TypeScript metadata exists
+        val metadataComment = if (node.metadata != null || node.args.any { it.metadata != null }) {
+            val returnType = node.metadata?.get("returnType") as? String
+            val paramTypes = node.metadata?.get("paramTypes") as? Map<String, String> ?: emptyMap()
+            
+            // Collect individual parameter metadata
+            val individualParamMetadata = node.args.associate { param ->
+                param.id to (param.metadata?.mapValues { it.value.toString() } ?: emptyMap())
+            }.filterValues { it.isNotEmpty() }
+            
+            if (returnType != null || paramTypes.isNotEmpty() || individualParamMetadata.isNotEmpty()) {
+                val metadata = LanguageMetadata(
+                    returnType = returnType,
+                    paramTypes = paramTypes,
+                    individualParamMetadata = individualParamMetadata
+                )
+                " " + MetadataSerializer.createMetadataComment(metadata, "java")
+            } else ""
+        } else ""
+        
+        return if (metadataComment.isNotEmpty()) {
+            "$metadataComment\npublic static void $funcName($params) {\n$bodyStatements\n    }"
+        } else {
+            "public static void $funcName($params) {\n$bodyStatements\n    }"
+        }
         // For a more complete solution, return type and parameter types are needed from AST.
         // throw NotImplementedError("Function definition generation for Java needs more AST details (return type, param types).")
     }
@@ -70,9 +95,17 @@ class JavaGenerator : AbstractAstGenerator() {
         // This is a simplified version. Real Java needs type information.
         val targetName = node.target.id // Assuming node.target is of type NameNode
         val valueExpr = generateExpression(node.value)
+        
+        // Create metadata comment if TypeScript variable type exists
+        val metadataComment = if (node.metadata?.get("variableType") != null) {
+            val variableType = node.metadata["variableType"] as String
+            val metadata = LanguageMetadata(variableType = variableType)
+            "\n" + MetadataSerializer.createMetadataComment(metadata, "java")
+        } else ""
+        
         // Simplified: Assumes variable is already declared or type inference is not handled.
         // A real generator would need to manage variable scopes and declarations.
-        return "$targetName = $valueExpr${getStatementTerminator()}"
+        return "$targetName = $valueExpr${getStatementTerminator()}$metadataComment"
         // throw NotImplementedError("Assignment generation for Java needs type information and declaration management.")
     }
 

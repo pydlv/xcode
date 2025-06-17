@@ -42,7 +42,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Install KMP dependencies
-        run: ./gradlew build --refresh-dependencies
+        run: ./gradlew dependencies --refresh-dependencies
         # This command will build the project and download/cache dependencies.
         # Alternatively, you could use a more specific task like `./gradlew resolveDependencies`
         # or `./gradlew :shared:dependencies` if you have a specific module and task.

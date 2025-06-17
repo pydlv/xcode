@@ -28,7 +28,28 @@ class PythonGenerator : AbstractAstGenerator() {
         val params = node.args.joinToString(", ") { it.id } // Assuming args are NameNodes for params
         // Each statement in the body needs to be indented.
         val body = node.body.joinToString("\n") { "    " + generateStatement(it) }
-        return "def $funcName($params):\n$body"
+        
+        // Create metadata comment if TypeScript metadata exists
+        val metadataComment = if (node.metadata != null || node.args.any { it.metadata != null }) {
+            val returnType = node.metadata?.get("returnType") as? String
+            val paramTypes = node.metadata?.get("paramTypes") as? Map<String, String> ?: emptyMap()
+            
+            // Collect individual parameter metadata
+            val individualParamMetadata = node.args.associate { param ->
+                param.id to (param.metadata?.mapValues { it.value.toString() } ?: emptyMap())
+            }.filterValues { it.isNotEmpty() }
+            
+            if (returnType != null || paramTypes.isNotEmpty() || individualParamMetadata.isNotEmpty()) {
+                val metadata = LanguageMetadata(
+                    returnType = returnType,
+                    paramTypes = paramTypes,
+                    individualParamMetadata = individualParamMetadata
+                )
+                "\n" + MetadataSerializer.createMetadataComment(metadata, "python")
+            } else ""
+        } else ""
+        
+        return "def $funcName($params):$metadataComment\n$body"
     }
 
     override fun visitAssignNode(node: AssignNode): String {
@@ -37,7 +58,15 @@ class PythonGenerator : AbstractAstGenerator() {
         // Otherwise, the original if/else structure might be needed if target can be other ExpressionNode types.
         val targetName = node.target.id // Assuming node.target is of type NameNode
         val valueExpr = generateExpression(node.value)
-        return "$targetName = $valueExpr"
+        
+        // Create metadata comment if TypeScript variable type exists
+        val metadataComment = if (node.metadata?.get("variableType") != null) {
+            val variableType = node.metadata["variableType"] as String
+            val metadata = LanguageMetadata(variableType = variableType)
+            "\n" + MetadataSerializer.createMetadataComment(metadata, "python")
+        } else ""
+        
+        return "$targetName = $valueExpr$metadataComment"
     }
 
     override fun visitCallStatementNode(node: CallStatementNode): String {

@@ -91,7 +91,4 @@ ASSIGN: '=';  // Added
 ADD : '+';
 
 // IDENTIFIER, NUMBER, STRING_LITERAL are expected to be in CommonLexerRules.g4
-// Whitespace and comments might also be in CommonLexerRules.g4 or need to be defined.
-// For simplicity, assuming IDENTIFIER is defined in CommonLexerRules as [a-zA-Z_][a-zA-Z_0-9]*
-// and whitespace is handled (e.g., skipped).
-WS: [ \\t\\r\\n]+ -> skip; // Common whitespace skipping rule, if not in CommonLexerRules
+// Whitespace and comments are defined in CommonLexerRules.g4
