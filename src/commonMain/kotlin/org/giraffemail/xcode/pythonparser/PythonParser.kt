@@ -72,7 +72,12 @@ object PythonParser : AbstractAntlrParser<PythonLexer, AntlrPythonParser, AntlrP
     }
     
     private fun injectMetadataIntoAst(ast: AstNode): AstNode {
-        var metadataIndex = 0
+        // Instead of using index, match metadata by type to appropriate nodes
+        val functionMetadata = metadataQueue.filter { it.returnType != null || it.paramTypes.isNotEmpty() }
+        val assignmentMetadata = metadataQueue.filter { it.variableType != null }
+        
+        var functionMetadataIndex = 0
+        var assignmentMetadataIndex = 0
         
         fun injectIntoNode(node: AstNode): AstNode {
             return when (node) {
@@ -83,8 +88,8 @@ object PythonParser : AbstractAntlrParser<PythonLexer, AntlrPythonParser, AntlrP
                     node.copy(body = processedBody)
                 }
                 is FunctionDefNode -> {
-                    if (metadataIndex < metadataQueue.size) {
-                        val metadata = metadataQueue[metadataIndex++]
+                    if (functionMetadataIndex < functionMetadata.size) {
+                        val metadata = functionMetadata[functionMetadataIndex++]
                         val metadataMap = mutableMapOf<String, Any>()
                         if (metadata.returnType != null) {
                             metadataMap["returnType"] = metadata.returnType
@@ -122,8 +127,8 @@ object PythonParser : AbstractAntlrParser<PythonLexer, AntlrPythonParser, AntlrP
                     }
                 }
                 is AssignNode -> {
-                    if (metadataIndex < metadataQueue.size) {
-                        val metadata = metadataQueue[metadataIndex++]
+                    if (assignmentMetadataIndex < assignmentMetadata.size) {
+                        val metadata = assignmentMetadata[assignmentMetadataIndex++]
                         if (metadata.variableType != null) {
                             node.copy(metadata = mapOf("variableType" to metadata.variableType))
                         } else {
