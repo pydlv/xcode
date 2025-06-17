@@ -13,6 +13,74 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
         }
     }
 
+    /**
+     * Generate code and metadata as separate parts
+     */
+    open fun generateWithMetadata(ast: AstNode): CodeWithMetadata {
+        // Collect metadata from the AST
+        val metadata = collectMetadataFromAst(ast)
+        
+        // Generate code without metadata comments
+        val code = generateWithoutMetadataComments(ast)
+        
+        // Return both parts
+        return MetadataSerializer.createCodeWithMetadata(code, metadata)
+    }
+    
+    /**
+     * Generate code without metadata comments (for file-based metadata)
+     */
+    protected open fun generateWithoutMetadataComments(ast: AstNode): String {
+        // Default implementation just calls normal generate
+        // Subclasses can override to remove metadata comment generation
+        return generate(ast)
+    }
+    
+    /**
+     * Collect all metadata from AST nodes recursively
+     */
+    protected open fun collectMetadataFromAst(ast: AstNode): List<LanguageMetadata> {
+        val metadata = mutableListOf<LanguageMetadata>()
+        
+        fun collectFromNode(node: AstNode) {
+            when (node) {
+                is ModuleNode -> {
+                    node.body.forEach { collectFromNode(it) }
+                }
+                is FunctionDefNode -> {
+                    // Extract function metadata
+                    val (returnType, paramTypes, individualParamMetadata) = extractFunctionMetadata(node)
+                    if (returnType != null || paramTypes.isNotEmpty() || individualParamMetadata.isNotEmpty()) {
+                        metadata.add(LanguageMetadata(
+                            returnType = returnType,
+                            paramTypes = paramTypes,
+                            individualParamMetadata = individualParamMetadata
+                        ))
+                    }
+                    node.body.forEach { collectFromNode(it) }
+                }
+                is AssignNode -> {
+                    // Extract assignment metadata
+                    if (node.metadata?.get("variableType") != null) {
+                        val variableType = node.metadata["variableType"] as String
+                        metadata.add(LanguageMetadata(variableType = variableType))
+                    }
+                }
+                is IfNode -> {
+                    // Recursively collect from if node body and else body
+                    node.body.forEach { collectFromNode(it) }
+                    node.orelse.forEach { collectFromNode(it) }
+                }
+                else -> {
+                    // For other node types, no metadata to collect
+                }
+            }
+        }
+        
+        collectFromNode(ast)
+        return metadata
+    }
+
     // Dispatch for statement-level nodes
     open fun generateStatement(statement: StatementNode): String {
         return when (statement) {

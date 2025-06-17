@@ -50,6 +50,27 @@ object JavaParser : AbstractAntlrParser<JavaLexer, AntlrJavaParser, AntlrJavaPar
         return ParserUtils.extractMetadataFromCode(code, metadataQueue)
     }
     
+    /**
+     * Parse method that supports parts-based metadata
+     */
+    fun parseWithMetadata(code: String, metadataPart: String): AstNode {
+        return try {
+            // Use parts-based metadata
+            val processedCode = ParserUtils.extractMetadataFromPart(code, metadataPart, metadataQueue)
+            
+            val lexer = createLexer(org.antlr.v4.kotlinruntime.CharStreams.fromString(processedCode))
+            val tokens = org.antlr.v4.kotlinruntime.CommonTokenStream(lexer)
+            val parser = createAntlrParser(tokens)
+            val parseTree = invokeEntryPoint(parser)
+            val visitor = createAstBuilder()
+            val ast = parseTree.accept(visitor)
+            postprocessAst(ast)
+        } catch (e: Exception) {
+            // Fallback to comment-based parsing if parts-based fails
+            parse(code)
+        }
+    }
+    
     private fun injectMetadataIntoAst(ast: AstNode): AstNode {
         return ParserUtils.injectMetadataIntoAst(ast, metadataQueue)
     }

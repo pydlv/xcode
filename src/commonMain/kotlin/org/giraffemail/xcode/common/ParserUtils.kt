@@ -60,6 +60,21 @@ object ParserUtils {
     }
     
     /**
+     * Extracts metadata from a metadata part and populates the metadata queue.
+     * This is the new parts-based metadata extraction method.
+     * 
+     * @param metadataPart The metadata part (JSON string)
+     * @param metadataQueue The queue to populate with extracted metadata
+     * @return The original source code (unchanged since metadata is separate)
+     */
+    fun extractMetadataFromPart(code: String, metadataPart: String, metadataQueue: MutableList<LanguageMetadata>): String {
+        metadataQueue.clear()
+        val metadata = MetadataSerializer.deserializeMetadataList(metadataPart)
+        metadataQueue.addAll(metadata)
+        return code // Return code unchanged since metadata is separate
+    }
+    
+    /**
      * Filters metadata queue by function-related metadata.
      * Common pattern used across all parsers.
      */

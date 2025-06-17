@@ -55,6 +55,27 @@ object PythonParser : AbstractAntlrParser<PythonLexer, AntlrPythonParser, AntlrP
         return ParserUtils.injectMetadataIntoAst(ast, metadataQueue)
     }
 
+    /**
+     * Parse method that supports parts-based metadata
+     */
+    fun parseWithMetadata(code: String, metadataPart: String): AstNode {
+        return try {
+            // Use parts-based metadata
+            val processedCode = ParserUtils.extractMetadataFromPart(code, metadataPart, metadataQueue)
+            
+            val lexer = createLexer(org.antlr.v4.kotlinruntime.CharStreams.fromString(processedCode))
+            val tokens = org.antlr.v4.kotlinruntime.CommonTokenStream(lexer)
+            val parser = createAntlrParser(tokens)
+            val parseTree = invokeEntryPoint(parser)
+            val visitor = createAstBuilder()
+            val ast = parseTree.accept(visitor)
+            postprocessAst(ast)
+        } catch (e: Exception) {
+            // Fallback to comment-based parsing if parts-based fails
+            parse(code)
+        }
+    }
+
     // The main parse method is now inherited from AbstractAntlrParser.
     // The original parse method's content, including the "trigger_error" check,
     // try-catch block, and preprocessing, is now handled by the abstract class
