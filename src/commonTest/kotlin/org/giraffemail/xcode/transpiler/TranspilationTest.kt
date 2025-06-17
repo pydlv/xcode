@@ -462,6 +462,110 @@ class TranspilationTest {
     }
 
     @Test
+    fun `test simple assignment metadata preservation`() {
+        // Define AST with just assignment metadata to debug the issue
+        val assignmentAst = ModuleNode(
+            body = listOf(
+                AssignNode(
+                    target = NameNode(id = "result", ctx = Store),
+                    value = ConstantNode("hello"),
+                    metadata = mapOf("variableType" to "string")
+                ),
+                PrintNode(
+                    expression = NameNode(id = "result", ctx = Load)
+                )
+            )
+        )
+
+        testAstRoundTrip("Simple Assignment Metadata", assignmentAst)
+    }
+
+    @Test
+    fun `test simple function metadata preservation`() {
+        // Define AST with just function metadata to debug the issue
+        val functionAst = ModuleNode(
+            body = listOf(
+                FunctionDefNode(
+                    name = "processData",
+                    args = listOf(
+                        NameNode(id = "input", ctx = Param, metadata = mapOf("type" to "string")),
+                        NameNode(id = "count", ctx = Param, metadata = mapOf("type" to "number"))
+                    ),
+                    body = listOf(
+                        PrintNode(
+                            expression = NameNode(id = "input", ctx = Load)
+                        )
+                    ),
+                    decorator_list = emptyList(),
+                    metadata = mapOf(
+                        "returnType" to "void",
+                        "paramTypes" to mapOf("input" to "string", "count" to "number")
+                    )
+                )
+            )
+        )
+
+        testAstRoundTrip("Simple Function Metadata", functionAst)
+    }
+
+    @Test
+    fun `test function and assignment metadata preservation`() {
+        // Define AST with both function and assignment metadata
+        val combinedAst = ModuleNode(
+            body = listOf(
+                FunctionDefNode(
+                    name = "test",
+                    args = listOf(),
+                    body = listOf(
+                        AssignNode(
+                            target = NameNode(id = "result", ctx = Store),
+                            value = ConstantNode("hello"),
+                            metadata = mapOf("variableType" to "string")
+                        )
+                    ),
+                    decorator_list = emptyList(),
+                    metadata = mapOf("returnType" to "void")
+                )
+            )
+        )
+
+        testAstRoundTrip("Function and Assignment Metadata", combinedAst)
+    }
+
+    @Test
+    fun `test javascript metadata extraction debug`() {
+        // Test the specific JavaScript code that's failing
+        val jsCode = """function test() {
+    let result = 'hello'; // __TS_META__: {"variableType":"string"}
+} // __TS_META__: {"returnType":"void"}"""
+
+        println("Testing JavaScript code: $jsCode")
+        val parsedAst = JavaScriptParser.parse(jsCode)
+        println("Parsed AST: $parsedAst")
+        
+        // Expected: function should have returnType metadata, assignment should have variableType metadata
+        val expectedAst = ModuleNode(
+            body = listOf(
+                FunctionDefNode(
+                    name = "test",
+                    args = listOf(),
+                    body = listOf(
+                        AssignNode(
+                            target = NameNode(id = "result", ctx = Store),
+                            value = ConstantNode("hello"),
+                            metadata = mapOf("variableType" to "string")
+                        )
+                    ),
+                    decorator_list = emptyList(),
+                    metadata = mapOf("returnType" to "void")
+                )
+            )
+        )
+        
+        assertEquals(expectedAst, parsedAst)
+    }
+
+    @Test
     fun `test maximal metadata preservation through all languages`() {
         // Define AST with maximum TypeScript metadata that should be preserved
         val maximalMetadataAst = ModuleNode(

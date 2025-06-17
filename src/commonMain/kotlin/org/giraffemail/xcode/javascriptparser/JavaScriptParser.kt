@@ -98,12 +98,22 @@ object JavaScriptParser : AbstractAntlrParser<JavaScriptLexer, AntlrJavaScriptPa
                             }
                         }
                         
+                        // Process function body recursively
+                        val updatedBody = node.body.map { stmt ->
+                            injectIntoNode(stmt) as StatementNode
+                        }
+                        
                         node.copy(
                             args = updatedArgs,
+                            body = updatedBody,
                             metadata = metadataMap.ifEmpty { null }
                         )
                     } else {
-                        node
+                        // No function metadata, but still need to process body
+                        val updatedBody = node.body.map { stmt ->
+                            injectIntoNode(stmt) as StatementNode
+                        }
+                        node.copy(body = updatedBody)
                     }
                 }
                 is AssignNode -> {
