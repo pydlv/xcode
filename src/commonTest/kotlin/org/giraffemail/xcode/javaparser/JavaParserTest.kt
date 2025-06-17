@@ -60,7 +60,7 @@ fib(0, 1);"""
             )
         )
 
-        val actualAst = JavaParser.parse(javaCode)
+        val actualAst = JavaParser.parseWithMetadata(javaCode, emptyList())
         assertEquals(expectedAst, actualAst, "AST from Java parser is not as expected for Fibonacci function.")
     }
 }

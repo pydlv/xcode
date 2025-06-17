@@ -251,7 +251,7 @@ class PartsBasedMetadataTest {
         """.trimIndent()
         
         // Parse using the regular parser (comment-based extraction removed)
-        val ast = JavaScriptParser.parse(jsCodeWithComments) as ModuleNode
+        val ast = JavaScriptParser.parseWithMetadata(jsCodeWithComments, emptyList()) as ModuleNode
         val functionDef = ast.body[0] as FunctionDefNode
         
         // Verify metadata was NOT extracted from comments (since we removed that functionality)

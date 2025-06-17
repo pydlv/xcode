@@ -25,7 +25,7 @@ class MetadataPreservationTest {
         """.trimIndent()
 
         println("Parsing TypeScript code: $tsCode")
-        val ast = TypeScriptParser.parse(tsCode) as ModuleNode
+        val ast = TypeScriptParser.parseWithMetadata(tsCode, emptyList()) as ModuleNode
         println("Generated AST: $ast")
 
         // Check that the function has metadata with type information
@@ -46,7 +46,7 @@ class MetadataPreservationTest {
         val tsCode = "let message: string = 'Hello';"
 
         println("Parsing TypeScript variable assignment: $tsCode")
-        val ast = TypeScriptParser.parse(tsCode) as ModuleNode
+        val ast = TypeScriptParser.parseWithMetadata(tsCode, emptyList()) as ModuleNode
         println("Generated AST: $ast")
 
         // Check that the assignment has metadata with type information
@@ -84,7 +84,7 @@ class MetadataPreservationTest {
         
         println("Generating TypeScript from AST with metadata...")
         val generator = TypeScriptGenerator()
-        val generatedCode = generator.generate(moduleAst)
+        val generatedCode = generator.generateWithMetadata(moduleAst).code
         println("Generated TypeScript code: $generatedCode")
         
         // Verify type annotations are included
@@ -144,7 +144,7 @@ class MetadataPreservationTest {
         
         // Step 1: Parse TypeScript to AST
         println("\n1. Parsing TypeScript to AST...")
-        val tsAst = TypeScriptParser.parse(originalTsCode) as ModuleNode
+        val tsAst = TypeScriptParser.parseWithMetadata(originalTsCode, emptyList()) as ModuleNode
         val functionDef = tsAst.body[0] as FunctionDefNode
         println("Extracted metadata: ${functionDef.metadata}")
         
@@ -171,7 +171,7 @@ class MetadataPreservationTest {
         // Step 4: Generate TypeScript from JavaScript AST (should restore type annotations)
         println("\n4. Generating TypeScript from JavaScript AST...")
         val tsGenerator = TypeScriptGenerator()
-        val finalTsCode = tsGenerator.generate(jsAst)
+        val finalTsCode = tsGenerator.generateWithMetadata(jsAst).code
         println("Final TypeScript:")
         println(finalTsCode)
         

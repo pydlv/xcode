@@ -12,7 +12,7 @@ class PythonParserTest {
     fun `test parsing specific input that triggers error - placeholder`() {
         val invalidPythonCode = "trigger_error_python" // Specific string to trigger placeholder error for Python
         try {
-            PythonParser.parse(invalidPythonCode)
+            PythonParser.parseWithMetadata(invalidPythonCode, emptyList())
             fail("Parsing 'trigger_error_python' should have thrown AstParseException (placeholder test)")
         } catch (e: AstParseException) { // Changed to AstParseException
             // Expected exception from placeholder logic
@@ -30,7 +30,7 @@ class PythonParserTest {
          // Expected AST uses common data classes (already correct from previous refactor)
          val expectedAst = ModuleNode(body = emptyList())
          try {
-             val ast = PythonParser.parse(emptyPythonCode)
+             val ast = PythonParser.parseWithMetadata(emptyPythonCode, emptyList())
              assertNotNull(ast, "AST should not be null for empty string")
              assertEquals(expectedAst, ast, "AST for empty string did not match. \\nActual: $ast\\nExpected: $expectedAst")
          } catch (e: AstParseException) { // Changed to AstParseException
@@ -52,7 +52,7 @@ class PythonParserTest {
         )
 
         try {
-            val ast = PythonParser.parse(pythonCode)
+            val ast = PythonParser.parseWithMetadata(pythonCode, emptyList())
             assertNotNull(ast, "AST should not be null")
             assertEquals(expectedAst, ast, "AST did not match expected structure. \\nActual: $ast\\nExpected: $expectedAst")
         } catch (e: AstParseException) { // Changed to AstParseException
@@ -75,7 +75,7 @@ class PythonParserTest {
         )
 
         try {
-            val ast = PythonParser.parse(pythonCode)
+            val ast = PythonParser.parseWithMetadata(pythonCode, emptyList())
             assertNotNull(ast, "AST should not be null")
             assertEquals(expectedAst, ast, "AST did not match expected structure for arbitrary string. \nActual: $ast\nExpected: $expectedAst")
         } catch (e: AstParseException) {
@@ -100,7 +100,7 @@ class PythonParserTest {
         )
 
         try {
-            val ast = PythonParser.parse(pythonCode)
+            val ast = PythonParser.parseWithMetadata(pythonCode, emptyList())
             assertEquals(expectedAst, ast, "AST for print with addition did not match expected.")
         } catch (e: AstParseException) {
             fail("Parsing failed for print with addition: ${e.message}", e)
@@ -126,7 +126,7 @@ class PythonParserTest {
         )
 
         try {
-            val ast = PythonParser.parse(pythonCode)
+            val ast = PythonParser.parseWithMetadata(pythonCode, emptyList())
             assertEquals(expectedAst, ast, "AST for fib(0, 1) did not match expected.")
         } catch (e: AstParseException) {
             fail("Parsing failed for fib(0, 1): ${e.message}", e)

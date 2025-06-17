@@ -51,6 +51,11 @@ object JavaParser : AbstractAntlrParser<JavaLexer, AntlrJavaParser, AntlrJavaPar
      * Parse method that supports parts-based metadata
      */
     fun parseWithMetadata(code: String, metadataPart: List<LanguageMetadata>): AstNode {
+        // Specific trigger for testing error handling paths
+        if (code == "trigger_error_${getLanguageName().lowercase()}") {
+            throw AstParseException("Simulated parsing error for 'trigger_error_${getLanguageName().lowercase()}' input in ${getLanguageName()}.")
+        }
+        
         // Use parts-based metadata
         val processedCode = ParserUtils.extractMetadataFromPart(code, metadataPart, metadataQueue)
         

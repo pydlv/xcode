@@ -16,8 +16,6 @@ import kotlin.test.fail
 
 data class LanguageConfig(
     val name: String,
-    val parseFn: (String) -> AstNode,
-    val generateFn: (AstNode) -> String,
     val parseWithMetadataFn: (String, List<LanguageMetadata>) -> AstNode,
     val generateWithMetadataFn: (AstNode) -> CodeWithMetadata
 )
@@ -31,29 +29,21 @@ class TranspilationTest {
 
     private val pythonConfig = LanguageConfig(
         "Python", 
-        PythonParser::parse, 
-        { ast -> PythonGenerator().generate(ast) },
         PythonParser::parseWithMetadata,
         { ast -> PythonGenerator().generateWithMetadata(ast) }
     )
     private val javaScriptConfig = LanguageConfig(
         "JavaScript", 
-        JavaScriptParser::parse, 
-        { ast -> JavaScriptGenerator().generate(ast) },
         JavaScriptParser::parseWithMetadata,
         { ast -> JavaScriptGenerator().generateWithMetadata(ast) }
     )
     private val javaConfig = LanguageConfig(
         "Java", 
-        JavaParser::parse, 
-        { ast -> JavaGenerator().generate(ast) },
         JavaParser::parseWithMetadata,
         { ast -> JavaGenerator().generateWithMetadata(ast) }
     )
     private val typeScriptConfig = LanguageConfig(
         "TypeScript", 
-        TypeScriptParser::parse, 
-        { ast -> TypeScriptGenerator().generate(ast) },
         TypeScriptParser::parseWithMetadata,
         { ast -> TypeScriptGenerator().generateWithMetadata(ast) }
     )
