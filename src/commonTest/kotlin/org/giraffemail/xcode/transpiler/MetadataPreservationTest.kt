@@ -93,7 +93,7 @@ class MetadataPreservationTest {
     }
 
     @Test
-    fun `test JavaScript generation without metadata comments`() {
+    fun `test JavaScript generation with parts-based metadata`() {
         // Create an AST with metadata containing type information
         val functionMetadata = mapOf(
             "returnType" to "void",
@@ -113,17 +113,24 @@ class MetadataPreservationTest {
         
         println("Generating JavaScript from AST with metadata...")
         val generator = JavaScriptGenerator()
-        val generatedCode = generator.generate(moduleAst)
-        println("Generated JavaScript code: $generatedCode")
+        val codeWithMetadata = generator.generateWithMetadata(moduleAst)
+        println("Generated JavaScript code: ${codeWithMetadata.code}")
+        println("Generated metadata part: ${codeWithMetadata.metadata}")
         
-        // Verify metadata is NOT serialized into comments (since we removed that functionality)
-        assertTrue(!generatedCode.contains("__META__"))
-        assertTrue(generatedCode.contains("function greet(name)"))
-        assertTrue(generatedCode.contains("console.log('Hello')"))
+        // Verify metadata is NOT in comments but in separate part
+        assertTrue(!codeWithMetadata.code.contains("__META__"))
+        assertTrue(codeWithMetadata.code.contains("function greet(name)"))
+        assertTrue(codeWithMetadata.code.contains("console.log('Hello')"))
+        
+        // Verify metadata is in the separate part
+        assertTrue(codeWithMetadata.metadata.isNotEmpty())
+        val functionMetadataItem = codeWithMetadata.metadata.first()
+        assertEquals("void", functionMetadataItem.returnType)
+        assertEquals("string", functionMetadataItem.paramTypes["name"])
     }
 
     @Test
-    fun `test round-trip TypeScript to JavaScript to TypeScript with parts-based metadata`() {
+    fun `test round-trip TypeScript to JavaScript to TypeScript type preservation`() {
         // Original TypeScript code with type annotations
         val originalTsCode = """
             function greet(name: string): void {
@@ -141,7 +148,7 @@ class MetadataPreservationTest {
         val functionDef = tsAst.body[0] as FunctionDefNode
         println("Extracted metadata: ${functionDef.metadata}")
         
-        // Step 2: Generate JavaScript and metadata parts separately
+        // Step 2: Generate JavaScript with metadata parts separately
         println("\n2. Generating JavaScript with parts-based metadata...")
         val jsGenerator = JavaScriptGenerator()
         val jsCodeWithMetadata = jsGenerator.generateWithMetadata(tsAst)
@@ -175,4 +182,25 @@ class MetadataPreservationTest {
         println("\n=== Parts-based round-trip test completed successfully! ===")
     }
 
+    @Test
+    fun `test parts-based metadata object handling`() {
+        val metadata = LanguageMetadata(
+            returnType = "void",
+            paramTypes = mapOf("name" to "string", "age" to "number")
+        )
+        
+        println("Original metadata: $metadata")
+        
+        // Create CodeWithMetadata using object-based approach
+        val codeWithMetadata = MetadataSerializer.createCodeWithMetadata("test code", listOf(metadata))
+        println("Code with metadata: $codeWithMetadata")
+        
+        // Verify metadata is stored as objects, not strings
+        val extractedMetadata = codeWithMetadata.metadata.first()
+        assertEquals("void", extractedMetadata.returnType)
+        assertEquals("string", extractedMetadata.paramTypes["name"])
+        assertEquals("number", extractedMetadata.paramTypes["age"])
+        
+        println("✓ Parts-based metadata handling verified")
+    }
 }
