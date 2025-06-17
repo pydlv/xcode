@@ -17,7 +17,6 @@ object PythonParser : AbstractAntlrParser<PythonLexer, AntlrPythonParser, AntlrP
 
     override fun preprocessCode(code: String): String {
         // No comment-based metadata extraction, just apply indentation processing
-        metadataQueue.clear()
         return indentationHandler.processIndentation(code)
     }
 
@@ -42,36 +41,18 @@ object PythonParser : AbstractAntlrParser<PythonLexer, AntlrPythonParser, AntlrP
     }
 
     override fun postprocessAst(ast: AstNode): AstNode {
-        return injectMetadataIntoAst(ast)
+        // Base class handles metadata injection in parseWithMetadata
+        return ast
     }
     
-    private val metadataQueue = mutableListOf<LanguageMetadata>()
+    override fun postMetadataPreprocessCode(code: String): String {
+        // Apply indentation processing after metadata extraction
+        return indentationHandler.processIndentation(code)
+    }
     
-    private fun injectMetadataIntoAst(ast: AstNode): AstNode {
-        return ParserUtils.injectMetadataIntoAst(ast, metadataQueue)
-    }
-
-    /**
-     * Parse method that supports parts-based metadata
-     */
-    fun parseWithMetadata(code: String, metadataPart: List<LanguageMetadata>): AstNode {
-        // Specific trigger for testing error handling paths
-        if (code == "trigger_error_${getLanguageName().lowercase()}") {
-            throw AstParseException("Simulated parsing error for 'trigger_error_${getLanguageName().lowercase()}' input in ${getLanguageName()}.")
-        }
-        
-        // Use parts-based metadata
-        val processedCode = ParserUtils.extractMetadataFromPart(code, metadataPart, metadataQueue)
-        val codeWithIndentation = indentationHandler.processIndentation(processedCode)
-        
-        val lexer = createLexer(CharStreams.fromString(codeWithIndentation))
-        val tokens = CommonTokenStream(lexer)
-        val parser = createAntlrParser(tokens)
-        val parseTree = invokeEntryPoint(parser)
-        val visitor = createAstBuilder()
-        val ast = parseTree.accept(visitor)
-        return postprocessAst(ast)
-    }
+    // The parseWithMetadata method is now inherited from AbstractAntlrParser.
+    // The metadata injection and parsing logic is handled by the base class.
+    // The indentation processing is handled by the postMetadataPreprocessCode override.
 
     // The main parse method is now inherited from AbstractAntlrParser.
     // The original parse method's content, including the "trigger_error" check,
