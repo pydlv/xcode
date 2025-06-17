@@ -21,7 +21,7 @@ data class FunctionDefNode(
     val name: String,
     val args: List<NameNode>,
     val body: List<StatementNode>,
-    val decorator_list: List<ExpressionNode> = emptyList(),
+    val decoratorList: List<ExpressionNode> = emptyList(),
     override val metadata: Map<String, Any>? = null
 ) : StatementNode
 

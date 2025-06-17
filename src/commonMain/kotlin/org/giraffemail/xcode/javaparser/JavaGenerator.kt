@@ -62,13 +62,7 @@ class JavaGenerator : AbstractAstGenerator() {
         
         // Create metadata comment if TypeScript metadata exists
         val metadataComment = if (node.metadata != null || node.args.any { it.metadata != null }) {
-            val returnType = node.metadata?.get("returnType") as? String
-            val paramTypes = node.metadata?.get("paramTypes") as? Map<String, String> ?: emptyMap()
-            
-            // Collect individual parameter metadata
-            val individualParamMetadata = node.args.associate { param ->
-                param.id to (param.metadata?.mapValues { it.value.toString() } ?: emptyMap())
-            }.filterValues { it.isNotEmpty() }
+            val (returnType, paramTypes, individualParamMetadata) = extractFunctionMetadata(node)
             
             if (returnType != null || paramTypes.isNotEmpty() || individualParamMetadata.isNotEmpty()) {
                 val metadata = LanguageMetadata(
@@ -123,6 +117,39 @@ class JavaGenerator : AbstractAstGenerator() {
         val objStr = generateExpression(node.obj)
         val propStr = if (node.property is NameNode) node.property.id else generateExpression(node.property)
         return "$objStr.$propStr"
+    }
+
+    override fun generateWithoutMetadataComments(ast: AstNode): String {
+        // Generate Java without metadata comments
+        return when (ast) {
+            is ModuleNode -> ast.body.joinToString(separator = getStatementSeparator()) { 
+                generateStatementWithoutMetadata(it) 
+            }
+            is StatementNode -> generateStatementWithoutMetadata(ast)
+            is ExpressionNode -> generateExpression(ast)
+            else -> generate(ast) // Fallback to default generation
+        }
+    }
+    
+    private fun generateStatementWithoutMetadata(statement: StatementNode): String {
+        return when (statement) {
+            is FunctionDefNode -> visitFunctionDefNodeWithoutMetadata(statement)
+            is AssignNode -> visitAssignNodeWithoutMetadata(statement)
+            else -> generateStatement(statement)
+        }
+    }
+    
+    private fun visitFunctionDefNodeWithoutMetadata(node: FunctionDefNode): String {
+        val funcName = node.name
+        val params = node.args.joinToString(", ") { "Object ${it.id}" }
+        val bodyStatements = node.body.joinToString("\n") { "        " + generateStatementWithoutMetadata(it) }
+        return "public static void $funcName($params) {\n$bodyStatements\n    }"
+    }
+    
+    private fun visitAssignNodeWithoutMetadata(node: AssignNode): String {
+        val targetName = node.target.id
+        val valueExpr = generateExpression(node.value)
+        return "$targetName = $valueExpr${getStatementTerminator()}"
     }
 
     override fun visitCompareNode(node: CompareNode): String {

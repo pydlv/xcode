@@ -1,6 +1,7 @@
 package org.giraffemail.xcode.typescriptparser
 
 import org.giraffemail.xcode.ast.*
+import org.giraffemail.xcode.common.ParserUtils
 import org.giraffemail.xcode.generated.TypeScriptLexer
 import org.giraffemail.xcode.generated.TypeScriptParser as AntlrTypeScriptParser
 import org.antlr.v4.kotlinruntime.CharStream
@@ -29,6 +30,46 @@ object TypeScriptParser : AbstractAntlrParser<TypeScriptLexer, AntlrTypeScriptPa
 
     override fun getLanguageName(): String {
         return "TypeScript"
+    }
+
+    override fun postprocessAst(ast: AstNode): AstNode {
+        return injectMetadataIntoAst(ast)
+    }
+    
+    override fun preprocessCode(code: String): String {
+        // Extract metadata comments and store them for processing
+        return extractMetadataFromCode(code)
+    }
+    
+    private val metadataQueue = mutableListOf<LanguageMetadata>()
+    
+    private fun extractMetadataFromCode(code: String): String {
+        return ParserUtils.extractMetadataFromCode(code, metadataQueue)
+    }
+    
+    private fun injectMetadataIntoAst(ast: AstNode): AstNode {
+        return ParserUtils.injectMetadataIntoAst(ast, metadataQueue)
+    }
+
+    /**
+     * Parse method that supports parts-based metadata
+     */
+    fun parseWithMetadata(code: String, metadataPart: String): AstNode {
+        return try {
+            // Use parts-based metadata
+            val processedCode = ParserUtils.extractMetadataFromPart(code, metadataPart, metadataQueue)
+            
+            val lexer = createLexer(org.antlr.v4.kotlinruntime.CharStreams.fromString(processedCode))
+            val tokens = org.antlr.v4.kotlinruntime.CommonTokenStream(lexer)
+            val parser = createAntlrParser(tokens)
+            val parseTree = invokeEntryPoint(parser)
+            val visitor = createAstBuilder()
+            val ast = parseTree.accept(visitor)
+            postprocessAst(ast)
+        } catch (e: Exception) {
+            // Fallback to comment-based parsing if parts-based fails
+            parse(code)
+        }
     }
 
     // The main parse method is now inherited from AbstractAntlrParser.
@@ -87,7 +128,7 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
             name = functionName,
             args = params,
             body = body,
-            decorator_list = emptyList(),
+            decoratorList = emptyList(),
             metadata = functionMetadata
         )
     }
@@ -133,8 +174,7 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
 
     // Handle if statements
     override fun visitIfStatement(ctx: AntlrTypeScriptParser.IfStatementContext): AstNode {
-        val condition = visit(ctx.expression()) as? ExpressionNode
-            ?: UnknownNode("Invalid condition in if statement")
+        val condition = ParserUtils.visitAsExpressionNode(visit(ctx.expression()), "Invalid condition in if statement")
 
         // Get the if body (first functionBody)
         val ifBody = ctx.functionBody(0)?.let { visit(it) as? ModuleNode }?.body ?: emptyList()
@@ -171,21 +211,11 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
 
     override fun visitComparison(ctx: AntlrTypeScriptParser.ComparisonContext): AstNode {
         try {
-            val left = visit(ctx.getChild(0)!!) as? ExpressionNode
-                ?: UnknownNode("Invalid left expression in comparison")
-
-            val right = visit(ctx.getChild(2)!!) as? ExpressionNode
-                ?: UnknownNode("Invalid right expression in comparison")
-
-            // Get the comparison operator from the context and normalize to canonical form
+            val left = ParserUtils.visitAsExpressionNode(visit(ctx.getChild(0)!!), "Invalid left expression in comparison")
+            val right = ParserUtils.visitAsExpressionNode(visit(ctx.getChild(2)!!), "Invalid right expression in comparison")
             val rawOperator = ctx.getChild(1)!!.text
-            val canonicalOperator = when (rawOperator) {
-                "===" -> "==" // Normalize TypeScript strict equality to canonical equality
-                "!==" -> "!=" // Normalize TypeScript strict inequality to canonical inequality
-                else -> rawOperator // Keep other operators as-is
-            }
-
-            return CompareNode(left, canonicalOperator, right)
+            
+            return ParserUtils.createComparisonNode(left, rawOperator, right)
         } catch (e: Exception) {
             println("Error parsing TypeScript comparison: ${e.message}")
             return UnknownNode("Error in comparison expression")
@@ -229,7 +259,7 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
 
     // Helper method to create call nodes
     private fun createCallNode(funcName: String, argumentsCtx: AntlrTypeScriptParser.ArgumentsContext?): CallNode {
-        val funcNameNode = NameNode(id = funcName, ctx = Load)
+        val funcNameNode = ParserUtils.createFunctionNameNode(funcName)
         val args = mutableListOf<ExpressionNode>()
         argumentsCtx?.expression()?.forEach { exprCtx ->
             val arg = visit(exprCtx) as? ExpressionNode

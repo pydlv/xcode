@@ -47,101 +47,32 @@ object JavaParser : AbstractAntlrParser<JavaLexer, AntlrJavaParser, AntlrJavaPar
     private val metadataQueue = mutableListOf<LanguageMetadata>()
     
     private fun extractMetadataFromCode(code: String): String {
-        metadataQueue.clear()
-        val lines = code.split('\n')
-        val cleanedLines = mutableListOf<String>()
-        
-        for (line in lines) {
-            if (line.contains("__META__:")) {
-                // Extract metadata and add to queue
-                MetadataSerializer.extractMetadataFromComment(line)?.let { metadata ->
-                    metadataQueue.add(metadata)
-                }
-                // Remove the metadata comment line from code to be parsed
-                val cleanedLine = line.replace(Regex("//.*__META__:.*"), "").trim()
-                if (cleanedLine.isNotEmpty()) {
-                    cleanedLines.add(cleanedLine)
-                }
-            } else {
-                cleanedLines.add(line)
-            }
+        return ParserUtils.extractMetadataFromCode(code, metadataQueue)
+    }
+    
+    /**
+     * Parse method that supports parts-based metadata
+     */
+    fun parseWithMetadata(code: String, metadataPart: String): AstNode {
+        return try {
+            // Use parts-based metadata
+            val processedCode = ParserUtils.extractMetadataFromPart(code, metadataPart, metadataQueue)
+            
+            val lexer = createLexer(org.antlr.v4.kotlinruntime.CharStreams.fromString(processedCode))
+            val tokens = org.antlr.v4.kotlinruntime.CommonTokenStream(lexer)
+            val parser = createAntlrParser(tokens)
+            val parseTree = invokeEntryPoint(parser)
+            val visitor = createAstBuilder()
+            val ast = parseTree.accept(visitor)
+            postprocessAst(ast)
+        } catch (e: Exception) {
+            // Fallback to comment-based parsing if parts-based fails
+            parse(code)
         }
-        
-        return cleanedLines.joinToString("\n")
     }
     
     private fun injectMetadataIntoAst(ast: AstNode): AstNode {
-        // Instead of using index, match metadata by type to appropriate nodes
-        val functionMetadata = metadataQueue.filter { it.returnType != null || it.paramTypes.isNotEmpty() }
-        val assignmentMetadata = metadataQueue.filter { it.variableType != null }
-        
-        var functionMetadataIndex = 0
-        var assignmentMetadataIndex = 0
-        
-        fun injectIntoNode(node: AstNode): AstNode {
-            return when (node) {
-                is ModuleNode -> {
-                    val processedBody = node.body.map { stmt ->
-                        injectIntoNode(stmt) as StatementNode
-                    }
-                    node.copy(body = processedBody)
-                }
-                is FunctionDefNode -> {
-                    if (functionMetadataIndex < functionMetadata.size) {
-                        val metadata = functionMetadata[functionMetadataIndex++]
-                        val metadataMap = mutableMapOf<String, Any>()
-                        if (metadata.returnType != null) {
-                            metadataMap["returnType"] = metadata.returnType
-                        }
-                        if (metadata.paramTypes.isNotEmpty()) {
-                            metadataMap["paramTypes"] = metadata.paramTypes
-                        }
-                        
-                        // Restore individual parameter metadata
-                        val updatedArgs = node.args.map { param ->
-                            val paramMetadata = metadata.individualParamMetadata[param.id]
-                            if (paramMetadata != null && paramMetadata.isNotEmpty()) {
-                                param.copy(metadata = paramMetadata)
-                            } else {
-                                param
-                            }
-                        }
-                        
-                        // Process function body recursively
-                        val updatedBody = node.body.map { stmt ->
-                            injectIntoNode(stmt) as StatementNode
-                        }
-                        
-                        node.copy(
-                            args = updatedArgs,
-                            body = updatedBody,
-                            metadata = metadataMap.ifEmpty { null }
-                        )
-                    } else {
-                        // No function metadata, but still need to process body
-                        val updatedBody = node.body.map { stmt ->
-                            injectIntoNode(stmt) as StatementNode
-                        }
-                        node.copy(body = updatedBody)
-                    }
-                }
-                is AssignNode -> {
-                    if (assignmentMetadataIndex < assignmentMetadata.size) {
-                        val metadata = assignmentMetadata[assignmentMetadataIndex++]
-                        if (metadata.variableType != null) {
-                            node.copy(metadata = mapOf("variableType" to metadata.variableType))
-                        } else {
-                            node
-                        }
-                    } else {
-                        node
-                    }
-                }
-                else -> node
-            }
-        }
-        
-        return injectIntoNode(ast)
+        return ParserUtils.injectMetadataIntoAst(ast, metadataQueue)
     }
 
     // The main parse method is now inherited from AbstractAntlrParser.
@@ -184,7 +115,7 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
             getParameters(paramListCtx)
         } ?: emptyList()
         val body = ctx.statement().mapNotNull { it.accept(this) as? StatementNode } // Process body statements
-        return FunctionDefNode(name = name, args = params, body = body, decorator_list = emptyList())
+        return FunctionDefNode(name = name, args = params, body = body, decoratorList = emptyList())
     }
 
     // visitParameterList should return a List<NameNode>, but the base visitor might expect AstNode.
@@ -372,12 +303,12 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
             }
             ctx.NUMBER() != null -> { // Changed from DECIMAL_LITERAL to NUMBER
                 val textVal = ctx.NUMBER()!!.text // Changed from DECIMAL_LITERAL to NUMBER
-                try {
+                return try {
                     // Java typically treats whole numbers as int
-                    return ConstantNode(textVal.toInt()) // Explicit return
+                    ConstantNode(textVal.toInt()) // Explicit return
                 } catch (_: NumberFormatException) { // Changed 'e' to '_'
                     try {
-                        return ConstantNode(textVal.toDouble()) // Explicit return
+                        ConstantNode(textVal.toDouble()) // Explicit return
                     } catch (_: NumberFormatException) { // Changed 'e2' to '_'
                         throw IllegalArgumentException("Could not parse number literal: '$textVal'") // Updated error message
                     }

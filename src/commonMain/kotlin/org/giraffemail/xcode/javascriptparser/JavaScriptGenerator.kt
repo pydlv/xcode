@@ -30,13 +30,7 @@ class JavaScriptGenerator : AbstractAstGenerator() {
         
         // Create metadata comment if TypeScript metadata exists
         val metadataComment = if (node.metadata != null || node.args.any { it.metadata != null }) {
-            val returnType = node.metadata?.get("returnType") as? String
-            val paramTypes = node.metadata?.get("paramTypes") as? Map<String, String> ?: emptyMap()
-            
-            // Collect individual parameter metadata
-            val individualParamMetadata = node.args.associate { param ->
-                param.id to (param.metadata?.mapValues { it.value.toString() } ?: emptyMap())
-            }.filterValues { it.isNotEmpty() }
+            val (returnType, paramTypes, individualParamMetadata) = extractFunctionMetadata(node)
             
             if (returnType != null || paramTypes.isNotEmpty() || individualParamMetadata.isNotEmpty()) {
                 val metadata = LanguageMetadata(
@@ -92,16 +86,47 @@ class JavaScriptGenerator : AbstractAstGenerator() {
         return "$objStr.$propStr"
     }
 
+    override fun generateWithoutMetadataComments(ast: AstNode): String {
+        // Generate JavaScript without metadata comments
+        return when (ast) {
+            is ModuleNode -> ast.body.joinToString(separator = getStatementSeparator()) { 
+                generateStatementWithoutMetadata(it) 
+            }
+            is StatementNode -> generateStatementWithoutMetadata(ast)
+            is ExpressionNode -> generateExpression(ast)
+            else -> generate(ast) // Fallback to default generation
+        }
+    }
+    
+    private fun generateStatementWithoutMetadata(statement: StatementNode): String {
+        return when (statement) {
+            is FunctionDefNode -> visitFunctionDefNodeWithoutMetadata(statement)
+            is AssignNode -> visitAssignNodeWithoutMetadata(statement)
+            else -> generateStatement(statement)
+        }
+    }
+    
+    private fun visitFunctionDefNodeWithoutMetadata(node: FunctionDefNode): String {
+        val funcName = node.name
+        val params = node.args.joinToString(", ") { it.id }
+        val body = node.body.joinToString("\n") { "    " + generateStatementWithoutMetadata(it) }
+        return "function $funcName($params) {\n$body\n}"
+    }
+    
+    private fun visitAssignNodeWithoutMetadata(node: AssignNode): String {
+        val targetName = node.target.id
+        val valueExpr = generateExpression(node.value)
+        return "let $targetName = $valueExpr${getStatementTerminator()}"
+    }
+
     override fun visitCompareNode(node: CompareNode): String {
-        val leftStr = generateExpression(node.left)
-        val rightStr = generateExpression(node.right)
         // Convert == to === for JavaScript strict equality
         val jsOp = when (node.op) {
             "==" -> "==="
             "!=" -> "!=="
             else -> node.op
         }
-        return "$leftStr $jsOp $rightStr"
+        return generateBinaryOperation(node.left, jsOp, node.right)
     }
 
     // visitConstantNode will use the base implementation which calls formatStringLiteral for strings.

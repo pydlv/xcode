@@ -38,7 +38,7 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         }
         
         // Generate return type annotation from metadata
-        val returnType = node.metadata?.get("returnType") as? String
+        val (returnType, paramTypes, _) = extractFunctionMetadata(node)
         val returnTypeAnnotation = if (returnType != null) ": $returnType" else ""
         
         // Indent statements within the function body
@@ -50,7 +50,7 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         val metadataComment = if (node.metadata != null) {
             val metadata = LanguageMetadata(
                 returnType = returnType,
-                paramTypes = (node.metadata["paramTypes"] as? Map<String, String>) ?: emptyMap()
+                paramTypes = paramTypes
             )
             if (metadata.returnType != null || metadata.paramTypes.isNotEmpty()) {
                 "\n" + MetadataSerializer.createMetadataComment(metadata, "typescript")
@@ -101,28 +101,66 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         return "$objStr.$propStr"
     }
 
-    override fun visitIfNode(node: IfNode): String {
-        val condition = generateExpression(node.test)
-        val ifBody = node.body.joinToString("\n") { "    " + generateStatement(it) }
-        
-        return if (node.orelse.isNotEmpty()) {
-            val elseBody = node.orelse.joinToString("\n") { "    " + generateStatement(it) }
-            "if ($condition) {\n$ifBody\n} else {\n$elseBody\n}"
-        } else {
-            "if ($condition) {\n$ifBody\n}"
+    override fun generateWithoutMetadataComments(ast: AstNode): String {
+        // Generate TypeScript without metadata comments
+        return when (ast) {
+            is ModuleNode -> ast.body.joinToString(separator = getStatementSeparator()) { 
+                generateStatementWithoutMetadata(it) 
+            }
+            is StatementNode -> generateStatementWithoutMetadata(ast)
+            is ExpressionNode -> generateExpression(ast)
+            else -> generate(ast) // Fallback to default generation
         }
+    }
+    
+    private fun generateStatementWithoutMetadata(statement: StatementNode): String {
+        return when (statement) {
+            is FunctionDefNode -> visitFunctionDefNodeWithoutMetadata(statement)
+            is AssignNode -> visitAssignNodeWithoutMetadata(statement)
+            else -> generateStatement(statement)
+        }
+    }
+    
+    private fun visitFunctionDefNodeWithoutMetadata(node: FunctionDefNode): String {
+        val funcName = node.name
+        val (returnType, paramTypes, _) = extractFunctionMetadata(node)
+        
+        // Generate parameters with type annotations from metadata
+        val params = node.args.joinToString(", ") { param ->
+            val paramType = paramTypes[param.id]
+            if (paramType != null) {
+                "${param.id}: $paramType"
+            } else {
+                param.id
+            }
+        }
+        
+        // Generate return type annotation from metadata
+        val returnTypeAnnotation = if (returnType != null) ": $returnType" else ""
+        
+        val body = node.body.joinToString("\n") { "    " + generateStatementWithoutMetadata(it) }
+        return "function $funcName($params)$returnTypeAnnotation {\n$body\n}"
+    }
+    
+    private fun visitAssignNodeWithoutMetadata(node: AssignNode): String {
+        val targetName = node.target.id
+        val valueExpr = generateExpression(node.value)
+        
+        // Generate type annotation from metadata
+        val variableType = node.metadata?.get("variableType") as? String
+        val typeAnnotation = if (variableType != null) ": $variableType" else ""
+        
+        return "let $targetName$typeAnnotation = $valueExpr${getStatementTerminator()}"
     }
 
     override fun visitCompareNode(node: CompareNode): String {
-        val leftStr = generateExpression(node.left)
-        val rightStr = generateExpression(node.right)
         // Convert == to === for TypeScript strict equality
         val tsOp = when (node.op) {
             "==" -> "==="
             "!=" -> "!=="
             else -> node.op
         }
-        return "$leftStr $tsOp $rightStr"
+        return generateBinaryOperation(node.left, tsOp, node.right)
     }
 
     // visitConstantNode will use the base implementation which calls formatStringLiteral for strings.
