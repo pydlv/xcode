@@ -17,7 +17,9 @@ import kotlin.test.fail
 data class LanguageConfig(
     val name: String,
     val parseFn: (String) -> AstNode,
-    val generateFn: (AstNode) -> String
+    val generateFn: (AstNode) -> String,
+    val parseWithMetadataFn: (String, List<LanguageMetadata>) -> AstNode,
+    val generateWithMetadataFn: (AstNode) -> CodeWithMetadata
 )
 
 /**
@@ -27,16 +29,41 @@ data class LanguageConfig(
  */
 class TranspilationTest {
 
-    private val pythonConfig = LanguageConfig("Python", PythonParser::parse) { ast -> PythonGenerator().generate(ast) }
-    private val javaScriptConfig = LanguageConfig("JavaScript", JavaScriptParser::parse) { ast -> JavaScriptGenerator().generate(ast) }
-    private val javaConfig = LanguageConfig("Java", JavaParser::parse) { ast -> JavaGenerator().generate(ast) }
-    private val typeScriptConfig = LanguageConfig("TypeScript", TypeScriptParser::parse) { ast -> TypeScriptGenerator().generate(ast) }
+    private val pythonConfig = LanguageConfig(
+        "Python", 
+        PythonParser::parse, 
+        { ast -> PythonGenerator().generate(ast) },
+        PythonParser::parseWithMetadata,
+        { ast -> PythonGenerator().generateWithMetadata(ast) }
+    )
+    private val javaScriptConfig = LanguageConfig(
+        "JavaScript", 
+        JavaScriptParser::parse, 
+        { ast -> JavaScriptGenerator().generate(ast) },
+        JavaScriptParser::parseWithMetadata,
+        { ast -> JavaScriptGenerator().generateWithMetadata(ast) }
+    )
+    private val javaConfig = LanguageConfig(
+        "Java", 
+        JavaParser::parse, 
+        { ast -> JavaGenerator().generate(ast) },
+        JavaParser::parseWithMetadata,
+        { ast -> JavaGenerator().generateWithMetadata(ast) }
+    )
+    private val typeScriptConfig = LanguageConfig(
+        "TypeScript", 
+        TypeScriptParser::parse, 
+        { ast -> TypeScriptGenerator().generate(ast) },
+        TypeScriptParser::parseWithMetadata,
+        { ast -> TypeScriptGenerator().generateWithMetadata(ast) }
+    )
 
     private val allLanguages = listOf(pythonConfig, javaScriptConfig, javaConfig, typeScriptConfig)
 
     /**
      * Test round-trip transpilation for a given AST through all language pairs.
-     * Verifies that AST structure and metadata are preserved through all languages.
+     * Verifies that AST structure and metadata are preserved through all languages
+     * using the parts-based metadata system.
      */
     private fun testAstRoundTrip(testName: String, originalAst: AstNode) {
         println("\\n=== Testing AST Round-Trip for '$testName' ===")
@@ -49,35 +76,38 @@ class TranspilationTest {
                 try {
                     println("\\nTesting ${fromLang.name} -> ${toLang.name} -> ${fromLang.name}")
 
-                    // Step 1: Generate code from original AST using source language
-                    val sourceCode = fromLang.generateFn(originalAst)
-                    println("Generated ${fromLang.name} code: $sourceCode")
+                    // Step 1: Generate code with metadata from original AST using source language
+                    val sourceCodeWithMetadata = fromLang.generateWithMetadataFn(originalAst)
+                    println("Generated ${fromLang.name} code: ${sourceCodeWithMetadata.code}")
+                    println("Generated ${fromLang.name} metadata: ${sourceCodeWithMetadata.metadata}")
 
                     // Step 2: Parse back to AST to verify generation didn't lose information
-                    val parsedFromSource = fromLang.parseFn(sourceCode)
+                    val parsedFromSource = fromLang.parseWithMetadataFn(sourceCodeWithMetadata.code, sourceCodeWithMetadata.metadata)
                     
-                    // All languages should preserve metadata through comment serialization
+                    // All languages should preserve metadata through parts-based system
                     assertEquals(
                         originalAst, parsedFromSource,
                         "AST changed after ${fromLang.name} generation/parsing round-trip"
                     )
 
-                    // Step 3: Generate intermediate code using target language
-                    val intermediateCode = toLang.generateFn(parsedFromSource)
-                    println("Generated ${toLang.name} code: $intermediateCode")
+                    // Step 3: Generate intermediate code with metadata using target language
+                    val intermediateCodeWithMetadata = toLang.generateWithMetadataFn(parsedFromSource)
+                    println("Generated ${toLang.name} code: ${intermediateCodeWithMetadata.code}")
+                    println("Generated ${toLang.name} metadata: ${intermediateCodeWithMetadata.metadata}")
 
-                    // Step 4: Parse intermediate code back to AST
-                    val parsedFromTarget = toLang.parseFn(intermediateCode)
+                    // Step 4: Parse intermediate code back to AST with metadata
+                    val parsedFromTarget = toLang.parseWithMetadataFn(intermediateCodeWithMetadata.code, intermediateCodeWithMetadata.metadata)
 
-                    // Step 5: Generate final code back to source language
-                    val finalCode = fromLang.generateFn(parsedFromTarget)
-                    println("Final ${fromLang.name} code: $finalCode")
+                    // Step 5: Generate final code with metadata back to source language
+                    val finalCodeWithMetadata = fromLang.generateWithMetadataFn(parsedFromTarget)
+                    println("Final ${fromLang.name} code: ${finalCodeWithMetadata.code}")
+                    println("Final ${fromLang.name} metadata: ${finalCodeWithMetadata.metadata}")
 
                     // Step 6: Parse final code and verify AST preservation
-                    val finalAst = fromLang.parseFn(finalCode)
+                    val finalAst = fromLang.parseWithMetadataFn(finalCodeWithMetadata.code, finalCodeWithMetadata.metadata)
                     
                     // Compare AST preservation through transpilation
-                    // All languages should preserve metadata through comment serialization
+                    // All languages should preserve metadata through parts-based system
                     assertEquals(
                         originalAst, finalAst,
                         "AST not preserved in ${fromLang.name} -> ${toLang.name} -> ${fromLang.name} round-trip"
@@ -95,6 +125,8 @@ class TranspilationTest {
 
     /**
      * Test sequential transpilation through all languages in a chain.
+     * Verifies that AST structure and metadata are preserved through the entire sequence
+     * using the parts-based metadata system.
      */
     private fun testSequentialTranspilation(testName: String, originalAst: AstNode) {
         println("\\n=== Testing Sequential Transpilation for '$testName' ===")
@@ -122,22 +154,23 @@ class TranspilationTest {
 
                     println("Step ${i + 1}: ${currentLang.name} -> ${nextLang.name}")
                     
-                    // Generate code in current language
-                    val code = currentLang.generateFn(currentAst)
-                    println("Generated ${currentLang.name} code: $code")
+                    // Generate code with metadata in current language
+                    val codeWithMetadata = currentLang.generateWithMetadataFn(currentAst)
+                    println("Generated ${currentLang.name} code: ${codeWithMetadata.code}")
+                    println("Generated ${currentLang.name} metadata: ${codeWithMetadata.metadata}")
 
                     // Parse to verify AST preservation
-                    val parsedAst = currentLang.parseFn(code)
+                    val parsedAst = currentLang.parseWithMetadataFn(codeWithMetadata.code, codeWithMetadata.metadata)
                     
-                    // All languages should preserve metadata through comment serialization
+                    // All languages should preserve metadata through parts-based system
                     assertEquals(
                         currentAst, parsedAst,
                         "AST changed during ${currentLang.name} generation/parsing at step ${i + 1}"
                     )
 
-                    // Generate in next language
-                    val nextCode = nextLang.generateFn(parsedAst)
-                    currentAst = nextLang.parseFn(nextCode)
+                    // Generate in next language and parse
+                    val nextCodeWithMetadata = nextLang.generateWithMetadataFn(parsedAst)
+                    currentAst = nextLang.parseWithMetadataFn(nextCodeWithMetadata.code, nextCodeWithMetadata.metadata)
                 }
 
                 // Verify we got back to the original AST including metadata
@@ -291,32 +324,8 @@ class TranspilationTest {
             )
         )
 
-        // Test specific TypeScript <-> JavaScript round trips for metadata preservation
-        val tsConfig = typeScriptConfig
-        val jsConfig = javaScriptConfig
-
-        println("\\n=== Testing TypeScript ↔ JavaScript Metadata Preservation ===")
-
-        // Test TypeScript -> JavaScript -> TypeScript
-        println("\\nTesting TypeScript -> JavaScript -> TypeScript")
-        val tsCode = tsConfig.generateFn(functionWithMetadataAst)
-        println("Generated TypeScript: $tsCode")
-        
-        val tsParsed = tsConfig.parseFn(tsCode)
-        assertEquals(functionWithMetadataAst, tsParsed, "TypeScript round-trip should preserve metadata")
-
-        val jsCode = jsConfig.generateFn(tsParsed)
-        println("Generated JavaScript with metadata: $jsCode")
-        // Verify metadata is serialized
-        assertTrue(jsCode.contains("__META__"), "JavaScript should contain metadata comments")
-
-        val jsParsed = jsConfig.parseFn(jsCode)
-        val finalTsCode = tsConfig.generateFn(jsParsed)
-        println("Final TypeScript: $finalTsCode")
-        
-        val finalTsParsed = tsConfig.parseFn(finalTsCode)
-        assertEquals(functionWithMetadataAst, finalTsParsed, "Metadata should be preserved through JS round-trip")
-
+        testAstRoundTrip("TypeScript to JavaScript Metadata", functionWithMetadataAst)
+        testSequentialTranspilation("TypeScript to JavaScript Metadata", functionWithMetadataAst)
         println("✓ TypeScript metadata preservation through JavaScript successful")
     }
 
@@ -337,6 +346,7 @@ class TranspilationTest {
         )
 
         testAstRoundTrip("Simple Assignment Metadata", assignmentAst)
+        testSequentialTranspilation("Simple Assignment Metadata", assignmentAst)
     }
 
     @Test
@@ -365,6 +375,7 @@ class TranspilationTest {
         )
 
         testAstRoundTrip("Simple Function Metadata", functionAst)
+        testSequentialTranspilation("Simple Function Metadata", functionAst)
     }
 
     @Test
@@ -389,43 +400,11 @@ class TranspilationTest {
         )
 
         testAstRoundTrip("Function and Assignment Metadata", combinedAst)
+        testSequentialTranspilation("Function and Assignment Metadata", combinedAst)
     }
 
     @Test
-    fun `test javascript metadata extraction debug`() {
-        // Test the specific JavaScript code that's failing
-        val jsCode = """function test() {
-    let result = 'hello'; // __META__: {"variableType":"string"}
-} // __META__: {"returnType":"void"}"""
-
-        println("Testing JavaScript code: $jsCode")
-        val parsedAst = JavaScriptParser.parse(jsCode)
-        println("Parsed AST: $parsedAst")
-        
-        // Expected: function should have returnType metadata, assignment should have variableType metadata
-        val expectedAst = ModuleNode(
-            body = listOf(
-                FunctionDefNode(
-                    name = "test",
-                    args = listOf(),
-                    body = listOf(
-                        AssignNode(
-                            target = NameNode(id = "result", ctx = Store),
-                            value = ConstantNode("hello"),
-                            metadata = mapOf("variableType" to "string")
-                        )
-                    ),
-                    decoratorList = emptyList(),
-                    metadata = mapOf("returnType" to "void")
-                )
-            )
-        )
-        
-        assertEquals(expectedAst, parsedAst)
-    }
-
-    @Test
-    fun `test maximal metadata preservation through all languages`() {
+    fun `test maximal metadata preservation through all languages with parts`() {
         // Define AST with maximum TypeScript metadata that should be preserved
         val maximalMetadataAst = ModuleNode(
             body = listOf(

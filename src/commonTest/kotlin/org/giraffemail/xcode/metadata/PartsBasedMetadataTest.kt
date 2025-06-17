@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 class PartsBasedMetadataTest {
 
     @Test
-    fun `test metadata serialization and deserialization`() {
+    fun `test metadata storage and retrieval`() {
         val metadata = listOf(
             LanguageMetadata(
                 returnType = "void",
@@ -27,15 +27,18 @@ class PartsBasedMetadataTest {
             )
         )
         
-        // Serialize metadata to string
-        val metadataPart = MetadataSerializer.serializeMetadataList(metadata)
+        // Store metadata directly as Kotlin objects (no serialization)
+        val codeWithMetadata = CodeWithMetadata(
+            code = "function test() {}",
+            metadata = metadata
+        )
         
-        // Deserialize metadata back
-        val readMetadata = MetadataSerializer.deserializeMetadataList(metadataPart)
-        assertEquals(2, readMetadata.size)
-        assertEquals("void", readMetadata[0].returnType)
-        assertEquals("string", readMetadata[0].paramTypes["name"])
-        assertEquals("number", readMetadata[1].variableType)
+        // Retrieve metadata directly
+        val retrievedMetadata = codeWithMetadata.metadata
+        assertEquals(2, retrievedMetadata.size)
+        assertEquals("void", retrievedMetadata[0].returnType)
+        assertEquals("string", retrievedMetadata[0].paramTypes["name"])
+        assertEquals("number", retrievedMetadata[1].variableType)
     }
 
     @Test
@@ -48,9 +51,9 @@ class PartsBasedMetadataTest {
         val codeWithMetadata = MetadataSerializer.createCodeWithMetadata(code, metadata)
         assertEquals(code, codeWithMetadata.code)
         
-        val deserializedMetadata = MetadataSerializer.deserializeMetadataList(codeWithMetadata.metadata)
-        assertEquals(1, deserializedMetadata.size)
-        assertEquals("void", deserializedMetadata[0].returnType)
+        val retrievedMetadata = codeWithMetadata.metadata
+        assertEquals(1, retrievedMetadata.size)
+        assertEquals("void", retrievedMetadata[0].returnType)
     }
 
     @Test
@@ -91,7 +94,7 @@ class PartsBasedMetadataTest {
         assertTrue(codeWithMetadata.code.contains("let message = 'Hello'"))
         
         // Verify metadata part contains expected data
-        val savedMetadata = MetadataSerializer.deserializeMetadataList(codeWithMetadata.metadata)
+        val savedMetadata = codeWithMetadata.metadata
         assertEquals(2, savedMetadata.size)
         
         // Check function metadata
@@ -113,7 +116,7 @@ class PartsBasedMetadataTest {
                 paramTypes = mapOf("name" to "String")
             )
         )
-        val metadataPart = MetadataSerializer.serializeMetadataList(metadata)
+        val metadataPart = metadata
         
         // Create simple Java code without metadata comments
         val javaCode = """
@@ -178,7 +181,7 @@ class PartsBasedMetadataTest {
         assertTrue(codeWithMetadata.code.contains("let result: number = x + y"))
         
         // Verify metadata part contains expected data
-        val savedMetadata = MetadataSerializer.deserializeMetadataList(codeWithMetadata.metadata)
+        val savedMetadata = codeWithMetadata.metadata
         assertEquals(2, savedMetadata.size)
     }
 
@@ -232,14 +235,14 @@ class PartsBasedMetadataTest {
         assertTrue(pythonCodeWithMetadata.code.contains("def greet(message):"))
         
         // Verify metadata persists
-        val pythonMetadata = MetadataSerializer.deserializeMetadataList(pythonCodeWithMetadata.metadata)
+        val pythonMetadata = pythonCodeWithMetadata.metadata
         assertEquals(1, pythonMetadata.size)
         assertEquals("void", pythonMetadata[0].returnType)
     }
 
     @Test
-    fun `test backward compatibility with comment-based metadata`() {
-        // Create JavaScript code with traditional metadata comments (like the existing system)
+    fun `test comment-based metadata is no longer supported`() {
+        // Create JavaScript code with traditional metadata comments (like the old system)
         val jsCodeWithComments = """
             function greet(name) { // __META__: {"returnType":"void","paramTypes":{"name":"string"}}
                 let message = 'Hello'; // __META__: {"variableType":"string"}
@@ -247,20 +250,18 @@ class PartsBasedMetadataTest {
             }
         """.trimIndent()
         
-        // Parse using the traditional comment-based method
+        // Parse using the regular parser (comment-based extraction removed)
         val ast = JavaScriptParser.parse(jsCodeWithComments) as ModuleNode
         val functionDef = ast.body[0] as FunctionDefNode
         
-        // Verify metadata was extracted from comments
+        // Verify metadata was NOT extracted from comments (since we removed that functionality)
         assertEquals("greet", functionDef.name)
-        assertEquals("void", functionDef.metadata?.get("returnType"))
-        val paramTypes = functionDef.metadata?.get("paramTypes") as? Map<*, *>
-        assertEquals("string", paramTypes?.get("name"))
+        assertEquals(null, functionDef.metadata?.get("returnType"))
         
-        // Verify assignment metadata
+        // Verify assignment has no metadata from comments
         val assignment = functionDef.body[0] as AssignNode
-        assertEquals("string", assignment.metadata?.get("variableType"))
+        assertEquals(null, assignment.metadata?.get("variableType"))
         
-        println("✓ Backward compatibility with comment-based metadata verified")
+        println("✓ Comment-based metadata is no longer supported (expected behavior)")
     }
 }

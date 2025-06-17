@@ -46,18 +46,7 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         
         val functionDeclaration = "function $funcName($params)$returnTypeAnnotation {\n$body\n}"
         
-        // Create metadata comment for non-TypeScript languages that need preservation
-        val metadataComment = if (node.metadata != null) {
-            val metadata = LanguageMetadata(
-                returnType = returnType,
-                paramTypes = paramTypes
-            )
-            if (metadata.returnType != null || metadata.paramTypes.isNotEmpty()) {
-                "\n" + MetadataSerializer.createMetadataComment(metadata, "typescript")
-            } else ""
-        } else ""
-        
-        return functionDeclaration + metadataComment
+        return functionDeclaration
     }
 
     override fun visitAssignNode(node: AssignNode): String {
@@ -70,14 +59,8 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         val variableType = node.metadata?.get("variableType") as? String
         val typeAnnotation = if (variableType != null) ": $variableType" else ""
         
-        // Create metadata comment for non-TypeScript languages that need preservation
-        val metadataComment = if (variableType != null) {
-            val metadata = LanguageMetadata(variableType = variableType)
-            " " + MetadataSerializer.createMetadataComment(metadata, "typescript")
-        } else ""
-        
         // Using 'let' for assignments, could be 'var' or 'const' based on further requirements
-        return "let $targetName$typeAnnotation = $valueExpr${getStatementTerminator()}$metadataComment"
+        return "let $targetName$typeAnnotation = $valueExpr${getStatementTerminator()}"
     }
 
     override fun visitCallStatementNode(node: CallStatementNode): String {

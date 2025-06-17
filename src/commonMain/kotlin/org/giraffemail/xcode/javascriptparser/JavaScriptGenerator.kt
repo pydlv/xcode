@@ -28,25 +28,7 @@ class JavaScriptGenerator : AbstractAstGenerator() {
         // Indent statements within the function body
         val body = node.body.joinToString("\n") { "    " + generateStatement(it) }
         
-        // Create metadata comment if TypeScript metadata exists
-        val metadataComment = if (node.metadata != null || node.args.any { it.metadata != null }) {
-            val (returnType, paramTypes, individualParamMetadata) = extractFunctionMetadata(node)
-            
-            if (returnType != null || paramTypes.isNotEmpty() || individualParamMetadata.isNotEmpty()) {
-                val metadata = LanguageMetadata(
-                    returnType = returnType,
-                    paramTypes = paramTypes,
-                    individualParamMetadata = individualParamMetadata
-                )
-                " " + MetadataSerializer.createMetadataComment(metadata, "javascript")
-            } else ""
-        } else ""
-        
-        return if (metadataComment.isNotEmpty()) {
-            "$metadataComment\nfunction $funcName($params) {\n$body\n}"
-        } else {
-            "function $funcName($params) {\n$body\n}"
-        }
+        return "function $funcName($params) {\n$body\n}"
     }
 
     override fun visitAssignNode(node: AssignNode): String {
@@ -55,14 +37,7 @@ class JavaScriptGenerator : AbstractAstGenerator() {
         val targetName = node.target.id // Assuming node.target is of type NameNode
         val valueExpr = generateExpression(node.value)
         
-        // Create metadata comment if TypeScript variable type exists
-        val metadataComment = if (node.metadata?.get("variableType") != null) {
-            val variableType = node.metadata["variableType"] as String
-            val metadata = LanguageMetadata(variableType = variableType)
-            "\n" + MetadataSerializer.createMetadataComment(metadata, "javascript")
-        } else ""
-        
-        return "let $targetName = $valueExpr${getStatementTerminator()}$metadataComment"
+        return "let $targetName = $valueExpr${getStatementTerminator()}"
     }
 
     override fun visitCallStatementNode(node: CallStatementNode): String {

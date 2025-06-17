@@ -27,50 +27,17 @@ object ParserUtils {
     }
     
     /**
-     * Extracts metadata from code comments and returns cleaned code.
-     * Common pattern used across all parsers.
-     * 
-     * @param code The source code containing metadata comments
-     * @param metadataQueue The queue to populate with extracted metadata
-     * @param commentPrefix The comment prefix for the language ("//", "#", etc.)
-     * @return The cleaned code with metadata comments removed
-     */
-    fun extractMetadataFromCode(code: String, metadataQueue: MutableList<LanguageMetadata>, commentPrefix: String = "//"): String {
-        metadataQueue.clear()
-        val lines = code.split('\n')
-        val cleanedLines = mutableListOf<String>()
-        
-        for (line in lines) {
-            if (line.contains("__META__:")) {
-                // Extract metadata and add to queue
-                MetadataSerializer.extractMetadataFromComment(line)?.let { metadata ->
-                    metadataQueue.add(metadata)
-                }
-                // Remove the metadata comment line from code to be parsed
-                val cleanedLine = line.replace(Regex("${Regex.escape(commentPrefix)}.*__META__:.*"), "").trim()
-                if (cleanedLine.isNotEmpty()) {
-                    cleanedLines.add(cleanedLine)
-                }
-            } else {
-                cleanedLines.add(line)
-            }
-        }
-        
-        return cleanedLines.joinToString("\n")
-    }
-    
-    /**
      * Extracts metadata from a metadata part and populates the metadata queue.
-     * This is the new parts-based metadata extraction method.
+     * This is the parts-based metadata extraction method.
      * 
-     * @param metadataPart The metadata part (JSON string)
+     * @param code The source code (unchanged since metadata is separate)
+     * @param metadataPart The metadata part (List of LanguageMetadata objects)
      * @param metadataQueue The queue to populate with extracted metadata
      * @return The original source code (unchanged since metadata is separate)
      */
-    fun extractMetadataFromPart(code: String, metadataPart: String, metadataQueue: MutableList<LanguageMetadata>): String {
+    fun extractMetadataFromPart(code: String, metadataPart: List<LanguageMetadata>, metadataQueue: MutableList<LanguageMetadata>): String {
         metadataQueue.clear()
-        val metadata = MetadataSerializer.deserializeMetadataList(metadataPart)
-        metadataQueue.addAll(metadata)
+        metadataQueue.addAll(metadataPart)
         return code // Return code unchanged since metadata is separate
     }
     
