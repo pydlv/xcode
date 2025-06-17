@@ -20,6 +20,7 @@ data class LanguageMetadata(
 object MetadataSerializer {
     
     private const val METADATA_PREFIX = "__META__:"
+    private const val METADATA_FILE_EXTENSION = ".meta"
     
     private val json = Json {
         ignoreUnknownKeys = true
@@ -68,5 +69,66 @@ object MetadataSerializer {
             "python" -> "# $METADATA_PREFIX $jsonStr"
             else -> "// $METADATA_PREFIX $jsonStr"
         }
+    }
+    
+    /**
+     * Generates the metadata file path for a given source file path
+     */
+    fun getMetadataFilePath(sourceFilePath: String): String {
+        return "$sourceFilePath$METADATA_FILE_EXTENSION"
+    }
+    
+    /**
+     * Writes metadata to a companion metadata file
+     */
+    fun writeMetadataToFile(sourceFilePath: String, metadata: List<LanguageMetadata>): Boolean {
+        return try {
+            val metadataFilePath = getMetadataFilePath(sourceFilePath)
+            val jsonContent = json.encodeToString(metadata)
+            // Note: In a real implementation, this would write to actual files
+            // For now, we'll store in a map for testing purposes
+            metadataFileStore[metadataFilePath] = jsonContent
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+    
+    /**
+     * Reads metadata from a companion metadata file
+     */
+    fun readMetadataFromFile(sourceFilePath: String): List<LanguageMetadata> {
+        return try {
+            val metadataFilePath = getMetadataFilePath(sourceFilePath)
+            val jsonContent = metadataFileStore[metadataFilePath]
+            if (jsonContent != null) {
+                json.decodeFromString<List<LanguageMetadata>>(jsonContent)
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+    
+    /**
+     * Checks if a metadata file exists for a given source file
+     */
+    fun hasMetadataFile(sourceFilePath: String): Boolean {
+        val metadataFilePath = getMetadataFilePath(sourceFilePath)
+        return metadataFileStore.containsKey(metadataFilePath)
+    }
+    
+    /**
+     * Temporary in-memory storage for metadata files during testing
+     * In a real implementation, this would be actual file I/O
+     */
+    private val metadataFileStore = mutableMapOf<String, String>()
+    
+    /**
+     * Clear the metadata file store (for testing purposes)
+     */
+    fun clearMetadataFileStore() {
+        metadataFileStore.clear()
     }
 }

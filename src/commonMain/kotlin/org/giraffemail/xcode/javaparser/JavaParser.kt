@@ -50,6 +50,27 @@ object JavaParser : AbstractAntlrParser<JavaLexer, AntlrJavaParser, AntlrJavaPar
         return ParserUtils.extractMetadataFromCode(code, metadataQueue)
     }
     
+    /**
+     * Parse method that supports file-based metadata
+     */
+    fun parseWithMetadataFile(code: String, sourceFilePath: String): AstNode {
+        return try {
+            // Try file-based metadata first
+            val processedCode = ParserUtils.extractMetadataFromFile(sourceFilePath, code, metadataQueue)
+            
+            val lexer = createLexer(org.antlr.v4.kotlinruntime.CharStreams.fromString(processedCode))
+            val tokens = org.antlr.v4.kotlinruntime.CommonTokenStream(lexer)
+            val parser = createAntlrParser(tokens)
+            val parseTree = invokeEntryPoint(parser)
+            val visitor = createAstBuilder()
+            val ast = parseTree.accept(visitor)
+            postprocessAst(ast)
+        } catch (e: Exception) {
+            // Fallback to comment-based parsing if file-based fails
+            parse(code)
+        }
+    }
+    
     private fun injectMetadataIntoAst(ast: AstNode): AstNode {
         return ParserUtils.injectMetadataIntoAst(ast, metadataQueue)
     }

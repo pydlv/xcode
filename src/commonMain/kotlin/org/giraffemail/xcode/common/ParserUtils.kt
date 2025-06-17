@@ -60,6 +60,21 @@ object ParserUtils {
     }
     
     /**
+     * Extracts metadata from a companion metadata file for a source file.
+     * This is the new file-based metadata extraction method.
+     * 
+     * @param sourceFilePath The path to the source file
+     * @param metadataQueue The queue to populate with extracted metadata
+     * @return The original source code (unchanged since metadata is in separate file)
+     */
+    fun extractMetadataFromFile(sourceFilePath: String, code: String, metadataQueue: MutableList<LanguageMetadata>): String {
+        metadataQueue.clear()
+        val fileMetadata = MetadataSerializer.readMetadataFromFile(sourceFilePath)
+        metadataQueue.addAll(fileMetadata)
+        return code // Return code unchanged since metadata is not embedded
+    }
+    
+    /**
      * Filters metadata queue by function-related metadata.
      * Common pattern used across all parsers.
      */
