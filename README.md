@@ -2,25 +2,55 @@
 
 ## Overview
 
-This project, internally referred to as "xcode" (as per `group = "org.giraffemail.xcode"`), is a source code transpiler built using Kotlin Multiplatform. It leverages ANTLR for parsing various programming languages and provides a command-line interface for transpiling code between different languages.
+This project is a sophisticated **cross-language source code transpiler** built using Kotlin Multiplatform. It enables seamless conversion between Java, JavaScript, Python, and TypeScript while preserving metadata and language-specific type information through an innovative parts-based metadata system.
 
-The core functionality revolves around parsing source code from languages like Java, JavaScript, Python, and TypeScript, and transpiling this code to any other supported language while preserving metadata and structure.
+**Key Features:**
+- **Multi-directional transpilation** between 4 major programming languages
+- **Metadata preservation** that maintains type information across language boundaries  
+- **Native CLI** with cross-platform executables for Linux, Windows, and macOS
+- **ANTLR-powered parsing** with robust grammar support for each language
+- **Round-trip transpilation** that preserves original semantics and typing
 
-## Usage
+The transpiler is particularly valuable for:
+- **Cross-platform code sharing** - convert algorithms between different technology stacks
+- **Language migration** - gradually migrate codebases from one language to another
+- **Polyglot development** - maintain consistent logic across multiple language implementations
+- **Educational purposes** - understand how similar concepts are expressed in different languages
 
-The project builds native executables that provide a command-line interface for transpilation:
+## Installation and Usage
+
+### Building the Project
 
 ```bash
-# Build the project
-./gradlew build
+# Clone the repository
+git clone https://github.com/pydlv/xcode.git
+cd xcode
 
-# Basic usage examples
-./build/bin/nativeLinux/releaseExecutable/xcode.kexe -t javascript example.py
-./build/bin/nativeLinux/releaseExecutable/xcode.kexe -s java -t python -o output.py MyClass.java
-./build/bin/nativeLinux/releaseExecutable/xcode.kexe --target typescript script.js
+# Build the project (generates native executables)
+./gradlew build
+```
+
+This creates native executables for different platforms:
+- Linux: `./build/bin/nativeLinux/releaseExecutable/xcode.kexe`
+- Windows: `./build/bin/nativeWindows/releaseExecutable/xcode.exe`
+- macOS: `./build/bin/nativeMacos/releaseExecutable/xcode.kexe`
+
+### CLI Usage
+
+```bash
+# Basic transpilation (source language auto-detected from file extension)
+xcode -t javascript example.py           # Python to JavaScript
+xcode -t python script.js               # JavaScript to Python  
+xcode --target typescript MyClass.java  # Java to TypeScript
+
+# Specify source language explicitly
+xcode -s java -t python MyClass.java    # Java to Python
+
+# Specify output file
+xcode -s python -t java -o MyClass.java script.py
 
 # Get help
-./build/bin/nativeLinux/releaseExecutable/xcode.kexe --help
+xcode --help
 ```
 
 ### CLI Options
@@ -32,10 +62,77 @@ The project builds native executables that provide a command-line interface for 
 
 ### Supported Languages
 
-- `python` (.py files)
-- `javascript` (.js, .mjs files) 
-- `java` (.java files)
-- `typescript` (.ts files)
+- `python` - Python files (.py)
+- `javascript` - JavaScript files (.js, .mjs) 
+- `java` - Java files (.java)
+- `typescript` - TypeScript files (.ts)
+
+### Transpilation Examples
+
+#### Python to JavaScript
+**Input (example.py):**
+```python
+def greet(name):
+    print("Hello, " + name)
+```
+
+**Output (example.js):**
+```javascript
+function greet(name) {
+    console.log('Hello, ' + name);
+}
+```
+
+#### TypeScript to Python (with type preservation)
+**Input (simple.ts):**
+```typescript
+function greet(name: string): void {
+    console.log("Hello");
+}
+```
+
+**Output (simple.py):**
+```python
+def greet(name):
+    print('Hello')
+```
+
+The transpiler preserves type information internally and can restore it when transpiling back to typed languages.
+
+## Metadata Preservation
+
+One of the key features of this transpiler is its sophisticated **metadata preservation system**. When transpiling code between languages, the system preserves type information, parameter types, and other language-specific metadata, even when converting to languages that don't natively support those features.
+
+### How Metadata Preservation Works
+
+1. **Extraction**: When parsing source code, the transpiler extracts type annotations, parameter types, and other metadata
+2. **Storage**: Metadata is stored separately from the generated code using a "parts-based" system
+3. **Restoration**: When transpiling back to a typed language, the metadata is used to restore type annotations
+
+### Example: Round-trip Type Preservation
+
+**Original TypeScript:**
+```typescript
+function greet(name: string): void {
+    console.log("Hello");
+}
+```
+
+**Intermediate JavaScript (metadata preserved internally):**
+```javascript
+function greet(name) {
+    console.log('Hello');
+}
+```
+
+**Back to TypeScript (types restored):**
+```typescript
+function greet(name: string): void {
+    console.log("Hello");
+}
+```
+
+This enables seamless transpilation chains like TypeScript → JavaScript → Python → TypeScript while preserving all type information.
 
 ## Current Functionality
 
@@ -76,12 +173,47 @@ The project builds native executables that provide a command-line interface for 
 *   **Error Handling and Reporting:** While parsing and transpilation are implemented, the sophistication of error handling and reporting for invalid input code is not detailed.
 *   **Output Targets:** The exact nature and target languages/formats of the "generation" and "transpilation" processes are not explicitly defined in the available context, beyond producing native executables.
 
-## Acknowledgement
+## Testing
+
+The project includes comprehensive test suites covering all major functionality:
+
+```bash
+# Run all tests
+./gradlew test
+
+# Run only Linux native tests (faster)
+./gradlew nativeLinuxTest
+
+# Build and run tests
+./gradlew build
+```
+
+**Test Coverage:**
+- Parser tests for all supported languages
+- Code generation and transpilation tests  
+- Metadata preservation and round-trip tests
+- CLI interface and file I/O tests
+- Cross-language transpilation chains
+
+## Development
+
+### Prerequisites
+- JDK 17 or later
+- Gradle 8.0 or later (included via wrapper)
+
+### Running Quality Checks
+```bash
+# Run Qodana code quality analysis
+./.github/run-qodana-scan.sh
+```
+
+## Acknowledgements
 
 *   This project utilizes [ANTLR](https://www.antlr.org/) for language parsing.
 *   The Kotlin integration for ANTLR is facilitated by the [com.strumenta.antlr-kotlin](https://github.com/Strumenta/antlr-kotlin) Gradle plugin.
 *   Built with the [Kotlin Multiplatform](https://kotlinlang.org/docs/multiplatform.html) technology.
 
----
-*This README was auto-generated based on the project structure and build files.*
+## License
+
+See [LICENSE](LICENSE) file for details.
 

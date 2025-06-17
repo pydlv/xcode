@@ -93,39 +93,6 @@ class PythonGenerator : AbstractAstGenerator() {
         }
     }
 
-    override fun generateWithoutMetadataComments(ast: AstNode): String {
-        // Generate Python without metadata comments
-        return when (ast) {
-            is ModuleNode -> ast.body.joinToString(separator = getStatementSeparator()) { 
-                generateStatementWithoutMetadata(it) 
-            }
-            is StatementNode -> generateStatementWithoutMetadata(ast)
-            is ExpressionNode -> generateExpression(ast)
-            else -> generateCode(ast) // Fallback to default generation
-        }
-    }
-    
-    private fun generateStatementWithoutMetadata(statement: StatementNode): String {
-        return when (statement) {
-            is FunctionDefNode -> visitFunctionDefNodeWithoutMetadata(statement)
-            is AssignNode -> visitAssignNodeWithoutMetadata(statement)
-            else -> generateStatement(statement)
-        }
-    }
-    
-    private fun visitFunctionDefNodeWithoutMetadata(node: FunctionDefNode): String {
-        val funcName = node.name
-        val params = node.args.joinToString(", ") { it.id }
-        val body = node.body.joinToString("\n") { "    " + generateStatementWithoutMetadata(it) }
-        return "def $funcName($params):\n$body"
-    }
-    
-    private fun visitAssignNodeWithoutMetadata(node: AssignNode): String {
-        val targetName = node.target.id
-        val valueExpr = generateExpression(node.value)
-        return "$targetName = $valueExpr"
-    }
-
     override fun visitCompareNode(node: CompareNode): String {
         val leftStr = generateExpression(node.left)
         val rightStr = generateExpression(node.right)
