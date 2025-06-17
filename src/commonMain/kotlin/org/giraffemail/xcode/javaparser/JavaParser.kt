@@ -52,13 +52,13 @@ object JavaParser : AbstractAntlrParser<JavaLexer, AntlrJavaParser, AntlrJavaPar
         val cleanedLines = mutableListOf<String>()
         
         for (line in lines) {
-            if (line.contains("__TS_META__:")) {
+            if (line.contains("__META__:")) {
                 // Extract metadata and add to queue
                 MetadataSerializer.extractMetadataFromComment(line)?.let { metadata ->
                     metadataQueue.add(metadata)
                 }
                 // Remove the metadata comment line from code to be parsed
-                val cleanedLine = line.replace(Regex("//.*__TS_META__:.*"), "").trim()
+                val cleanedLine = line.replace(Regex("//.*__META__:.*"), "").trim()
                 if (cleanedLine.isNotEmpty()) {
                     cleanedLines.add(cleanedLine)
                 }

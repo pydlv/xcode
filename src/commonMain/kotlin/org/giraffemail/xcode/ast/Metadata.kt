@@ -19,7 +19,7 @@ data class TypescriptMetadata(
  */
 object MetadataSerializer {
     
-    private const val METADATA_PREFIX = "__TS_META__:"
+    private const val METADATA_PREFIX = "__META__:"
     
     private val json = Json {
         ignoreUnknownKeys = true

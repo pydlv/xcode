@@ -117,7 +117,7 @@ class MetadataPreservationTest {
         println("Generated JavaScript code: $generatedCode")
         
         // Verify metadata is serialized into comments
-        assertTrue(generatedCode.contains("__TS_META__"))
+        assertTrue(generatedCode.contains("__META__"))
         assertTrue(generatedCode.contains("returnType"))
         assertTrue(generatedCode.contains("void"))
     }
@@ -149,7 +149,7 @@ class MetadataPreservationTest {
         println(jsCode)
         
         // Verify metadata is preserved in comments
-        assertTrue(jsCode.contains("__TS_META__"))
+        assertTrue(jsCode.contains("__META__"))
         assertTrue(jsCode.contains("returnType"))
         assertTrue(jsCode.contains("void"))
         

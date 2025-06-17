@@ -308,7 +308,7 @@ class TranspilationTest {
         val jsCode = jsConfig.generateFn(tsParsed)
         println("Generated JavaScript with metadata: $jsCode")
         // Verify metadata is serialized
-        assertTrue(jsCode.contains("__TS_META__"), "JavaScript should contain metadata comments")
+        assertTrue(jsCode.contains("__META__"), "JavaScript should contain metadata comments")
 
         val jsParsed = jsConfig.parseFn(jsCode)
         val finalTsCode = tsConfig.generateFn(jsParsed)
@@ -395,8 +395,8 @@ class TranspilationTest {
     fun `test javascript metadata extraction debug`() {
         // Test the specific JavaScript code that's failing
         val jsCode = """function test() {
-    let result = 'hello'; // __TS_META__: {"variableType":"string"}
-} // __TS_META__: {"returnType":"void"}"""
+    let result = 'hello'; // __META__: {"variableType":"string"}
+} // __META__: {"returnType":"void"}"""
 
         println("Testing JavaScript code: $jsCode")
         val parsedAst = JavaScriptParser.parse(jsCode)
