@@ -1,3 +1,4 @@
 - If you want to quickly run tests, then use the Gradle `nativeLinuxTest` task.
-- If you are unable to complete the requested work entirely, then be sure to clearly communicate the remaining items to the user.
+- Before checking in code, run Qodana code quality analysis using the `qodana scan` command to address any code quality issues. The Qodana CLI is available in the environment via `/home/runner/work/xcode/xcode/.github/setup-qodana.sh`.
 - Update relevant documentation after completing a PR.
+- - If you are unable to complete the requested work entirely, then be sure to clearly communicate the remaining items to the user.
