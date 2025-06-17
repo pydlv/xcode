@@ -38,7 +38,7 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         }
         
         // Generate return type annotation from metadata
-        val returnType = node.metadata?.get("returnType") as? String
+        val (returnType, paramTypes, _) = extractFunctionMetadata(node)
         val returnTypeAnnotation = if (returnType != null) ": $returnType" else ""
         
         // Indent statements within the function body
@@ -50,7 +50,7 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         val metadataComment = if (node.metadata != null) {
             val metadata = LanguageMetadata(
                 returnType = returnType,
-                paramTypes = (node.metadata["paramTypes"] as? Map<String, String>) ?: emptyMap()
+                paramTypes = paramTypes
             )
             if (metadata.returnType != null || metadata.paramTypes.isNotEmpty()) {
                 "\n" + MetadataSerializer.createMetadataComment(metadata, "typescript")
@@ -114,15 +114,13 @@ class TypeScriptGenerator : AbstractAstGenerator() {
     }
 
     override fun visitCompareNode(node: CompareNode): String {
-        val leftStr = generateExpression(node.left)
-        val rightStr = generateExpression(node.right)
         // Convert == to === for TypeScript strict equality
         val tsOp = when (node.op) {
             "==" -> "==="
             "!=" -> "!=="
             else -> node.op
         }
-        return "$leftStr $tsOp $rightStr"
+        return generateBinaryOperation(node.left, tsOp, node.right)
     }
 
     // visitConstantNode will use the base implementation which calls formatStringLiteral for strings.

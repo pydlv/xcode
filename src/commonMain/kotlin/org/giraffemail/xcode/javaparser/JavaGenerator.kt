@@ -62,13 +62,7 @@ class JavaGenerator : AbstractAstGenerator() {
         
         // Create metadata comment if TypeScript metadata exists
         val metadataComment = if (node.metadata != null || node.args.any { it.metadata != null }) {
-            val returnType = node.metadata?.get("returnType") as? String
-            val paramTypes = node.metadata?.get("paramTypes") as? Map<String, String> ?: emptyMap()
-            
-            // Collect individual parameter metadata
-            val individualParamMetadata = node.args.associate { param ->
-                param.id to (param.metadata?.mapValues { it.value.toString() } ?: emptyMap())
-            }.filterValues { it.isNotEmpty() }
+            val (returnType, paramTypes, individualParamMetadata) = extractFunctionMetadata(node)
             
             if (returnType != null || paramTypes.isNotEmpty() || individualParamMetadata.isNotEmpty()) {
                 val metadata = LanguageMetadata(

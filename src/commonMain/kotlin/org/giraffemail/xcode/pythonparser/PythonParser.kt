@@ -48,33 +48,13 @@ object PythonParser : AbstractAntlrParser<PythonLexer, AntlrPythonParser, AntlrP
     private val metadataQueue = mutableListOf<LanguageMetadata>()
     
     private fun extractMetadataFromCode(code: String): String {
-        metadataQueue.clear()
-        val lines = code.split('\n')
-        val cleanedLines = mutableListOf<String>()
-        
-        for (line in lines) {
-            if (line.contains("__META__:")) {
-                // Extract metadata and add to queue
-                MetadataSerializer.extractMetadataFromComment(line)?.let { metadata ->
-                    metadataQueue.add(metadata)
-                }
-                // Remove the metadata comment line from code to be parsed
-                val cleanedLine = line.replace(Regex("#.*__META__:.*"), "").trim()
-                if (cleanedLine.isNotEmpty()) {
-                    cleanedLines.add(cleanedLine)
-                }
-            } else {
-                cleanedLines.add(line)
-            }
-        }
-        
-        return cleanedLines.joinToString("\n")
+        return ParserUtils.extractMetadataFromCode(code, metadataQueue, "#")
     }
     
     private fun injectMetadataIntoAst(ast: AstNode): AstNode {
         // Instead of using index, match metadata by type to appropriate nodes
-        val functionMetadata = metadataQueue.filter { it.returnType != null || it.paramTypes.isNotEmpty() }
-        val assignmentMetadata = metadataQueue.filter { it.variableType != null }
+        val functionMetadata = ParserUtils.filterFunctionMetadata(metadataQueue)
+        val assignmentMetadata = ParserUtils.filterAssignmentMetadata(metadataQueue)
         
         var functionMetadataIndex = 0
         var assignmentMetadataIndex = 0

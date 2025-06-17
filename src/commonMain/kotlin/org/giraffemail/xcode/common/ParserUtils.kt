@@ -1,5 +1,8 @@
 package org.giraffemail.xcode.common
 
+import org.giraffemail.xcode.ast.LanguageMetadata
+import org.giraffemail.xcode.ast.MetadataSerializer
+
 /**
  * Utility functions for parser implementations to avoid code duplication.
  */
@@ -22,5 +25,54 @@ object ParserUtils {
             contextText.contains(">") -> ">"
             else -> "=="
         }
+    }
+    
+    /**
+     * Extracts metadata from code comments and returns cleaned code.
+     * Common pattern used across all parsers.
+     * 
+     * @param code The source code containing metadata comments
+     * @param metadataQueue The queue to populate with extracted metadata
+     * @param commentPrefix The comment prefix for the language ("//", "#", etc.)
+     * @return The cleaned code with metadata comments removed
+     */
+    fun extractMetadataFromCode(code: String, metadataQueue: MutableList<LanguageMetadata>, commentPrefix: String = "//"): String {
+        metadataQueue.clear()
+        val lines = code.split('\n')
+        val cleanedLines = mutableListOf<String>()
+        
+        for (line in lines) {
+            if (line.contains("__META__:")) {
+                // Extract metadata and add to queue
+                MetadataSerializer.extractMetadataFromComment(line)?.let { metadata ->
+                    metadataQueue.add(metadata)
+                }
+                // Remove the metadata comment line from code to be parsed
+                val cleanedLine = line.replace(Regex("${Regex.escape(commentPrefix)}.*__META__:.*"), "").trim()
+                if (cleanedLine.isNotEmpty()) {
+                    cleanedLines.add(cleanedLine)
+                }
+            } else {
+                cleanedLines.add(line)
+            }
+        }
+        
+        return cleanedLines.joinToString("\n")
+    }
+    
+    /**
+     * Filters metadata queue by function-related metadata.
+     * Common pattern used across all parsers.
+     */
+    fun filterFunctionMetadata(metadataQueue: List<LanguageMetadata>): List<LanguageMetadata> {
+        return metadataQueue.filter { it.returnType != null || it.paramTypes.isNotEmpty() }
+    }
+    
+    /**
+     * Filters metadata queue by assignment-related metadata.
+     * Common pattern used across all parsers.
+     */
+    fun filterAssignmentMetadata(metadataQueue: List<LanguageMetadata>): List<LanguageMetadata> {
+        return metadataQueue.filter { it.variableType != null }
     }
 }

@@ -100,6 +100,33 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
     protected open fun generateArgumentList(args: List<ExpressionNode>): String {
         return args.joinToString(", ") { generateExpression(it) }
     }
+    
+    /**
+     * Common utility for generating binary operation expressions.
+     * Used across multiple generators for comparison and binary operations.
+     */
+    protected open fun generateBinaryOperation(left: ExpressionNode, operator: String, right: ExpressionNode): String {
+        val leftStr = generateExpression(left)
+        val rightStr = generateExpression(right)
+        return "$leftStr $operator $rightStr"
+    }
+    
+    /**
+     * Common utility for extracting function metadata for comment generation.
+     * Used across multiple generators.
+     */
+    protected fun extractFunctionMetadata(node: FunctionDefNode): Triple<String?, Map<String, String>, Map<String, Map<String, String>>> {
+        val returnType = node.metadata?.get("returnType") as? String
+        @Suppress("UNCHECKED_CAST")
+        val paramTypes = node.metadata?.get("paramTypes") as? Map<String, String> ?: emptyMap()
+        
+        // Collect individual parameter metadata
+        val individualParamMetadata = node.args.associate { param ->
+            param.id to (param.metadata?.mapValues { it.value.toString() } ?: emptyMap())
+        }.filterValues { it.isNotEmpty() }
+        
+        return Triple(returnType, paramTypes, individualParamMetadata)
+    }
 
     abstract fun getStatementSeparator(): String
     abstract fun getStatementTerminator(): String
