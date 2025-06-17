@@ -172,18 +172,10 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
     override fun visitComparison(ctx: AntlrTypeScriptParser.ComparisonContext): AstNode {
         try {
             val left = ParserUtils.visitAsExpressionNode(visit(ctx.getChild(0)!!), "Invalid left expression in comparison")
-
             val right = ParserUtils.visitAsExpressionNode(visit(ctx.getChild(2)!!), "Invalid right expression in comparison")
-
-            // Get the comparison operator from the context and normalize to canonical form
             val rawOperator = ctx.getChild(1)!!.text
-            val canonicalOperator = when (rawOperator) {
-                "===" -> "==" // Normalize TypeScript strict equality to canonical equality
-                "!==" -> "!=" // Normalize TypeScript strict inequality to canonical inequality
-                else -> rawOperator // Keep other operators as-is
-            }
-
-            return CompareNode(left, canonicalOperator, right)
+            
+            return ParserUtils.createComparisonNode(left, rawOperator, right)
         } catch (e: Exception) {
             println("Error parsing TypeScript comparison: ${e.message}")
             return UnknownNode("Error in comparison expression")

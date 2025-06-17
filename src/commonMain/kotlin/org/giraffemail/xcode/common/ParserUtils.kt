@@ -92,6 +92,21 @@ object ParserUtils {
     }
     
     /**
+     * Common utility for creating comparison nodes with operator normalization.
+     * Used across JavaScript and TypeScript parsers.
+     */
+    fun createComparisonNode(left: ExpressionNode, rawOperator: String, right: ExpressionNode): CompareNode {
+        // Normalize strict equality operators to canonical form
+        val canonicalOperator = when (rawOperator) {
+            "===" -> "==" // Normalize strict equality to canonical equality
+            "!==" -> "!=" // Normalize strict inequality to canonical inequality
+            else -> rawOperator // Keep other operators as-is
+        }
+        
+        return CompareNode(left, canonicalOperator, right)
+    }
+    
+    /**
      * Common utility for injecting metadata into AST nodes.
      * Used across all parsers to avoid code duplication.
      */
