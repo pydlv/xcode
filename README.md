@@ -207,6 +207,20 @@ The project includes comprehensive test suites covering all major functionality:
 ./.github/run-qodana-scan.sh
 ```
 
+## Documentation
+
+For detailed language feature roadmaps and implementation status:
+
+📚 **[Language Documentation](docs/README.md)**
+
+- [Java Language Features](docs/java-features.md)
+- [JavaScript Language Features](docs/javascript-features.md)  
+- [Python Language Features](docs/python-features.md)
+- [TypeScript Language Features](docs/typescript-features.md)
+- [Transpilation Features](docs/transpilation-features.md)
+
+Each feature roadmap includes links to test files demonstrating functionality.
+
 ## Acknowledgements
 
 *   This project utilizes [ANTLR](https://www.antlr.org/) for language parsing.
