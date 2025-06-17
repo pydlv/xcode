@@ -60,18 +60,6 @@ class JavaScriptGenerator : AbstractAstGenerator() {
         return "$objStr.$propStr"
     }
 
-    override fun visitIfNode(node: IfNode): String {
-        val condition = generateExpression(node.test)
-        val ifBody = node.body.joinToString("\n") { "    " + generateStatement(it) }
-        
-        return if (node.orelse.isNotEmpty()) {
-            val elseBody = node.orelse.joinToString("\n") { "    " + generateStatement(it) }
-            "if ($condition) {\n$ifBody\n} else {\n$elseBody\n}"
-        } else {
-            "if ($condition) {\n$ifBody\n}"
-        }
-    }
-
     override fun visitCompareNode(node: CompareNode): String {
         val leftStr = generateExpression(node.left)
         val rightStr = generateExpression(node.right)

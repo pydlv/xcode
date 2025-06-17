@@ -66,4 +66,77 @@ class JavaScriptGeneratorTest {
         val actualCode = JavaScriptGenerator().generate(moduleAst)
         assertEquals(expectedCode, actualCode, "Generated JavaScript code for simple addition did not match expected.")
     }
+
+    @Test
+    fun `test generating if statement without else`() {
+        val ast = ModuleNode(
+            body = listOf(
+                IfNode(
+                    test = CompareNode(
+                        left = NameNode(id = "x", ctx = Load),
+                        op = "==",
+                        right = ConstantNode(value = 5)
+                    ),
+                    body = listOf(
+                        ExprNode(
+                            value = CallNode(
+                                func = MemberExpressionNode(
+                                    obj = NameNode(id = "console", ctx = Load),
+                                    property = NameNode(id = "log", ctx = Load)
+                                ),
+                                args = listOf(ConstantNode(value = "x is 5")),
+                                keywords = emptyList()
+                            )
+                        )
+                    ),
+                    orelse = emptyList()
+                )
+            )
+        )
+        val expectedCode = "if (x === 5) {\n    console.log('x is 5');\n}"
+        val actualCode = JavaScriptGenerator().generate(ast)
+        assertEquals(expectedCode, actualCode, "Generated JavaScript if statement without else did not match expected.")
+    }
+
+    @Test
+    fun `test generating if statement with else`() {
+        val ast = ModuleNode(
+            body = listOf(
+                IfNode(
+                    test = CompareNode(
+                        left = NameNode(id = "x", ctx = Load),
+                        op = "==",
+                        right = ConstantNode(value = 5)
+                    ),
+                    body = listOf(
+                        ExprNode(
+                            value = CallNode(
+                                func = MemberExpressionNode(
+                                    obj = NameNode(id = "console", ctx = Load),
+                                    property = NameNode(id = "log", ctx = Load)
+                                ),
+                                args = listOf(ConstantNode(value = "x is 5")),
+                                keywords = emptyList()
+                            )
+                        )
+                    ),
+                    orelse = listOf(
+                        ExprNode(
+                            value = CallNode(
+                                func = MemberExpressionNode(
+                                    obj = NameNode(id = "console", ctx = Load),
+                                    property = NameNode(id = "log", ctx = Load)
+                                ),
+                                args = listOf(ConstantNode(value = "x is not 5")),
+                                keywords = emptyList()
+                            )
+                        )
+                    )
+                )
+            )
+        )
+        val expectedCode = "if (x === 5) {\n    console.log('x is 5');\n} else {\n    console.log('x is not 5');\n}"
+        val actualCode = JavaScriptGenerator().generate(ast)
+        assertEquals(expectedCode, actualCode, "Generated JavaScript if statement with else did not match expected.")
+    }
 }

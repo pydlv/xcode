@@ -78,13 +78,24 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
         return "// Unknown node: ${node.description}"
     }
 
+    override fun visitIfNode(node: IfNode): String {
+        val condition = generateExpression(node.test)
+        val ifBody = node.body.joinToString("\n") { "    " + generateStatement(it) }
+        
+        return if (node.orelse.isNotEmpty()) {
+            val elseBody = node.orelse.joinToString("\n") { "    " + generateStatement(it) }
+            "if ($condition) {\n$ifBody\n} else {\n$elseBody\n}"
+        } else {
+            "if ($condition) {\n$ifBody\n}"
+        }
+    }
+
     abstract override fun visitPrintNode(node: PrintNode): String
     abstract override fun visitFunctionDefNode(node: FunctionDefNode): String
     abstract override fun visitAssignNode(node: AssignNode): String
     abstract override fun visitCallStatementNode(node: CallStatementNode): String
     abstract override fun visitCallNode(node: CallNode): String
     abstract override fun visitMemberExpressionNode(node: MemberExpressionNode): String
-    abstract override fun visitIfNode(node: IfNode): String
 
     protected open fun generateArgumentList(args: List<ExpressionNode>): String {
         return args.joinToString(", ") { generateExpression(it) }
