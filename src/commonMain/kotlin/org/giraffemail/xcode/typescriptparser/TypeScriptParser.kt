@@ -87,7 +87,7 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
             name = functionName,
             args = params,
             body = body,
-            decorator_list = emptyList(),
+            decoratorList = emptyList(),
             metadata = functionMetadata
         )
     }

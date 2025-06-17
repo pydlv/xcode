@@ -83,7 +83,7 @@ class TypeScriptGeneratorTest {
                         ),
                         PrintNode(expression = NameNode(id = "result", ctx = Load))
                     ),
-                    decorator_list = emptyList()
+                    decoratorList = emptyList()
                 )
             )
         )

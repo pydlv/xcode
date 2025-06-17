@@ -45,7 +45,7 @@ fib(0, 1);"""
                     name = "fib",
                     args = listOf(NameNode(id = "a", ctx = Param), NameNode(id = "b", ctx = Param)),
                     body = functionBody,
-                    decorator_list = emptyList()
+                    decoratorList = emptyList()
                 ),
                 CallStatementNode(
                     call = CallNode(

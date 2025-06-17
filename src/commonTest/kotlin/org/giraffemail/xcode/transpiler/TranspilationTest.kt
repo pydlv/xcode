@@ -27,10 +27,10 @@ data class LanguageConfig(
  */
 class TranspilationTest {
 
-    private val pythonConfig = LanguageConfig("Python", PythonParser::parse, { ast -> PythonGenerator().generate(ast) })
-    private val javaScriptConfig = LanguageConfig("JavaScript", JavaScriptParser::parse, { ast -> JavaScriptGenerator().generate(ast) })
-    private val javaConfig = LanguageConfig("Java", JavaParser::parse, { ast -> JavaGenerator().generate(ast) })
-    private val typeScriptConfig = LanguageConfig("TypeScript", TypeScriptParser::parse, { ast -> TypeScriptGenerator().generate(ast) })
+    private val pythonConfig = LanguageConfig("Python", PythonParser::parse) { ast -> PythonGenerator().generate(ast) }
+    private val javaScriptConfig = LanguageConfig("JavaScript", JavaScriptParser::parse) { ast -> JavaScriptGenerator().generate(ast) }
+    private val javaConfig = LanguageConfig("Java", JavaParser::parse) { ast -> JavaGenerator().generate(ast) }
+    private val typeScriptConfig = LanguageConfig("TypeScript", TypeScriptParser::parse) { ast -> TypeScriptGenerator().generate(ast) }
 
     private val allLanguages = listOf(pythonConfig, javaScriptConfig, javaConfig, typeScriptConfig)
 
@@ -203,7 +203,7 @@ class TranspilationTest {
                             )
                         )
                     ),
-                    decorator_list = emptyList()
+                    decoratorList = emptyList()
                 ),
                 CallStatementNode(
                     call = CallNode(
@@ -282,7 +282,7 @@ class TranspilationTest {
                             )
                         )
                     ),
-                    decorator_list = emptyList(),
+                    decoratorList = emptyList(),
                     metadata = mapOf(
                         "returnType" to "void",
                         "paramTypes" to mapOf("name" to "string")
@@ -355,7 +355,7 @@ class TranspilationTest {
                             expression = NameNode(id = "input", ctx = Load)
                         )
                     ),
-                    decorator_list = emptyList(),
+                    decoratorList = emptyList(),
                     metadata = mapOf(
                         "returnType" to "void",
                         "paramTypes" to mapOf("input" to "string", "count" to "number")
@@ -382,7 +382,7 @@ class TranspilationTest {
                             metadata = mapOf("variableType" to "string")
                         )
                     ),
-                    decorator_list = emptyList(),
+                    decoratorList = emptyList(),
                     metadata = mapOf("returnType" to "void")
                 )
             )
@@ -415,7 +415,7 @@ class TranspilationTest {
                             metadata = mapOf("variableType" to "string")
                         )
                     ),
-                    decorator_list = emptyList(),
+                    decoratorList = emptyList(),
                     metadata = mapOf("returnType" to "void")
                 )
             )
@@ -449,7 +449,7 @@ class TranspilationTest {
                             expression = NameNode(id = "result", ctx = Load)
                         )
                     ),
-                    decorator_list = emptyList(),
+                    decoratorList = emptyList(),
                     metadata = mapOf(
                         "returnType" to "void",
                         "paramTypes" to mapOf("input" to "string", "count" to "number")

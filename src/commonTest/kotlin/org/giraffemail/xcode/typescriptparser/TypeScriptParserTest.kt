@@ -115,7 +115,7 @@ class TypeScriptParserTest {
                     body = listOf(
                         PrintNode(expression = ConstantNode(value = "Hello"))
                     ),
-                    decorator_list = emptyList(),
+                    decoratorList = emptyList(),
                     metadata = mapOf(
                         "paramTypes" to mapOf("name" to "string")
                     )

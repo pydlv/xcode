@@ -184,7 +184,7 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
             getParameters(paramListCtx)
         } ?: emptyList()
         val body = ctx.statement().mapNotNull { it.accept(this) as? StatementNode } // Process body statements
-        return FunctionDefNode(name = name, args = params, body = body, decorator_list = emptyList())
+        return FunctionDefNode(name = name, args = params, body = body, decoratorList = emptyList())
     }
 
     // visitParameterList should return a List<NameNode>, but the base visitor might expect AstNode.
@@ -372,12 +372,12 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
             }
             ctx.NUMBER() != null -> { // Changed from DECIMAL_LITERAL to NUMBER
                 val textVal = ctx.NUMBER()!!.text // Changed from DECIMAL_LITERAL to NUMBER
-                try {
+                return try {
                     // Java typically treats whole numbers as int
-                    return ConstantNode(textVal.toInt()) // Explicit return
+                    ConstantNode(textVal.toInt()) // Explicit return
                 } catch (_: NumberFormatException) { // Changed 'e' to '_'
                     try {
-                        return ConstantNode(textVal.toDouble()) // Explicit return
+                        ConstantNode(textVal.toDouble()) // Explicit return
                     } catch (_: NumberFormatException) { // Changed 'e2' to '_'
                         throw IllegalArgumentException("Could not parse number literal: '$textVal'") // Updated error message
                     }

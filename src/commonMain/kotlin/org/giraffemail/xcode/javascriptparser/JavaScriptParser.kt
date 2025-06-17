@@ -181,7 +181,7 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
             name = funcName,
             args = parameters,
             body = body,
-            decorator_list = emptyList()
+            decoratorList = emptyList()
         )
     }
 

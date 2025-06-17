@@ -239,7 +239,7 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
     override fun visitProgram(ctx: AntlrPythonParser.ProgramContext): AstNode {
         // Updated to correctly visit the optional program_body
         val bodyNode = ctx.program_body()?.let { visit(it) }
-        return if (bodyNode is ModuleNode) bodyNode else ModuleNode(emptyList()) // Ensure ModuleNode is returned
+        return (bodyNode as? ModuleNode) ?: ModuleNode(emptyList()) // Ensure ModuleNode is returned
     }
 
     // NEW: Handle program_body for sequences of top-level statements
@@ -326,7 +326,7 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
             name = name,
             args = parameters,
             body = bodyStmts,
-            decorator_list = emptyList()
+            decoratorList = emptyList()
         )
     }
 
