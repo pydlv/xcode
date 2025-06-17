@@ -293,8 +293,8 @@ fib(0, 1);"""
 
         // TypeScript code for recursive fibonacci
         val typeScriptCode = """
-            function fib(a, b) {
-                let c = a + b;
+            function fib(a: number, b: number): void {
+                let c: number = a + b;
                 console.log(c);
                 fib(b, c);
             }

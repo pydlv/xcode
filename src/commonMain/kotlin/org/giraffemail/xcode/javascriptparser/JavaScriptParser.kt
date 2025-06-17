@@ -31,14 +31,6 @@ object JavaScriptParser : AbstractAntlrParser<JavaScriptLexer, AntlrJavaScriptPa
         return "JavaScript"
     }
 
-    override fun preprocessCode(code: String): String {
-        return MetadataContext.extractAndPreprocessCode(code)
-    }
-    
-    override fun postprocessAst(ast: AstNode): AstNode {
-        return MetadataContext.injectMetadataIntoAst(ast)
-    }
-
     // The main parse method is now inherited from AbstractAntlrParser.
     // The original parse method's content, including the "trigger_error" check
     // and try-catch block, is now handled by the abstract class and the overrides above.
@@ -76,11 +68,30 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
             visit(stmtCtx) as? StatementNode
         }
 
+        // Extract metadata from comment if present
+        println("DEBUG: metadataComment context: ${ctx.metadataComment()}")
+        println("DEBUG: metadataComment text: ${ctx.metadataComment()?.text}")
+        val metadata = ctx.metadataComment()?.let { metaCtx ->
+            val tsMetadata = MetadataSerializer.extractMetadataFromComment(metaCtx.text)
+            println("DEBUG: extracted metadata: $tsMetadata")
+            if (tsMetadata != null) {
+                val metadataMap = mutableMapOf<String, Any>()
+                if (tsMetadata.returnType != null) {
+                    metadataMap["returnType"] = tsMetadata.returnType
+                }
+                if (tsMetadata.paramTypes.isNotEmpty()) {
+                    metadataMap["paramTypes"] = tsMetadata.paramTypes
+                }
+                metadataMap.ifEmpty { null }
+            } else null
+        }
+
         return FunctionDefNode(
             name = funcName,
             args = parameters,
             body = body,
-            decorator_list = emptyList()
+            decorator_list = emptyList(),
+            metadata = metadata
         )
     }
 
@@ -100,7 +111,15 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
         val valueExpr = visit(ctx.expression()) as? ExpressionNode
             ?: UnknownNode("Invalid expression in assignment")
 
-        return AssignNode(target = targetNode, value = valueExpr)
+        // Extract metadata from comment if present
+        val metadata = ctx.metadataComment()?.let { metaCtx ->
+            val tsMetadata = MetadataSerializer.extractMetadataFromComment(metaCtx.text)
+            if (tsMetadata?.variableType != null) {
+                mapOf("variableType" to tsMetadata.variableType)
+            } else null
+        }
+
+        return AssignNode(target = targetNode, value = valueExpr, metadata = metadata)
     }
 
     // Handle function calls as statements

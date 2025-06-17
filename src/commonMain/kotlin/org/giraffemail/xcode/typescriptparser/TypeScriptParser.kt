@@ -68,16 +68,33 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
 
         // Extract return type annotation if present
         val returnType = ctx.typeAnnotation()?.typeExpression()?.text
-        val functionMetadata = if (returnType != null || params.any { it.metadata != null }) {
+        
+        // Extract metadata from comment if present
+        val commentMetadata = ctx.metadataComment()?.let { metaCtx ->
+            MetadataSerializer.extractMetadataFromComment(metaCtx.text)
+        }
+        
+        val functionMetadata = if (returnType != null || params.any { it.metadata != null } || commentMetadata != null) {
             val metadata = mutableMapOf<String, Any>()
-            if (returnType != null) {
-                metadata["returnType"] = returnType
-            }
-            val paramTypes = params.mapNotNull { param ->
-                param.metadata?.get("type")?.let { param.id to it }
-            }.toMap()
-            if (paramTypes.isNotEmpty()) {
-                metadata["paramTypes"] = paramTypes
+            
+            // Prefer comment metadata if available, otherwise use inferred types
+            if (commentMetadata != null) {
+                if (commentMetadata.returnType != null) {
+                    metadata["returnType"] = commentMetadata.returnType
+                }
+                if (commentMetadata.paramTypes.isNotEmpty()) {
+                    metadata["paramTypes"] = commentMetadata.paramTypes
+                }
+            } else {
+                if (returnType != null) {
+                    metadata["returnType"] = returnType
+                }
+                val paramTypes = params.mapNotNull { param ->
+                    param.metadata?.get("type")?.let { param.id to it }
+                }.toMap()
+                if (paramTypes.isNotEmpty()) {
+                    metadata["paramTypes"] = paramTypes
+                }
             }
             metadata
         } else null
@@ -109,8 +126,15 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
 
         // Extract type annotation if present
         val variableType = ctx.typeAnnotation()?.typeExpression()?.text
-        val assignmentMetadata = if (variableType != null) {
-            mapOf("variableType" to variableType)
+        
+        // Extract metadata from comment if present
+        val commentMetadata = ctx.metadataComment()?.let { metaCtx ->
+            MetadataSerializer.extractMetadataFromComment(metaCtx.text)
+        }
+        
+        val assignmentMetadata = if (variableType != null || commentMetadata?.variableType != null) {
+            val type = commentMetadata?.variableType ?: variableType
+            if (type != null) mapOf("variableType" to type) else null
         } else null
 
         return AssignNode(target = targetNode, value = valueExpr, metadata = assignmentMetadata)

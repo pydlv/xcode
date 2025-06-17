@@ -43,9 +43,21 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         
         // Indent statements within the function body
         val body = node.body.joinToString("\n") { "    " + generateStatement(it) }
-        val metadataComment = MetadataUtils.serializeToComment(node.metadata)
         
-        return "function $funcName($params)$returnTypeAnnotation {$metadataComment\n$body\n}"
+        val functionDeclaration = "function $funcName($params)$returnTypeAnnotation {\n$body\n}"
+        
+        // Create metadata comment for non-TypeScript languages that need preservation
+        val metadataComment = if (node.metadata != null) {
+            val metadata = TypescriptMetadata(
+                returnType = returnType,
+                paramTypes = (node.metadata["paramTypes"] as? Map<String, String>) ?: emptyMap()
+            )
+            if (metadata.returnType != null || metadata.paramTypes.isNotEmpty()) {
+                " " + MetadataSerializer.createMetadataComment(metadata, "typescript")
+            } else ""
+        } else ""
+        
+        return functionDeclaration.dropLast(1) + metadataComment + "\n}"
     }
 
     override fun visitAssignNode(node: AssignNode): String {
@@ -57,7 +69,12 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         // Generate type annotation from metadata
         val variableType = node.metadata?.get("variableType") as? String
         val typeAnnotation = if (variableType != null) ": $variableType" else ""
-        val metadataComment = MetadataUtils.serializeToComment(node.metadata)
+        
+        // Create metadata comment for non-TypeScript languages that need preservation
+        val metadataComment = if (variableType != null) {
+            val metadata = TypescriptMetadata(variableType = variableType)
+            " " + MetadataSerializer.createMetadataComment(metadata, "typescript")
+        } else ""
         
         // Using 'let' for assignments, could be 'var' or 'const' based on further requirements
         return "let $targetName$typeAnnotation = $valueExpr${getStatementTerminator()}$metadataComment"

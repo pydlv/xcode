@@ -174,23 +174,22 @@ class MetadataPreservationTest {
     }
 
     @Test
-    fun `test MetadataUtils serialization and deserialization`() {
-        val metadata = mapOf(
-            "returnType" to "void",
-            "paramTypes" to mapOf("name" to "string", "age" to "number")
+    fun `test MetadataSerializer serialization and deserialization`() {
+        val metadata = TypescriptMetadata(
+            returnType = "void",
+            paramTypes = mapOf("name" to "string", "age" to "number")
         )
         
         println("Original metadata: $metadata")
         
-        val serialized = MetadataUtils.serializeToComment(metadata)
-        println("Serialized comment: $serialized")
+        val serialized = MetadataSerializer.serialize(metadata)
+        println("Serialized JSON: $serialized")
         
-        val deserialized = MetadataUtils.deserializeFromComment(serialized)
+        val deserialized = MetadataSerializer.deserialize(serialized)
         println("Deserialized metadata: $deserialized")
         
-        assertEquals("void", deserialized?.get("returnType"))
-        val paramTypes = deserialized?.get("paramTypes") as? Map<*, *>
-        assertEquals("string", paramTypes?.get("name"))
-        assertEquals("number", paramTypes?.get("age"))
+        assertEquals("void", deserialized?.returnType)
+        assertEquals("string", deserialized?.paramTypes?.get("name"))
+        assertEquals("number", deserialized?.paramTypes?.get("age"))
     }
 }

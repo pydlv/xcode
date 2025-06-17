@@ -22,7 +22,7 @@ statement // Basic statements
 
 printStatement: 'print' '(' expression ')' ; // Using literal parens
 
-functionDef: 'def' IDENTIFIER '(' parameters? ')' ':' NEWLINE INDENT function_body? DEDENT ; // function_body is now optional
+functionDef: 'def' IDENTIFIER '(' parameters? ')' ':' metadataComment? NEWLINE INDENT function_body? DEDENT ; // function_body is now optional
 
 function_body // Sequence of statements within a function - MODIFIED
     : NEWLINE* statement (NEWLINE+ statement)* NEWLINE*
@@ -31,7 +31,7 @@ function_body // Sequence of statements within a function - MODIFIED
 parameters: parameter (',' parameter)* ;
 parameter: IDENTIFIER ;
 
-assignStatement: IDENTIFIER '=' expression ;
+assignStatement: IDENTIFIER '=' expression metadataComment? ;
 
 functionCallStatement: IDENTIFIER '(' arguments? ')' ; // Using literal parens
 
@@ -60,3 +60,8 @@ NEWLINE: ( '\r'? '\n' | '\r' )+ ; // Python specific newline handling, keep here
 // WHITESPACE is now WS_HORIZONTAL from CommonLexerRules
 // Python does not use // or /* */ comments by default, so SL_COMMENT and ML_COMMENT are not used.
 // If Python needs to support # comments, a rule like: HASH_COMMENT: '#' ~[\r\n]* -> skip; would be added here.
+
+// Python metadata comment (using # instead of //)
+PYTHON_METADATA_COMMENT: '#' [ \t]* '__TS_META__:' [ \t]* '{' .*? '}' ;
+
+metadataComment: PYTHON_METADATA_COMMENT ;
