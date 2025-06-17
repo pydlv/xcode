@@ -25,6 +25,10 @@ abstract class AbstractAntlrParser<
     protected open fun preprocessCode(code: String): String {
         return code // Default implementation does no preprocessing
     }
+    
+    protected open fun postprocessAst(ast: AstNode): AstNode {
+        return ast // Default implementation does no post-processing
+    }
 
     fun parse(code: String): AstNode {
         // println("${getLanguageName()}Parser.parse attempting to parse with ANTLR: '$code'") // Verbose logging
@@ -56,7 +60,10 @@ abstract class AbstractAntlrParser<
 
             // The AstBuilder's visit method is expected to return a non-null AstNode.
             // If it could return null, the AstBuilder or its base visitor types would need to allow nullable AstNode.
-            return astBuilder.visit(tree)
+            val ast = astBuilder.visit(tree)
+            
+            // Apply post-processing (e.g., metadata injection)
+            return postprocessAst(ast)
 
         } catch (e: AstParseException) {
             // Re-throw AstParseException as it's our defined exception type for parsing issues

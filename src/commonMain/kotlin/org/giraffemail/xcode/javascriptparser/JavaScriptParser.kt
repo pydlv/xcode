@@ -31,6 +31,14 @@ object JavaScriptParser : AbstractAntlrParser<JavaScriptLexer, AntlrJavaScriptPa
         return "JavaScript"
     }
 
+    override fun preprocessCode(code: String): String {
+        return MetadataContext.extractAndPreprocessCode(code)
+    }
+    
+    override fun postprocessAst(ast: AstNode): AstNode {
+        return MetadataContext.injectMetadataIntoAst(ast)
+    }
+
     // The main parse method is now inherited from AbstractAntlrParser.
     // The original parse method's content, including the "trigger_error" check
     // and try-catch block, is now handled by the abstract class and the overrides above.

@@ -53,20 +53,41 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
     override fun visitFunctionDeclaration(ctx: AntlrTypeScriptParser.FunctionDeclarationContext): AstNode {
         val functionName = ctx.IDENTIFIER().text
         
-        // Handle parameters
+        // Handle parameters and extract type information
         val params = ctx.parameterList()?.parameter()?.map { paramCtx ->
             val paramName = paramCtx.IDENTIFIER().text
-            NameNode(id = paramName, ctx = Param)
+            val paramType = paramCtx.typeAnnotation()?.typeExpression()?.text
+            val metadata = if (paramType != null) {
+                mapOf("type" to paramType)
+            } else null
+            NameNode(id = paramName, ctx = Param, metadata = metadata)
         } ?: emptyList()
 
         // Handle function body
         val body = ctx.functionBody()?.let { visit(it) as? ModuleNode }?.body ?: emptyList()
 
+        // Extract return type annotation if present
+        val returnType = ctx.typeAnnotation()?.typeExpression()?.text
+        val functionMetadata = if (returnType != null || params.any { it.metadata != null }) {
+            val metadata = mutableMapOf<String, Any>()
+            if (returnType != null) {
+                metadata["returnType"] = returnType
+            }
+            val paramTypes = params.mapNotNull { param ->
+                param.metadata?.get("type")?.let { param.id to it }
+            }.toMap()
+            if (paramTypes.isNotEmpty()) {
+                metadata["paramTypes"] = paramTypes
+            }
+            metadata
+        } else null
+
         return FunctionDefNode(
             name = functionName,
             args = params,
             body = body,
-            decorator_list = emptyList()
+            decorator_list = emptyList(),
+            metadata = functionMetadata
         )
     }
 
@@ -86,7 +107,13 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
         val valueExpr = visit(ctx.expression()) as? ExpressionNode
             ?: UnknownNode("Invalid expression in assignment")
 
-        return AssignNode(target = targetNode, value = valueExpr)
+        // Extract type annotation if present
+        val variableType = ctx.typeAnnotation()?.typeExpression()?.text
+        val assignmentMetadata = if (variableType != null) {
+            mapOf("variableType" to variableType)
+        } else null
+
+        return AssignNode(target = targetNode, value = valueExpr, metadata = assignmentMetadata)
     }
 
     // Handle function calls as statements

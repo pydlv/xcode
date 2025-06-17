@@ -27,7 +27,8 @@ class JavaScriptGenerator : AbstractAstGenerator() {
         val params = node.args.joinToString(", ") { it.id } // Assuming args are NameNodes for params
         // Indent statements within the function body
         val body = node.body.joinToString("\n") { "    " + generateStatement(it) }
-        return "function $funcName($params) {\n$body\n}"
+        val metadataComment = MetadataUtils.serializeToComment(node.metadata)
+        return "function $funcName($params) {$metadataComment\n$body\n}"
     }
 
     override fun visitAssignNode(node: AssignNode): String {
@@ -35,8 +36,9 @@ class JavaScriptGenerator : AbstractAstGenerator() {
         // This implies node.target is already NameNode or a subtype from which .id can be accessed.
         val targetName = node.target.id // Assuming node.target is of type NameNode
         val valueExpr = generateExpression(node.value)
+        val metadataComment = MetadataUtils.serializeToComment(node.metadata)
         // Using 'let' for assignments, could be 'var' or 'const' based on further requirements
-        return "let $targetName = $valueExpr${getStatementTerminator()}"
+        return "let $targetName = $valueExpr${getStatementTerminator()}$metadataComment"
     }
 
     override fun visitCallStatementNode(node: CallStatementNode): String {

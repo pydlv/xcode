@@ -24,10 +24,28 @@ class TypeScriptGenerator : AbstractAstGenerator() {
 
     override fun visitFunctionDefNode(node: FunctionDefNode): String {
         val funcName = node.name
-        val params = node.args.joinToString(", ") { it.id } // Assuming args are NameNodes for params
+        
+        // Generate parameters with type annotations from metadata
+        val params = node.args.joinToString(", ") { param ->
+            val paramType = node.metadata?.get("paramTypes")?.let { types ->
+                (types as? Map<*, *>)?.get(param.id) as? String
+            }
+            if (paramType != null) {
+                "${param.id}: $paramType"
+            } else {
+                param.id
+            }
+        }
+        
+        // Generate return type annotation from metadata
+        val returnType = node.metadata?.get("returnType") as? String
+        val returnTypeAnnotation = if (returnType != null) ": $returnType" else ""
+        
         // Indent statements within the function body
         val body = node.body.joinToString("\n") { "    " + generateStatement(it) }
-        return "function $funcName($params) {\n$body\n}"
+        val metadataComment = MetadataUtils.serializeToComment(node.metadata)
+        
+        return "function $funcName($params)$returnTypeAnnotation {$metadataComment\n$body\n}"
     }
 
     override fun visitAssignNode(node: AssignNode): String {
@@ -35,8 +53,14 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         // This implies node.target is already NameNode or a subtype from which .id can be accessed.
         val targetName = node.target.id // Assuming node.target is of type NameNode
         val valueExpr = generateExpression(node.value)
+        
+        // Generate type annotation from metadata
+        val variableType = node.metadata?.get("variableType") as? String
+        val typeAnnotation = if (variableType != null) ": $variableType" else ""
+        val metadataComment = MetadataUtils.serializeToComment(node.metadata)
+        
         // Using 'let' for assignments, could be 'var' or 'const' based on further requirements
-        return "let $targetName = $valueExpr${getStatementTerminator()}"
+        return "let $targetName$typeAnnotation = $valueExpr${getStatementTerminator()}$metadataComment"
     }
 
     override fun visitCallStatementNode(node: CallStatementNode): String {
