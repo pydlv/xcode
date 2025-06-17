@@ -48,77 +48,7 @@ object JavaScriptParser : AbstractAntlrParser<JavaScriptLexer, AntlrJavaScriptPa
     }
     
     private fun injectMetadataIntoAst(ast: AstNode): AstNode {
-        // Instead of using index, match metadata by type to appropriate nodes
-        val functionMetadata = ParserUtils.filterFunctionMetadata(metadataQueue)
-        val assignmentMetadata = ParserUtils.filterAssignmentMetadata(metadataQueue)
-        
-        var functionMetadataIndex = 0
-        var assignmentMetadataIndex = 0
-        
-        fun injectIntoNode(node: AstNode): AstNode {
-            return when (node) {
-                is ModuleNode -> {
-                    val processedBody = node.body.map { stmt ->
-                        injectIntoNode(stmt) as StatementNode
-                    }
-                    node.copy(body = processedBody)
-                }
-                is FunctionDefNode -> {
-                    if (functionMetadataIndex < functionMetadata.size) {
-                        val metadata = functionMetadata[functionMetadataIndex++]
-                        val metadataMap = mutableMapOf<String, Any>()
-                        if (metadata.returnType != null) {
-                            metadataMap["returnType"] = metadata.returnType
-                        }
-                        if (metadata.paramTypes.isNotEmpty()) {
-                            metadataMap["paramTypes"] = metadata.paramTypes
-                        }
-                        
-                        // Restore individual parameter metadata
-                        val updatedArgs = node.args.map { param ->
-                            val paramMetadata = metadata.individualParamMetadata[param.id]
-                            if (paramMetadata != null && paramMetadata.isNotEmpty()) {
-                                param.copy(metadata = paramMetadata)
-                            } else {
-                                param
-                            }
-                        }
-                        
-                        // Process function body recursively
-                        val updatedBody = node.body.map { stmt ->
-                            injectIntoNode(stmt) as StatementNode
-                        }
-                        
-                        node.copy(
-                            args = updatedArgs,
-                            body = updatedBody,
-                            metadata = metadataMap.ifEmpty { null }
-                        )
-                    } else {
-                        // No function metadata, but still need to process body
-                        val updatedBody = node.body.map { stmt ->
-                            injectIntoNode(stmt) as StatementNode
-                        }
-                        node.copy(body = updatedBody)
-                    }
-                }
-                is AssignNode -> {
-                    if (assignmentMetadataIndex < assignmentMetadata.size) {
-                        val metadata = assignmentMetadata[assignmentMetadataIndex++]
-                        if (metadata.variableType != null) {
-                            node.copy(metadata = mapOf("variableType" to metadata.variableType))
-                        } else {
-                            node
-                        }
-                    } else {
-                        node
-                    }
-                }
-                else -> node
-            }
-        }
-        
-        return injectIntoNode(ast)
+        return ParserUtils.injectMetadataIntoAst(ast, metadataQueue)
     }
 
     // The main parse method is now inherited from AbstractAntlrParser.
@@ -249,18 +179,10 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
     override fun visitComparison(ctx: AntlrJavaScriptParser.ComparisonContext): AstNode {
         try {
             val left = ParserUtils.visitAsExpressionNode(visit(ctx.getChild(0)!!), "Invalid left expression in comparison")
-
             val right = ParserUtils.visitAsExpressionNode(visit(ctx.getChild(2)!!), "Invalid right expression in comparison")
-
-            // Get the comparison operator from the context and normalize to canonical form
             val rawOperator = ctx.getChild(1)!!.text
-            val canonicalOperator = when (rawOperator) {
-                "===" -> "==" // Normalize JavaScript strict equality to canonical equality
-                "!==" -> "!=" // Normalize JavaScript strict inequality to canonical inequality
-                else -> rawOperator // Keep other operators as-is
-            }
-
-            return CompareNode(left, canonicalOperator, right)
+            
+            return ParserUtils.createComparisonNode(left, rawOperator, right)
         } catch (e: Exception) {
             println("Error parsing JavaScript comparison: ${e.message}")
             return UnknownNode("Error in comparison expression")
