@@ -1,7 +1,6 @@
 package org.giraffemail.xcode.javaparser
 
 import org.antlr.v4.kotlinruntime.CharStream
-import org.antlr.v4.kotlinruntime.CharStreams
 import org.antlr.v4.kotlinruntime.CommonTokenStream
 import org.antlr.v4.kotlinruntime.tree.ParseTreeVisitor
 import org.giraffemail.xcode.ast.*

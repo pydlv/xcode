@@ -5,7 +5,6 @@ import org.giraffemail.xcode.common.ParserUtils
 import org.giraffemail.xcode.generated.TypeScriptLexer
 import org.giraffemail.xcode.generated.TypeScriptParser as AntlrTypeScriptParser
 import org.antlr.v4.kotlinruntime.CharStream
-import org.antlr.v4.kotlinruntime.CharStreams
 import org.antlr.v4.kotlinruntime.CommonTokenStream
 import org.antlr.v4.kotlinruntime.tree.ParseTreeVisitor
 import org.giraffemail.xcode.generated.TypeScriptBaseVisitor

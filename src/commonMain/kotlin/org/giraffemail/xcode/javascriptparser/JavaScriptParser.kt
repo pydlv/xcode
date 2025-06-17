@@ -4,7 +4,6 @@ import org.giraffemail.xcode.ast.*
 import org.giraffemail.xcode.generated.JavaScriptLexer
 import org.giraffemail.xcode.generated.JavaScriptParser as AntlrJavaScriptParser
 import org.antlr.v4.kotlinruntime.CharStream
-import org.antlr.v4.kotlinruntime.CharStreams
 import org.antlr.v4.kotlinruntime.CommonTokenStream
 import org.antlr.v4.kotlinruntime.tree.ParseTreeVisitor
 import org.giraffemail.xcode.generated.JavaScriptBaseVisitor
