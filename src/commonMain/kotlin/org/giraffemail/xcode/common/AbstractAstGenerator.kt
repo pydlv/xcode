@@ -4,15 +4,6 @@ import org.giraffemail.xcode.ast.*
 
 abstract class AbstractAstGenerator : AstGeneratorVisitor {
 
-    // Main dispatch function for any node - can be used by external callers
-    open fun generate(ast: AstNode): String {
-        return when (ast) {
-            is ModuleNode -> visitModuleNode(ast)
-            is StatementNode -> generateStatement(ast) // Dispatch to statement handler
-            is ExpressionNode -> generateExpression(ast) // Dispatch to expression handler
-        }
-    }
-
     /**
      * Generate code and metadata as separate parts
      */
@@ -31,9 +22,20 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
      * Generate code without metadata comments (for file-based metadata)
      */
     protected open fun generateWithoutMetadataComments(ast: AstNode): String {
-        // Default implementation just calls normal generate
+        // Default implementation calls the main code generation dispatch
         // Subclasses can override to remove metadata comment generation
-        return generate(ast)
+        return generateCode(ast)
+    }
+    
+    /**
+     * Main dispatch function for code generation - internal use
+     */
+    protected open fun generateCode(ast: AstNode): String {
+        return when (ast) {
+            is ModuleNode -> visitModuleNode(ast)
+            is StatementNode -> generateStatement(ast) // Dispatch to statement handler
+            is ExpressionNode -> generateExpression(ast) // Dispatch to expression handler
+        }
     }
     
     /**

@@ -84,7 +84,7 @@ class MetadataPreservationTest {
         
         println("Generating TypeScript from AST with metadata...")
         val generator = TypeScriptGenerator()
-        val generatedCode = generator.generate(moduleAst)
+        val generatedCode = generator.generateWithMetadata(moduleAst).code
         println("Generated TypeScript code: $generatedCode")
         
         // Verify type annotations are included
@@ -171,7 +171,7 @@ class MetadataPreservationTest {
         // Step 4: Generate TypeScript from JavaScript AST (should restore type annotations)
         println("\n4. Generating TypeScript from JavaScript AST...")
         val tsGenerator = TypeScriptGenerator()
-        val finalTsCode = tsGenerator.generate(jsAst)
+        val finalTsCode = tsGenerator.generateWithMetadata(jsAst).code
         println("Final TypeScript:")
         println(finalTsCode)
         

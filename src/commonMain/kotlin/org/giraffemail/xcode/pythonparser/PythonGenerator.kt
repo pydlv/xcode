@@ -101,7 +101,7 @@ class PythonGenerator : AbstractAstGenerator() {
             }
             is StatementNode -> generateStatementWithoutMetadata(ast)
             is ExpressionNode -> generateExpression(ast)
-            else -> generate(ast) // Fallback to default generation
+            else -> generateCode(ast) // Fallback to default generation
         }
     }
     
