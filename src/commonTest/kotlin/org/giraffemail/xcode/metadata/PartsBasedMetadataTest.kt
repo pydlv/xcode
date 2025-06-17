@@ -11,23 +11,12 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Tests for file-based metadata storage and retrieval
+ * Tests for parts-based metadata storage and retrieval
  */
-class FileBasedMetadataTest {
+class PartsBasedMetadataTest {
 
     @Test
-    fun `test metadata file path generation`() {
-        val sourceFile = "test.js"
-        val metadataFile = MetadataSerializer.getMetadataFilePath(sourceFile)
-        assertEquals("test.js.meta", metadataFile)
-    }
-
-    @Test
-    fun `test metadata file write and read`() {
-        // Clear any existing metadata
-        MetadataSerializer.clearMetadataFileStore()
-        
-        val sourceFile = "test.js"
+    fun `test metadata serialization and deserialization`() {
         val metadata = listOf(
             LanguageMetadata(
                 returnType = "void",
@@ -38,15 +27,11 @@ class FileBasedMetadataTest {
             )
         )
         
-        // Write metadata to file
-        val success = MetadataSerializer.writeMetadataToFile(sourceFile, metadata)
-        assertTrue(success)
+        // Serialize metadata to string
+        val metadataPart = MetadataSerializer.serializeMetadataList(metadata)
         
-        // Check if metadata file exists
-        assertTrue(MetadataSerializer.hasMetadataFile(sourceFile))
-        
-        // Read metadata back
-        val readMetadata = MetadataSerializer.readMetadataFromFile(sourceFile)
+        // Deserialize metadata back
+        val readMetadata = MetadataSerializer.deserializeMetadataList(metadataPart)
         assertEquals(2, readMetadata.size)
         assertEquals("void", readMetadata[0].returnType)
         assertEquals("string", readMetadata[0].paramTypes["name"])
@@ -54,10 +39,22 @@ class FileBasedMetadataTest {
     }
 
     @Test
-    fun `test JavaScript generation with file-based metadata`() {
-        // Clear any existing metadata
-        MetadataSerializer.clearMetadataFileStore()
+    fun `test CodeWithMetadata creation`() {
+        val code = "function test() { }"
+        val metadata = listOf(
+            LanguageMetadata(returnType = "void")
+        )
         
+        val codeWithMetadata = MetadataSerializer.createCodeWithMetadata(code, metadata)
+        assertEquals(code, codeWithMetadata.code)
+        
+        val deserializedMetadata = MetadataSerializer.deserializeMetadataList(codeWithMetadata.metadata)
+        assertEquals(1, deserializedMetadata.size)
+        assertEquals("void", deserializedMetadata[0].returnType)
+    }
+
+    @Test
+    fun `test JavaScript generation with parts-based metadata`() {
         // Create AST with metadata
         val functionMetadata = mapOf(
             "returnType" to "void",
@@ -79,22 +76,22 @@ class FileBasedMetadataTest {
         
         val moduleAst = ModuleNode(body = listOf(functionAst))
         
-        // Generate JavaScript with file-based metadata
+        // Generate JavaScript with parts-based metadata
         val generator = JavaScriptGenerator()
-        val outputFile = "output.js"
-        val generatedCode = generator.generateWithMetadataFile(moduleAst, outputFile)
+        val codeWithMetadata = generator.generateWithMetadata(moduleAst)
         
         println("Generated JavaScript code:")
-        println(generatedCode)
+        println(codeWithMetadata.code)
+        println("Generated metadata part:")
+        println(codeWithMetadata.metadata)
         
         // Verify code doesn't contain metadata comments
-        assertTrue(!generatedCode.contains("__META__"))
-        assertTrue(generatedCode.contains("function greet(name)"))
-        assertTrue(generatedCode.contains("let message = 'Hello'"))
+        assertTrue(!codeWithMetadata.code.contains("__META__"))
+        assertTrue(codeWithMetadata.code.contains("function greet(name)"))
+        assertTrue(codeWithMetadata.code.contains("let message = 'Hello'"))
         
-        // Verify metadata was written to file
-        assertTrue(MetadataSerializer.hasMetadataFile(outputFile))
-        val savedMetadata = MetadataSerializer.readMetadataFromFile(outputFile)
+        // Verify metadata part contains expected data
+        val savedMetadata = MetadataSerializer.deserializeMetadataList(codeWithMetadata.metadata)
         assertEquals(2, savedMetadata.size)
         
         // Check function metadata
@@ -108,19 +105,15 @@ class FileBasedMetadataTest {
     }
 
     @Test
-    fun `test parser with file-based metadata`() {
-        // Clear any existing metadata
-        MetadataSerializer.clearMetadataFileStore()
-        
-        // Create metadata file
-        val sourceFile = "test.java"
+    fun `test parser with parts-based metadata`() {
+        // Create metadata part
         val metadata = listOf(
             LanguageMetadata(
                 returnType = "void",
                 paramTypes = mapOf("name" to "String")
             )
         )
-        MetadataSerializer.writeMetadataToFile(sourceFile, metadata)
+        val metadataPart = MetadataSerializer.serializeMetadataList(metadata)
         
         // Create simple Java code without metadata comments
         val javaCode = """
@@ -129,11 +122,11 @@ class FileBasedMetadataTest {
             }
         """.trimIndent()
         
-        // Parse with file-based metadata
-        val ast = JavaParser.parseWithMetadataFile(javaCode, sourceFile) as ModuleNode
+        // Parse with parts-based metadata
+        val ast = JavaParser.parseWithMetadata(javaCode, metadataPart) as ModuleNode
         val functionDef = ast.body[0] as FunctionDefNode
         
-        // Verify metadata was injected from file
+        // Verify metadata was injected from part
         assertEquals("greet", functionDef.name)
         assertEquals("void", functionDef.metadata?.get("returnType"))
         val paramTypes = functionDef.metadata?.get("paramTypes") as? Map<*, *>
@@ -141,10 +134,7 @@ class FileBasedMetadataTest {
     }
 
     @Test
-    fun `test TypeScript round-trip with file-based metadata`() {
-        // Clear any existing metadata
-        MetadataSerializer.clearMetadataFileStore()
-        
+    fun `test TypeScript round-trip with parts-based metadata`() {
         // Create TypeScript AST with metadata
         val functionMetadata = mapOf(
             "returnType" to "number",
@@ -173,30 +163,27 @@ class FileBasedMetadataTest {
         
         val moduleAst = ModuleNode(body = listOf(functionAst))
         
-        // Generate TypeScript with file-based metadata
+        // Generate TypeScript with parts-based metadata
         val tsGenerator = TypeScriptGenerator()
-        val outputFile = "output.ts"
-        val generatedCode = tsGenerator.generateWithMetadataFile(moduleAst, outputFile)
+        val codeWithMetadata = tsGenerator.generateWithMetadata(moduleAst)
         
         println("Generated TypeScript code:")
-        println(generatedCode)
+        println(codeWithMetadata.code)
+        println("Generated metadata part:")
+        println(codeWithMetadata.metadata)
         
         // Verify code contains type annotations but no metadata comments
-        assertTrue(!generatedCode.contains("__META__"))
-        assertTrue(generatedCode.contains("function add(x: number, y: number): number"))
-        assertTrue(generatedCode.contains("let result: number = x + y"))
+        assertTrue(!codeWithMetadata.code.contains("__META__"))
+        assertTrue(codeWithMetadata.code.contains("function add(x: number, y: number): number"))
+        assertTrue(codeWithMetadata.code.contains("let result: number = x + y"))
         
-        // Verify metadata was written to file
-        assertTrue(MetadataSerializer.hasMetadataFile(outputFile))
-        val savedMetadata = MetadataSerializer.readMetadataFromFile(outputFile)
+        // Verify metadata part contains expected data
+        val savedMetadata = MetadataSerializer.deserializeMetadataList(codeWithMetadata.metadata)
         assertEquals(2, savedMetadata.size)
     }
 
     @Test
-    fun `test cross-language transpilation with file-based metadata`() {
-        // Clear any existing metadata
-        MetadataSerializer.clearMetadataFileStore()
-        
+    fun `test cross-language transpilation with parts-based metadata`() {
         // Start with TypeScript AST
         val functionMetadata = mapOf(
             "returnType" to "void",
@@ -212,16 +199,17 @@ class FileBasedMetadataTest {
             )
         ))
         
-        // Generate JavaScript with file-based metadata
+        // Generate JavaScript with parts-based metadata
         val jsGenerator = JavaScriptGenerator()
-        val jsFile = "output.js"
-        val jsCode = jsGenerator.generateWithMetadataFile(tsAst, jsFile)
+        val jsCodeWithMetadata = jsGenerator.generateWithMetadata(tsAst)
         
         println("Generated JavaScript code for cross-language test:")
-        println(jsCode)
+        println(jsCodeWithMetadata.code)
+        println("Generated metadata part:")
+        println(jsCodeWithMetadata.metadata)
         
-        // Parse JavaScript back with file-based metadata
-        val jsAst = JavaScriptParser.parseWithMetadataFile(jsCode, jsFile) as ModuleNode
+        // Parse JavaScript back with parts-based metadata
+        val jsAst = JavaScriptParser.parseWithMetadata(jsCodeWithMetadata.code, jsCodeWithMetadata.metadata) as ModuleNode
         val jsFunctionDef = jsAst.body[0] as FunctionDefNode
         
         // Verify metadata was preserved
@@ -230,30 +218,27 @@ class FileBasedMetadataTest {
         val paramTypes = jsFunctionDef.metadata?.get("paramTypes") as? Map<*, *>
         assertEquals("string", paramTypes?.get("message"))
         
-        // Generate Python with file-based metadata
+        // Generate Python with parts-based metadata
         val pythonGenerator = PythonGenerator()
-        val pythonFile = "output.py"
-        val pythonCode = pythonGenerator.generateWithMetadataFile(jsAst, pythonFile)
+        val pythonCodeWithMetadata = pythonGenerator.generateWithMetadata(jsAst)
         
         println("Generated Python code:")
-        println(pythonCode)
+        println(pythonCodeWithMetadata.code)
+        println("Generated Python metadata part:")
+        println(pythonCodeWithMetadata.metadata)
         
         // Verify Python code doesn't contain metadata comments
-        assertTrue(!pythonCode.contains("__META__"))
-        assertTrue(pythonCode.contains("def greet(message):"))
+        assertTrue(!pythonCodeWithMetadata.code.contains("__META__"))
+        assertTrue(pythonCodeWithMetadata.code.contains("def greet(message):"))
         
         // Verify metadata persists
-        assertTrue(MetadataSerializer.hasMetadataFile(pythonFile))
-        val pythonMetadata = MetadataSerializer.readMetadataFromFile(pythonFile)
+        val pythonMetadata = MetadataSerializer.deserializeMetadataList(pythonCodeWithMetadata.metadata)
         assertEquals(1, pythonMetadata.size)
         assertEquals("void", pythonMetadata[0].returnType)
     }
 
     @Test
     fun `test backward compatibility with comment-based metadata`() {
-        // Clear any existing metadata
-        MetadataSerializer.clearMetadataFileStore()
-        
         // Create JavaScript code with traditional metadata comments (like the existing system)
         val jsCodeWithComments = """
             function greet(name) { // __META__: {"returnType":"void","paramTypes":{"name":"string"}}

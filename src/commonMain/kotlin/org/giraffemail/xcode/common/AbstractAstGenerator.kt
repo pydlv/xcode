@@ -14,19 +14,17 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
     }
 
     /**
-     * Generate code and write metadata to a separate file
+     * Generate code and metadata as separate parts
      */
-    open fun generateWithMetadataFile(ast: AstNode, outputFilePath: String): String {
+    open fun generateWithMetadata(ast: AstNode): CodeWithMetadata {
         // Collect metadata from the AST
         val metadata = collectMetadataFromAst(ast)
         
-        // Write metadata to companion file if any metadata exists
-        if (metadata.isNotEmpty()) {
-            MetadataSerializer.writeMetadataToFile(outputFilePath, metadata)
-        }
-        
         // Generate code without metadata comments
-        return generateWithoutMetadataComments(ast)
+        val code = generateWithoutMetadataComments(ast)
+        
+        // Return both parts
+        return MetadataSerializer.createCodeWithMetadata(code, metadata)
     }
     
     /**

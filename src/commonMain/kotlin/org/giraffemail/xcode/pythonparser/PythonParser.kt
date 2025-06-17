@@ -56,12 +56,12 @@ object PythonParser : AbstractAntlrParser<PythonLexer, AntlrPythonParser, AntlrP
     }
 
     /**
-     * Parse method that supports file-based metadata
+     * Parse method that supports parts-based metadata
      */
-    fun parseWithMetadataFile(code: String, sourceFilePath: String): AstNode {
+    fun parseWithMetadata(code: String, metadataPart: String): AstNode {
         return try {
-            // Try file-based metadata first
-            val processedCode = ParserUtils.extractMetadataFromFile(sourceFilePath, code, metadataQueue)
+            // Use parts-based metadata
+            val processedCode = ParserUtils.extractMetadataFromPart(code, metadataPart, metadataQueue)
             
             val lexer = createLexer(org.antlr.v4.kotlinruntime.CharStreams.fromString(processedCode))
             val tokens = org.antlr.v4.kotlinruntime.CommonTokenStream(lexer)
@@ -71,7 +71,7 @@ object PythonParser : AbstractAntlrParser<PythonLexer, AntlrPythonParser, AntlrP
             val ast = parseTree.accept(visitor)
             postprocessAst(ast)
         } catch (e: Exception) {
-            // Fallback to comment-based parsing if file-based fails
+            // Fallback to comment-based parsing if parts-based fails
             parse(code)
         }
     }

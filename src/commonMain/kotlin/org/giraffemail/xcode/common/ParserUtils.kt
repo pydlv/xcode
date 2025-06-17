@@ -60,18 +60,18 @@ object ParserUtils {
     }
     
     /**
-     * Extracts metadata from a companion metadata file for a source file.
-     * This is the new file-based metadata extraction method.
+     * Extracts metadata from a metadata part and populates the metadata queue.
+     * This is the new parts-based metadata extraction method.
      * 
-     * @param sourceFilePath The path to the source file
+     * @param metadataPart The metadata part (JSON string)
      * @param metadataQueue The queue to populate with extracted metadata
-     * @return The original source code (unchanged since metadata is in separate file)
+     * @return The original source code (unchanged since metadata is separate)
      */
-    fun extractMetadataFromFile(sourceFilePath: String, code: String, metadataQueue: MutableList<LanguageMetadata>): String {
+    fun extractMetadataFromPart(code: String, metadataPart: String, metadataQueue: MutableList<LanguageMetadata>): String {
         metadataQueue.clear()
-        val fileMetadata = MetadataSerializer.readMetadataFromFile(sourceFilePath)
-        metadataQueue.addAll(fileMetadata)
-        return code // Return code unchanged since metadata is not embedded
+        val metadata = MetadataSerializer.deserializeMetadataList(metadataPart)
+        metadataQueue.addAll(metadata)
+        return code // Return code unchanged since metadata is separate
     }
     
     /**

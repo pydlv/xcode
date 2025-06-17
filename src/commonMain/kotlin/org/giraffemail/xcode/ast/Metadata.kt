@@ -15,12 +15,20 @@ data class LanguageMetadata(
 )
 
 /**
+ * Data class representing code and metadata as separate parts
+ */
+@Serializable
+data class CodeWithMetadata(
+    val code: String,
+    val metadata: String
+)
+
+/**
  * Utilities for serializing and deserializing AST metadata using kotlinx.serialization
  */
 object MetadataSerializer {
     
     private const val METADATA_PREFIX = "__META__:"
-    private const val METADATA_FILE_EXTENSION = ".meta"
     
     private val json = Json {
         ignoreUnknownKeys = true
@@ -72,39 +80,21 @@ object MetadataSerializer {
     }
     
     /**
-     * Generates the metadata file path for a given source file path
+     * Serializes a list of metadata to a JSON string (metadata part)
      */
-    fun getMetadataFilePath(sourceFilePath: String): String {
-        return "$sourceFilePath$METADATA_FILE_EXTENSION"
+    fun serializeMetadataList(metadata: List<LanguageMetadata>): String {
+        return json.encodeToString(metadata)
     }
     
     /**
-     * Writes metadata to a companion metadata file
+     * Deserializes a list of metadata from a JSON string (metadata part)
      */
-    fun writeMetadataToFile(sourceFilePath: String, metadata: List<LanguageMetadata>): Boolean {
+    fun deserializeMetadataList(metadataPart: String): List<LanguageMetadata> {
         return try {
-            val metadataFilePath = getMetadataFilePath(sourceFilePath)
-            val jsonContent = json.encodeToString(metadata)
-            // Note: In a real implementation, this would write to actual files
-            // For now, we'll store in a map for testing purposes
-            metadataFileStore[metadataFilePath] = jsonContent
-            true
-        } catch (e: Exception) {
-            false
-        }
-    }
-    
-    /**
-     * Reads metadata from a companion metadata file
-     */
-    fun readMetadataFromFile(sourceFilePath: String): List<LanguageMetadata> {
-        return try {
-            val metadataFilePath = getMetadataFilePath(sourceFilePath)
-            val jsonContent = metadataFileStore[metadataFilePath]
-            if (jsonContent != null) {
-                json.decodeFromString<List<LanguageMetadata>>(jsonContent)
-            } else {
+            if (metadataPart.isBlank()) {
                 emptyList()
+            } else {
+                json.decodeFromString<List<LanguageMetadata>>(metadataPart)
             }
         } catch (e: Exception) {
             emptyList()
@@ -112,23 +102,12 @@ object MetadataSerializer {
     }
     
     /**
-     * Checks if a metadata file exists for a given source file
+     * Creates a CodeWithMetadata object from code and metadata parts
      */
-    fun hasMetadataFile(sourceFilePath: String): Boolean {
-        val metadataFilePath = getMetadataFilePath(sourceFilePath)
-        return metadataFileStore.containsKey(metadataFilePath)
-    }
-    
-    /**
-     * Temporary in-memory storage for metadata files during testing
-     * In a real implementation, this would be actual file I/O
-     */
-    private val metadataFileStore = mutableMapOf<String, String>()
-    
-    /**
-     * Clear the metadata file store (for testing purposes)
-     */
-    fun clearMetadataFileStore() {
-        metadataFileStore.clear()
+    fun createCodeWithMetadata(code: String, metadata: List<LanguageMetadata>): CodeWithMetadata {
+        return CodeWithMetadata(
+            code = code,
+            metadata = serializeMetadataList(metadata)
+        )
     }
 }
