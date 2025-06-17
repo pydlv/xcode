@@ -39,7 +39,6 @@ class TranspilationTest {
      * Verifies that AST structure and metadata are preserved through all languages.
      */
     private fun testAstRoundTrip(testName: String, originalAst: AstNode) {
-        val expectMetadataPreservation = hasMetadata(originalAst)
         println("\\n=== Testing AST Round-Trip for '$testName' ===")
         println("Original AST: $originalAst")
 
@@ -58,18 +57,10 @@ class TranspilationTest {
                     val parsedFromSource = fromLang.parseFn(sourceCode)
                     
                     // All languages should preserve metadata through comment serialization
-                    if (expectMetadataPreservation) {
-                        assertEquals(
-                            originalAst, parsedFromSource,
-                            "AST changed after ${fromLang.name} generation/parsing round-trip"
-                        )
-                    } else {
-                        // For cases where metadata preservation is not expected
-                        assertEquals(
-                            stripMetadata(originalAst), stripMetadata(parsedFromSource),
-                            "AST structure changed after ${fromLang.name} generation/parsing round-trip"
-                        )
-                    }
+                    assertEquals(
+                        originalAst, parsedFromSource,
+                        "AST changed after ${fromLang.name} generation/parsing round-trip"
+                    )
 
                     // Step 3: Generate intermediate code using target language
                     val intermediateCode = toLang.generateFn(parsedFromSource)
@@ -86,19 +77,11 @@ class TranspilationTest {
                     val finalAst = fromLang.parseFn(finalCode)
                     
                     // Compare AST preservation through transpilation
-                    if (expectMetadataPreservation) {
-                        // All languages should preserve metadata through comment serialization
-                        assertEquals(
-                            originalAst, finalAst,
-                            "AST not preserved in ${fromLang.name} -> ${toLang.name} -> ${fromLang.name} round-trip"
-                        )
-                    } else {
-                        // At least one language doesn't support metadata, so compare structure only
-                        assertEquals(
-                            stripMetadata(originalAst), stripMetadata(finalAst),
-                            "AST structure not preserved in ${fromLang.name} -> ${toLang.name} -> ${fromLang.name} round-trip"
-                        )
-                    }
+                    // All languages should preserve metadata through comment serialization
+                    assertEquals(
+                        originalAst, finalAst,
+                        "AST not preserved in ${fromLang.name} -> ${toLang.name} -> ${fromLang.name} round-trip"
+                    )
 
                     println("✓ Round-trip successful")
 
@@ -111,119 +94,9 @@ class TranspilationTest {
     }
 
     /**
-     * Strip metadata from AST nodes recursively for structural comparison.
-     */
-    private fun stripMetadata(node: AstNode): AstNode {
-        return when (node) {
-            is ModuleNode -> ModuleNode(
-                body = node.body.map { stripMetadata(it) as StatementNode },
-                metadata = null
-            )
-            is FunctionDefNode -> FunctionDefNode(
-                name = node.name,
-                args = node.args.map { stripMetadata(it) as NameNode },
-                body = node.body.map { stripMetadata(it) as StatementNode },
-                decorator_list = node.decorator_list.map { stripMetadata(it) as ExpressionNode },
-                metadata = null
-            )
-            is NameNode -> NameNode(
-                id = node.id,
-                ctx = node.ctx,
-                metadata = null
-            )
-            is AssignNode -> AssignNode(
-                target = stripMetadata(node.target) as NameNode,
-                value = stripMetadata(node.value) as ExpressionNode,
-                metadata = null
-            )
-            is BinaryOpNode -> BinaryOpNode(
-                left = stripMetadata(node.left) as ExpressionNode,
-                op = node.op,
-                right = stripMetadata(node.right) as ExpressionNode,
-                metadata = null
-            )
-            is ConstantNode -> ConstantNode(
-                value = node.value,
-                metadata = null
-            )
-            is PrintNode -> PrintNode(
-                expression = stripMetadata(node.expression) as ExpressionNode,
-                metadata = null
-            )
-            is CallStatementNode -> CallStatementNode(
-                call = stripMetadata(node.call) as CallNode,
-                metadata = null
-            )
-            is CallNode -> CallNode(
-                func = stripMetadata(node.func) as ExpressionNode,
-                args = node.args.map { stripMetadata(it) as ExpressionNode },
-                keywords = node.keywords,
-                metadata = null
-            )
-            is IfNode -> IfNode(
-                test = stripMetadata(node.test) as ExpressionNode,
-                body = node.body.map { stripMetadata(it) as StatementNode },
-                orelse = node.orelse.map { stripMetadata(it) as StatementNode },
-                metadata = null
-            )
-            is CompareNode -> CompareNode(
-                left = stripMetadata(node.left) as ExpressionNode,
-                op = node.op,
-                right = stripMetadata(node.right) as ExpressionNode,
-                metadata = null
-            )
-            else -> node
-        }
-    }
-
-    /**
-     * Check if an AST node has any metadata recursively.
-     */
-    private fun hasMetadata(node: AstNode): Boolean {
-        return when (node) {
-            is ModuleNode -> {
-                node.metadata != null || node.body.any { hasMetadata(it) }
-            }
-            is FunctionDefNode -> {
-                node.metadata != null || 
-                node.args.any { hasMetadata(it) } || 
-                node.body.any { hasMetadata(it) } || 
-                node.decorator_list.any { hasMetadata(it) }
-            }
-            is NameNode -> node.metadata != null
-            is AssignNode -> {
-                node.metadata != null || hasMetadata(node.target) || hasMetadata(node.value)
-            }
-            is BinaryOpNode -> {
-                node.metadata != null || hasMetadata(node.left) || hasMetadata(node.right)
-            }
-            is ConstantNode -> node.metadata != null
-            is PrintNode -> {
-                node.metadata != null || hasMetadata(node.expression)
-            }
-            is CallStatementNode -> {
-                node.metadata != null || hasMetadata(node.call)
-            }
-            is CallNode -> {
-                node.metadata != null || hasMetadata(node.func) || node.args.any { hasMetadata(it) }
-            }
-            is IfNode -> {
-                node.metadata != null || hasMetadata(node.test) || 
-                node.body.any { hasMetadata(it) } || 
-                node.orelse.any { hasMetadata(it) }
-            }
-            is CompareNode -> {
-                node.metadata != null || hasMetadata(node.left) || hasMetadata(node.right)
-            }
-            else -> false
-        }
-    }
-
-    /**
      * Test sequential transpilation through all languages in a chain.
      */
     private fun testSequentialTranspilation(testName: String, originalAst: AstNode) {
-        val expectMetadataPreservation = hasMetadata(originalAst)
         println("\\n=== Testing Sequential Transpilation for '$testName' ===")
         println("Original AST: $originalAst")
 
@@ -236,7 +109,7 @@ class TranspilationTest {
                 sequence.add(allLanguages[(startLangIndex + i) % allLanguages.size])
             }
 
-            val sequenceNames = sequence.map { it.name }.joinToString(" -> ")
+            val sequenceNames = sequence.joinToString(" -> ") { it.name }
             println("\\nTesting sequence: $sequenceNames -> ${sequence.first().name}")
 
             try {
@@ -257,17 +130,10 @@ class TranspilationTest {
                     val parsedAst = currentLang.parseFn(code)
                     
                     // All languages should preserve metadata through comment serialization
-                    if (expectMetadataPreservation) {
-                        assertEquals(
-                            currentAst, parsedAst,
-                            "AST changed during ${currentLang.name} generation/parsing at step ${i + 1}"
-                        )
-                    } else {
-                        assertEquals(
-                            stripMetadata(currentAst), stripMetadata(parsedAst),
-                            "AST structure changed during ${currentLang.name} generation/parsing at step ${i + 1}"
-                        )
-                    }
+                    assertEquals(
+                        currentAst, parsedAst,
+                        "AST changed during ${currentLang.name} generation/parsing at step ${i + 1}"
+                    )
 
                     // Generate in next language
                     val nextCode = nextLang.generateFn(parsedAst)
@@ -275,17 +141,10 @@ class TranspilationTest {
                 }
 
                 // Verify we got back to the original AST including metadata
-                if (expectMetadataPreservation) {
-                    assertEquals(
-                        originalAst, currentAst,
-                        "AST not preserved through sequence: $sequenceNames -> ${sequence.first().name}"
-                    )
-                } else {
-                    assertEquals(
-                        stripMetadata(originalAst), stripMetadata(currentAst),
-                        "AST structure not preserved through sequence: $sequenceNames -> ${sequence.first().name}"
-                    )
-                }
+                assertEquals(
+                    originalAst, currentAst,
+                    "AST not preserved through sequence: $sequenceNames -> ${sequence.first().name}"
+                )
 
                 println("✓ Sequential transpilation successful")
 
