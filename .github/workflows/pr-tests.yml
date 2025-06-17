@@ -4,6 +4,8 @@ name: "PR Tests"
 on:
   pull_request:
     # Run on all PRs except when only documentation files are changed
+    branches:
+      - 'master'
     paths-ignore:
       - '**.md'
       - 'docs/**'
