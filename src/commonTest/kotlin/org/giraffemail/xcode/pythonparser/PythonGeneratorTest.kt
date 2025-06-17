@@ -22,7 +22,7 @@ class PythonGeneratorTest {
             )
         )
         val expectedCode = "print('Hello, World!')"
-        val actualCode = PythonGenerator().generate(ast) // Changed: Instantiate PythonGenerator
+        val actualCode = PythonGenerator().generateWithMetadata(ast).code // Changed: Instantiate PythonGenerator
         assertEquals(expectedCode, actualCode, "Generated Python code did not match expected.")
     }
 
@@ -43,7 +43,7 @@ class PythonGeneratorTest {
             )
         )
         val expectedCode = "print('$customString')"
-        val actualCode = PythonGenerator().generate(ast) // Changed: Instantiate PythonGenerator
+        val actualCode = PythonGenerator().generateWithMetadata(ast).code // Changed: Instantiate PythonGenerator
         assertEquals(expectedCode, actualCode, "Generated Python code with arbitrary string did not match expected.")
     }
 
@@ -61,7 +61,7 @@ class PythonGeneratorTest {
             )
         )
         val expectedCode = "print(1 + 2)"
-        val actualCode = PythonGenerator().generate(ast) // Changed: Instantiate PythonGenerator
+        val actualCode = PythonGenerator().generateWithMetadata(ast).code // Changed: Instantiate PythonGenerator
         assertEquals(expectedCode, actualCode, "Generated Python code for print with simple addition did not match expected.")
     }
 
@@ -74,7 +74,7 @@ class PythonGeneratorTest {
         )
         val moduleAst = ModuleNode(body = listOf(ExprNode(value = ast)))
         val expectedCode = "1 + 2"
-        val actualCode = PythonGenerator().generate(moduleAst) // Changed: Instantiate PythonGenerator
+        val actualCode = PythonGenerator().generateWithMetadata(moduleAst).code // Changed: Instantiate PythonGenerator
         assertEquals(expectedCode, actualCode, "Generated Python code for simple addition did not match expected.")
     }
 
@@ -95,7 +95,7 @@ class PythonGeneratorTest {
             )
         )
         val expectedCode = "fib(0, 1)"
-        val actualCode = PythonGenerator().generate(ast) // Changed: Instantiate PythonGenerator
+        val actualCode = PythonGenerator().generateWithMetadata(ast).code // Changed: Instantiate PythonGenerator
         assertEquals(expectedCode, actualCode, "Generated Python code for fib(0, 1) with integer constants did not match expected.")
     }
 
@@ -118,7 +118,7 @@ class PythonGeneratorTest {
             )
         )
         val expectedCode = "fib(0, 1)" // Expecting conversion to integer string representation
-        val actualCode = PythonGenerator().generate(ast) // Changed: Instantiate PythonGenerator
+        val actualCode = PythonGenerator().generateWithMetadata(ast).code // Changed: Instantiate PythonGenerator
         assertEquals(expectedCode, actualCode, "Generated Python code for fib(0, 1) with double constants did not match expected.")
     }
 }

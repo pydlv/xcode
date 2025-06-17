@@ -21,7 +21,7 @@ class TypeScriptParserTest {
         )
 
         try {
-            val ast = TypeScriptParser.parse(tsCode)
+            val ast = TypeScriptParser.parseWithMetadata(tsCode, emptyList())
             assertNotNull(ast, "AST should not be null")
             assertEquals(expectedAst, ast, "AST did not match expected structure for console.log with string.")
         } catch (e: AstParseException) {
@@ -44,7 +44,7 @@ class TypeScriptParserTest {
         )
 
         try {
-            val ast = TypeScriptParser.parse(tsCode)
+            val ast = TypeScriptParser.parseWithMetadata(tsCode, emptyList())
             assertNotNull(ast, "AST should not be null")
             assertEquals(expectedAst, ast, "AST did not match expected structure for arbitrary string. \nActual: $ast\nExpected: $expectedAst")
         } catch (e: AstParseException) {
@@ -70,7 +70,7 @@ class TypeScriptParserTest {
         )
 
         try {
-            val ast = TypeScriptParser.parse(tsCode)
+            val ast = TypeScriptParser.parseWithMetadata(tsCode, emptyList())
             assertEquals(expectedAst, ast, "AST for console.log with addition did not match expected.")
         } catch (e: AstParseException) {
             fail("Parsing failed for console.log with addition: ${e.message}", e)
@@ -96,7 +96,7 @@ class TypeScriptParserTest {
         )
 
         try {
-            val ast = TypeScriptParser.parse(tsCode)
+            val ast = TypeScriptParser.parseWithMetadata(tsCode, emptyList())
             assertEquals(expectedAst, ast, "AST for fib(0, 1) did not match expected.")
         } catch (e: AstParseException) {
             fail("Parsing failed for fib(0, 1): ${e.message}", e)
@@ -124,7 +124,7 @@ class TypeScriptParserTest {
         )
 
         try {
-            val ast = TypeScriptParser.parse(tsCode)
+            val ast = TypeScriptParser.parseWithMetadata(tsCode, emptyList())
             assertEquals(expectedAst, ast, "AST for function declaration did not match expected.")
         } catch (e: AstParseException) {
             fail("Parsing failed for function declaration: ${e.message}", e)
@@ -146,7 +146,7 @@ class TypeScriptParserTest {
         )
 
         try {
-            val ast = TypeScriptParser.parse(tsCode)
+            val ast = TypeScriptParser.parseWithMetadata(tsCode, emptyList())
             assertEquals(expectedAst, ast, "AST for variable assignment did not match expected.")
         } catch (e: AstParseException) {
             fail("Parsing failed for variable assignment: ${e.message}", e)
