@@ -28,7 +28,22 @@ class PythonGenerator : AbstractAstGenerator() {
         val params = node.args.joinToString(", ") { it.id } // Assuming args are NameNodes for params
         // Each statement in the body needs to be indented.
         val body = node.body.joinToString("\n") { "    " + generateStatement(it) }
-        return "def $funcName($params):\n$body"
+        
+        // Create metadata comment if TypeScript metadata exists
+        val metadataComment = if (node.metadata != null) {
+            val returnType = node.metadata["returnType"] as? String
+            val paramTypes = node.metadata["paramTypes"] as? Map<String, String>
+            
+            if (returnType != null || !paramTypes.isNullOrEmpty()) {
+                val metadata = TypescriptMetadata(
+                    returnType = returnType,
+                    paramTypes = paramTypes ?: emptyMap()
+                )
+                " " + MetadataSerializer.createMetadataComment(metadata, "python")
+            } else ""
+        } else ""
+        
+        return "def $funcName($params):$metadataComment\n$body"
     }
 
     override fun visitAssignNode(node: AssignNode): String {
@@ -37,7 +52,15 @@ class PythonGenerator : AbstractAstGenerator() {
         // Otherwise, the original if/else structure might be needed if target can be other ExpressionNode types.
         val targetName = node.target.id // Assuming node.target is of type NameNode
         val valueExpr = generateExpression(node.value)
-        return "$targetName = $valueExpr"
+        
+        // Create metadata comment if TypeScript variable type exists
+        val metadataComment = if (node.metadata?.get("variableType") != null) {
+            val variableType = node.metadata["variableType"] as String
+            val metadata = TypescriptMetadata(variableType = variableType)
+            " " + MetadataSerializer.createMetadataComment(metadata, "python")
+        } else ""
+        
+        return "$targetName = $valueExpr$metadataComment"
     }
 
     override fun visitCallStatementNode(node: CallStatementNode): String {
