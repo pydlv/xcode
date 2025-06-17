@@ -4,7 +4,7 @@ import kotlinx.serialization.*
 import kotlinx.serialization.json.*
 
 /**
- * Data classes for metadata serialization using kotlinx.serialization
+ * Data classes for metadata storage and comment-based serialization
  */
 @Serializable
 data class LanguageMetadata(
@@ -16,6 +16,7 @@ data class LanguageMetadata(
 
 /**
  * Data class representing code and metadata as separate parts
+ * Note: metadata is stored as Kotlin objects, not serialized strings
  */
 data class CodeWithMetadata(
     val code: String,
@@ -23,7 +24,7 @@ data class CodeWithMetadata(
 )
 
 /**
- * Utilities for serializing and deserializing AST metadata using kotlinx.serialization
+ * Utilities for comment-based metadata serialization and metadata part handling
  */
 object MetadataSerializer {
     
@@ -35,14 +36,14 @@ object MetadataSerializer {
     }
     
     /**
-     * Serializes language metadata to a JSON string
+     * Serializes language metadata to a JSON string for comment embedding
      */
     fun serialize(metadata: LanguageMetadata): String {
         return json.encodeToString(metadata)
     }
     
     /**
-     * Deserializes language metadata from a JSON string
+     * Deserializes language metadata from a JSON string for comment extraction
      */
     fun deserialize(jsonString: String): LanguageMetadata? {
         return try {
@@ -80,6 +81,7 @@ object MetadataSerializer {
     
     /**
      * Creates a CodeWithMetadata object from code and metadata parts
+     * Note: metadata is stored as Kotlin objects, not serialized
      */
     fun createCodeWithMetadata(code: String, metadata: List<LanguageMetadata>): CodeWithMetadata {
         return CodeWithMetadata(
