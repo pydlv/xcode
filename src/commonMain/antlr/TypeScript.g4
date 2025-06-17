@@ -15,7 +15,7 @@ statement
 consoleLogStatement: 'console' '.' 'log' '(' expression ')' ';'? ; // Using literal chars
 
 functionDeclaration:
-    'function' IDENTIFIER '(' parameterList? ')' typeAnnotation? '{' functionBody '}' metadataComment? ; // Using literal chars
+    'function' IDENTIFIER '(' parameterList? ')' typeAnnotation? '{' functionBody '}' ; // Using literal chars
 
 parameterList: parameter (',' parameter)* ; // Using literal chars
 
@@ -28,7 +28,7 @@ typeExpression:
 
 functionBody: statement* ;
 
-assignStatement: ('let' | 'var' | 'const')? IDENTIFIER typeAnnotation? '=' expression ';'? metadataComment? ; // Using literal chars
+assignStatement: ('let' | 'var' | 'const')? IDENTIFIER typeAnnotation? '=' expression ';'? ; // Using literal chars
 
 functionCallStatement: IDENTIFIER '(' arguments? ')' ';'? ; // Using literal chars
 
@@ -49,5 +49,3 @@ expression
 // STRING_LITERAL, IDENTIFIER, NUMBER are now imported from CommonLexerRules.
 // WS is now handled by WS_ALL from CommonLexerRules.
 // TypeScript comments (// and /* */) are handled by SL_COMMENT and ML_COMMENT from CommonLexerRules.
-
-metadataComment: METADATA_COMMENT ;

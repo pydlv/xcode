@@ -20,7 +20,5 @@ WS_ALL: [ \t\r\n]+ -> skip;
 WS_HORIZONTAL: [ \t]+ -> skip;
 
 // Comment rules
-// Metadata comment rule (not skipped) - must come before SL_COMMENT
-METADATA_COMMENT: '//' .*? '__TS_META__:' .*? ;
 SL_COMMENT : '//' ~[\r\n]* -> skip;
 ML_COMMENT: '/*' .*? '*/' -> skip;

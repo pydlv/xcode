@@ -57,7 +57,7 @@ class TypeScriptGenerator : AbstractAstGenerator() {
             } else ""
         } else ""
         
-        return functionDeclaration.dropLast(1) + metadataComment + "\n}"
+        return functionDeclaration.dropLast(1) + metadataComment + "}"
     }
 
     override fun visitAssignNode(node: AssignNode): String {

@@ -291,10 +291,10 @@ class TranspilationTest {
     }
 fib(0, 1);"""
 
-        // TypeScript code for recursive fibonacci
+        // TypeScript code for recursive fibonacci (without type annotations for now)
         val typeScriptCode = """
-            function fib(a: number, b: number): void {
-                let c: number = a + b;
+            function fib(a, b) {
+                let c = a + b;
                 console.log(c);
                 fib(b, c);
             }

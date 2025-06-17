@@ -30,6 +30,86 @@ object JavaScriptParser : AbstractAntlrParser<JavaScriptLexer, AntlrJavaScriptPa
     override fun getLanguageName(): String {
         return "JavaScript"
     }
+    
+    override fun postprocessAst(ast: AstNode): AstNode {
+        return injectMetadataIntoAst(ast)
+    }
+    
+    override fun preprocessCode(code: String): String {
+        // Extract metadata comments and store them for processing
+        return extractMetadataFromCode(code)
+    }
+    
+    private val metadataQueue = mutableListOf<TypescriptMetadata>()
+    
+    private fun extractMetadataFromCode(code: String): String {
+        metadataQueue.clear()
+        val lines = code.split('\n')
+        val cleanedLines = mutableListOf<String>()
+        
+        for (line in lines) {
+            if (line.contains("__TS_META__:")) {
+                // Extract metadata and add to queue
+                MetadataSerializer.extractMetadataFromComment(line)?.let { metadata ->
+                    metadataQueue.add(metadata)
+                }
+                // Remove the metadata comment line from code to be parsed
+                val cleanedLine = line.replace(Regex("//.*__TS_META__:.*"), "").trim()
+                if (cleanedLine.isNotEmpty()) {
+                    cleanedLines.add(cleanedLine)
+                }
+            } else {
+                cleanedLines.add(line)
+            }
+        }
+        
+        return cleanedLines.joinToString("\n")
+    }
+    
+    private fun injectMetadataIntoAst(ast: AstNode): AstNode {
+        var metadataIndex = 0
+        
+        fun injectIntoNode(node: AstNode): AstNode {
+            return when (node) {
+                is ModuleNode -> {
+                    val processedBody = node.body.map { stmt ->
+                        injectIntoNode(stmt) as StatementNode
+                    }
+                    node.copy(body = processedBody)
+                }
+                is FunctionDefNode -> {
+                    if (metadataIndex < metadataQueue.size) {
+                        val metadata = metadataQueue[metadataIndex++]
+                        val metadataMap = mutableMapOf<String, Any>()
+                        if (metadata.returnType != null) {
+                            metadataMap["returnType"] = metadata.returnType
+                        }
+                        if (metadata.paramTypes.isNotEmpty()) {
+                            metadataMap["paramTypes"] = metadata.paramTypes
+                        }
+                        node.copy(metadata = metadataMap.ifEmpty { null })
+                    } else {
+                        node
+                    }
+                }
+                is AssignNode -> {
+                    if (metadataIndex < metadataQueue.size) {
+                        val metadata = metadataQueue[metadataIndex++]
+                        if (metadata.variableType != null) {
+                            node.copy(metadata = mapOf("variableType" to metadata.variableType))
+                        } else {
+                            node
+                        }
+                    } else {
+                        node
+                    }
+                }
+                else -> node
+            }
+        }
+        
+        return injectIntoNode(ast)
+    }
 
     // The main parse method is now inherited from AbstractAntlrParser.
     // The original parse method's content, including the "trigger_error" check
@@ -68,30 +148,11 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
             visit(stmtCtx) as? StatementNode
         }
 
-        // Extract metadata from comment if present
-        println("DEBUG: metadataComment context: ${ctx.metadataComment()}")
-        println("DEBUG: metadataComment text: ${ctx.metadataComment()?.text}")
-        val metadata = ctx.metadataComment()?.let { metaCtx ->
-            val tsMetadata = MetadataSerializer.extractMetadataFromComment(metaCtx.text)
-            println("DEBUG: extracted metadata: $tsMetadata")
-            if (tsMetadata != null) {
-                val metadataMap = mutableMapOf<String, Any>()
-                if (tsMetadata.returnType != null) {
-                    metadataMap["returnType"] = tsMetadata.returnType
-                }
-                if (tsMetadata.paramTypes.isNotEmpty()) {
-                    metadataMap["paramTypes"] = tsMetadata.paramTypes
-                }
-                metadataMap.ifEmpty { null }
-            } else null
-        }
-
         return FunctionDefNode(
             name = funcName,
             args = parameters,
             body = body,
-            decorator_list = emptyList(),
-            metadata = metadata
+            decorator_list = emptyList()
         )
     }
 
@@ -111,15 +172,7 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
         val valueExpr = visit(ctx.expression()) as? ExpressionNode
             ?: UnknownNode("Invalid expression in assignment")
 
-        // Extract metadata from comment if present
-        val metadata = ctx.metadataComment()?.let { metaCtx ->
-            val tsMetadata = MetadataSerializer.extractMetadataFromComment(metaCtx.text)
-            if (tsMetadata?.variableType != null) {
-                mapOf("variableType" to tsMetadata.variableType)
-            } else null
-        }
-
-        return AssignNode(target = targetNode, value = valueExpr, metadata = metadata)
+        return AssignNode(target = targetNode, value = valueExpr)
     }
 
     // Handle function calls as statements

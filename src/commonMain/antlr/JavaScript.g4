@@ -15,13 +15,13 @@ statement
 consoleLogStatement: 'console' '.' 'log' '(' expression ')' ';'? ; // Using literal chars
 
 functionDeclaration:
-    'function' IDENTIFIER '(' parameterList? ')' '{' functionBody '}' metadataComment? ; // Using literal chars
+    'function' IDENTIFIER '(' parameterList? ')' '{' functionBody '}' ; // Using literal chars
 
 parameterList: IDENTIFIER (',' IDENTIFIER)* ; // Using literal chars
 
 functionBody: statement* ;
 
-assignStatement: 'let'? IDENTIFIER '=' expression ';'? metadataComment? ; // Using literal chars
+assignStatement: 'let'? IDENTIFIER '=' expression ';'? ; // Using literal chars
 
 functionCallStatement: IDENTIFIER '(' arguments? ')' ';'? ; // Using literal chars
 
@@ -42,5 +42,3 @@ expression
 // STRING_LITERAL, IDENTIFIER, NUMBER are now imported from CommonLexerRules.
 // WS is now handled by WS_ALL from CommonLexerRules.
 // JavaScript comments (// and /* */) are handled by SL_COMMENT and ML_COMMENT from CommonLexerRules.
-
-metadataComment: METADATA_COMMENT ;

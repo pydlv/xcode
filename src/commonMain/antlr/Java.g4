@@ -17,7 +17,7 @@ expressionStatement: expression SEMI; // Changed from ';' to SEMI
 
 // Function Definition
 functionDefinition:
-    PUBLIC STATIC VOID IDENTIFIER LPAREN parameterList RPAREN LBRACE statement* RBRACE metadataComment?
+    PUBLIC STATIC VOID IDENTIFIER LPAREN parameterList RPAREN LBRACE statement* RBRACE
     ;
 
 parameterList:
@@ -30,7 +30,7 @@ parameter:
 
     // Assignment Statement
 assignmentStatement:
-    IDENTIFIER ASSIGN expression SEMI metadataComment?
+    IDENTIFIER ASSIGN expression SEMI
     ;
 
     // Call Statement (for standalone calls like fib(0,1); or fib(b,c);)
@@ -95,5 +95,3 @@ ADD : '+';
 // For simplicity, assuming IDENTIFIER is defined in CommonLexerRules as [a-zA-Z_][a-zA-Z_0-9]*
 // and whitespace is handled (e.g., skipped).
 WS: [ \\t\\r\\n]+ -> skip; // Common whitespace skipping rule, if not in CommonLexerRules
-
-metadataComment: METADATA_COMMENT ;
