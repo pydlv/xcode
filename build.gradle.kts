@@ -38,6 +38,28 @@ val generateKotlinGrammarSource = tasks.register<AntlrKotlinTask>("generateKotli
     outputDirectory = layout.buildDirectory.dir(outDir).get().asFile
 }
 
+// Task to fix deprecated UNSAFE_CALL suppressions in generated ANTLR code
+val fixAntlrWarnings = tasks.register("fixAntlrWarnings") {
+    dependsOn(generateKotlinGrammarSource)
+    
+    doLast {
+        val generatedDir = file("build/generatedAntlr/org/giraffemail/xcode/generated")
+        if (generatedDir.exists()) {
+            generatedDir.listFiles { file -> file.name.endsWith("Parser.kt") }?.forEach { file ->
+                val content = file.readText()
+                val fixedContent = content.replace(
+                    "@Suppress(\"UNSAFE_CALL\")",
+                    "@Suppress(\"UNNECESSARY_NOT_NULL_ASSERTION\")"
+                )
+                if (content != fixedContent) {
+                    file.writeText(fixedContent)
+                    println("Fixed UNSAFE_CALL suppressions in ${file.name}")
+                }
+            }
+        }
+    }
+}
+
 kotlin {
     linuxX64("nativeLinux") {
         binaries.executable {
@@ -98,6 +120,13 @@ kotlin {
         val nativeWindowsTest by getting {
             dependsOn(commonTest)
         }
+    }
+}
+
+// Make sure ANTLR warnings are fixed before compilation
+tasks.configureEach {
+    if (name.startsWith("compile") && name.contains("Kotlin")) {
+        dependsOn(fixAntlrWarnings)
     }
 }
 
