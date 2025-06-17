@@ -4,7 +4,6 @@ plugins {
     kotlin("multiplatform") version "2.1.21" // Ensure this is a recent KMP plugin version
     id("com.strumenta.antlr-kotlin") version "1.0.5"
     kotlin("plugin.serialization") version "2.1.21"
-    id("org.jetbrains.qodana") version "2024.2.3"
 }
 
 val antlrKotlinVersion by extra("1.0.5")
