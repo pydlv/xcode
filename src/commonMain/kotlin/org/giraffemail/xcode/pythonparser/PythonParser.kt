@@ -5,6 +5,7 @@ import org.giraffemail.xcode.common.ParserUtils
 import org.giraffemail.xcode.generated.PythonLexer
 import org.giraffemail.xcode.generated.PythonParser as AntlrPythonParser
 import org.antlr.v4.kotlinruntime.CharStream
+import org.antlr.v4.kotlinruntime.CharStreams
 import org.antlr.v4.kotlinruntime.CommonTokenStream
 import org.antlr.v4.kotlinruntime.tree.ParseTreeVisitor
 import org.giraffemail.xcode.generated.PythonBaseVisitor
@@ -63,8 +64,8 @@ object PythonParser : AbstractAntlrParser<PythonLexer, AntlrPythonParser, AntlrP
         val processedCode = ParserUtils.extractMetadataFromPart(code, metadataPart, metadataQueue)
         val codeWithIndentation = indentationHandler.processIndentation(processedCode)
         
-        val lexer = createLexer(org.antlr.v4.kotlinruntime.CharStreams.fromString(codeWithIndentation))
-        val tokens = org.antlr.v4.kotlinruntime.CommonTokenStream(lexer)
+        val lexer = createLexer(CharStreams.fromString(codeWithIndentation))
+        val tokens = CommonTokenStream(lexer)
         val parser = createAntlrParser(tokens)
         val parseTree = invokeEntryPoint(parser)
         val visitor = createAstBuilder()

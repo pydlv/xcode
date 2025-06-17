@@ -38,7 +38,7 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         }
         
         // Generate return type annotation from metadata
-        val (returnType, paramTypes, _) = extractFunctionMetadata(node)
+        val (returnType, _, _) = extractFunctionMetadata(node)
         val returnTypeAnnotation = if (returnType != null) ": $returnType" else ""
         
         // Indent statements within the function body
