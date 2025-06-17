@@ -48,33 +48,13 @@ object PythonParser : AbstractAntlrParser<PythonLexer, AntlrPythonParser, AntlrP
     private val metadataQueue = mutableListOf<LanguageMetadata>()
     
     private fun extractMetadataFromCode(code: String): String {
-        metadataQueue.clear()
-        val lines = code.split('\n')
-        val cleanedLines = mutableListOf<String>()
-        
-        for (line in lines) {
-            if (line.contains("__META__:")) {
-                // Extract metadata and add to queue
-                MetadataSerializer.extractMetadataFromComment(line)?.let { metadata ->
-                    metadataQueue.add(metadata)
-                }
-                // Remove the metadata comment line from code to be parsed
-                val cleanedLine = line.replace(Regex("#.*__META__:.*"), "").trim()
-                if (cleanedLine.isNotEmpty()) {
-                    cleanedLines.add(cleanedLine)
-                }
-            } else {
-                cleanedLines.add(line)
-            }
-        }
-        
-        return cleanedLines.joinToString("\n")
+        return ParserUtils.extractMetadataFromCode(code, metadataQueue, "#")
     }
     
     private fun injectMetadataIntoAst(ast: AstNode): AstNode {
         // Instead of using index, match metadata by type to appropriate nodes
-        val functionMetadata = metadataQueue.filter { it.returnType != null || it.paramTypes.isNotEmpty() }
-        val assignmentMetadata = metadataQueue.filter { it.variableType != null }
+        val functionMetadata = ParserUtils.filterFunctionMetadata(metadataQueue)
+        val assignmentMetadata = ParserUtils.filterAssignmentMetadata(metadataQueue)
         
         var functionMetadataIndex = 0
         var assignmentMetadataIndex = 0
@@ -239,7 +219,7 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
     override fun visitProgram(ctx: AntlrPythonParser.ProgramContext): AstNode {
         // Updated to correctly visit the optional program_body
         val bodyNode = ctx.program_body()?.let { visit(it) }
-        return if (bodyNode is ModuleNode) bodyNode else ModuleNode(emptyList()) // Ensure ModuleNode is returned
+        return (bodyNode as? ModuleNode) ?: ModuleNode(emptyList()) // Ensure ModuleNode is returned
     }
 
     // NEW: Handle program_body for sequences of top-level statements
@@ -326,7 +306,7 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
             name = name,
             args = parameters,
             body = bodyStmts,
-            decorator_list = emptyList()
+            decoratorList = emptyList()
         )
     }
 
@@ -356,8 +336,7 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
 
     // Handle if statements
     override fun visitIfStatement(ctx: AntlrPythonParser.IfStatementContext): AstNode {
-        val condition = visit(ctx.expression()) as? ExpressionNode
-            ?: UnknownNode("Invalid condition in if statement")
+        val condition = ParserUtils.visitAsExpressionNode(visit(ctx.expression()), "Invalid condition in if statement")
 
         // Get the if body (first function_body)
         val ifBody = ctx.function_body(0)?.let { visit(it) as? ModuleNode }?.body ?: emptyList()
@@ -379,7 +358,7 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
     }
 
     private fun createCallNode(funcName: String, argumentsCtx: AntlrPythonParser.ArgumentsContext?): CallNode {
-        val funcNameNode = NameNode(id = funcName, ctx = Load)
+        val funcNameNode = ParserUtils.createFunctionNameNode(funcName)
         val args = mutableListOf<ExpressionNode>()
         argumentsCtx?.expression()?.forEach { exprCtx ->
             val arg = visit(exprCtx) as? ExpressionNode

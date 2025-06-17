@@ -8,6 +8,7 @@ import org.antlr.v4.kotlinruntime.CommonTokenStream
 import org.antlr.v4.kotlinruntime.tree.ParseTreeVisitor
 import org.giraffemail.xcode.generated.JavaScriptBaseVisitor
 import org.giraffemail.xcode.parserbase.AbstractAntlrParser
+import org.giraffemail.xcode.common.ParserUtils
 
 object JavaScriptParser : AbstractAntlrParser<JavaScriptLexer, AntlrJavaScriptParser, AntlrJavaScriptParser.ProgramContext>() {
 
@@ -43,33 +44,13 @@ object JavaScriptParser : AbstractAntlrParser<JavaScriptLexer, AntlrJavaScriptPa
     private val metadataQueue = mutableListOf<LanguageMetadata>()
     
     private fun extractMetadataFromCode(code: String): String {
-        metadataQueue.clear()
-        val lines = code.split('\n')
-        val cleanedLines = mutableListOf<String>()
-        
-        for (line in lines) {
-            if (line.contains("__META__:")) {
-                // Extract metadata and add to queue
-                MetadataSerializer.extractMetadataFromComment(line)?.let { metadata ->
-                    metadataQueue.add(metadata)
-                }
-                // Remove the metadata comment line from code to be parsed
-                val cleanedLine = line.replace(Regex("//.*__META__:.*"), "").trim()
-                if (cleanedLine.isNotEmpty()) {
-                    cleanedLines.add(cleanedLine)
-                }
-            } else {
-                cleanedLines.add(line)
-            }
-        }
-        
-        return cleanedLines.joinToString("\n")
+        return ParserUtils.extractMetadataFromCode(code, metadataQueue)
     }
     
     private fun injectMetadataIntoAst(ast: AstNode): AstNode {
         // Instead of using index, match metadata by type to appropriate nodes
-        val functionMetadata = metadataQueue.filter { it.returnType != null || it.paramTypes.isNotEmpty() }
-        val assignmentMetadata = metadataQueue.filter { it.variableType != null }
+        val functionMetadata = ParserUtils.filterFunctionMetadata(metadataQueue)
+        val assignmentMetadata = ParserUtils.filterAssignmentMetadata(metadataQueue)
         
         var functionMetadataIndex = 0
         var assignmentMetadataIndex = 0
@@ -181,7 +162,7 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
             name = funcName,
             args = parameters,
             body = body,
-            decorator_list = emptyList()
+            decoratorList = emptyList()
         )
     }
 
@@ -219,8 +200,7 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
 
     // Handle if statements
     override fun visitIfStatement(ctx: AntlrJavaScriptParser.IfStatementContext): AstNode {
-        val condition = visit(ctx.expression()) as? ExpressionNode
-            ?: UnknownNode("Invalid condition in if statement")
+        val condition = ParserUtils.visitAsExpressionNode(visit(ctx.expression()), "Invalid condition in if statement")
 
         // Get the if body (first functionBody)
         val ifBody = ctx.functionBody(0)?.let { visit(it) as? ModuleNode }?.body ?: emptyList()
@@ -236,7 +216,7 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
     }
 
     private fun createCallNode(funcName: String, argumentsCtx: AntlrJavaScriptParser.ArgumentsContext?): CallNode {
-        val funcNameNode = NameNode(id = funcName, ctx = Load)
+        val funcNameNode = ParserUtils.createFunctionNameNode(funcName)
         val args = mutableListOf<ExpressionNode>()
         argumentsCtx?.expression()?.forEach { exprCtx -> // argumentsCtx can be null, and expression() can be null within argumentsCtx
             (exprCtx as? AntlrJavaScriptParser.ExpressionContext)?.let {
@@ -268,11 +248,9 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
     // Handle Comparison expression
     override fun visitComparison(ctx: AntlrJavaScriptParser.ComparisonContext): AstNode {
         try {
-            val left = visit(ctx.getChild(0)!!) as? ExpressionNode
-                ?: UnknownNode("Invalid left expression in comparison")
+            val left = ParserUtils.visitAsExpressionNode(visit(ctx.getChild(0)!!), "Invalid left expression in comparison")
 
-            val right = visit(ctx.getChild(2)!!) as? ExpressionNode
-                ?: UnknownNode("Invalid right expression in comparison")
+            val right = ParserUtils.visitAsExpressionNode(visit(ctx.getChild(2)!!), "Invalid right expression in comparison")
 
             // Get the comparison operator from the context and normalize to canonical form
             val rawOperator = ctx.getChild(1)!!.text
