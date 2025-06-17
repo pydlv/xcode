@@ -51,77 +51,7 @@ object JavaParser : AbstractAntlrParser<JavaLexer, AntlrJavaParser, AntlrJavaPar
     }
     
     private fun injectMetadataIntoAst(ast: AstNode): AstNode {
-        // Instead of using index, match metadata by type to appropriate nodes
-        val functionMetadata = ParserUtils.filterFunctionMetadata(metadataQueue)
-        val assignmentMetadata = ParserUtils.filterAssignmentMetadata(metadataQueue)
-        
-        var functionMetadataIndex = 0
-        var assignmentMetadataIndex = 0
-        
-        fun injectIntoNode(node: AstNode): AstNode {
-            return when (node) {
-                is ModuleNode -> {
-                    val processedBody = node.body.map { stmt ->
-                        injectIntoNode(stmt) as StatementNode
-                    }
-                    node.copy(body = processedBody)
-                }
-                is FunctionDefNode -> {
-                    if (functionMetadataIndex < functionMetadata.size) {
-                        val metadata = functionMetadata[functionMetadataIndex++]
-                        val metadataMap = mutableMapOf<String, Any>()
-                        if (metadata.returnType != null) {
-                            metadataMap["returnType"] = metadata.returnType
-                        }
-                        if (metadata.paramTypes.isNotEmpty()) {
-                            metadataMap["paramTypes"] = metadata.paramTypes
-                        }
-                        
-                        // Restore individual parameter metadata
-                        val updatedArgs = node.args.map { param ->
-                            val paramMetadata = metadata.individualParamMetadata[param.id]
-                            if (paramMetadata != null && paramMetadata.isNotEmpty()) {
-                                param.copy(metadata = paramMetadata)
-                            } else {
-                                param
-                            }
-                        }
-                        
-                        // Process function body recursively
-                        val updatedBody = node.body.map { stmt ->
-                            injectIntoNode(stmt) as StatementNode
-                        }
-                        
-                        node.copy(
-                            args = updatedArgs,
-                            body = updatedBody,
-                            metadata = metadataMap.ifEmpty { null }
-                        )
-                    } else {
-                        // No function metadata, but still need to process body
-                        val updatedBody = node.body.map { stmt ->
-                            injectIntoNode(stmt) as StatementNode
-                        }
-                        node.copy(body = updatedBody)
-                    }
-                }
-                is AssignNode -> {
-                    if (assignmentMetadataIndex < assignmentMetadata.size) {
-                        val metadata = assignmentMetadata[assignmentMetadataIndex++]
-                        if (metadata.variableType != null) {
-                            node.copy(metadata = mapOf("variableType" to metadata.variableType))
-                        } else {
-                            node
-                        }
-                    } else {
-                        node
-                    }
-                }
-                else -> node
-            }
-        }
-        
-        return injectIntoNode(ast)
+        return ParserUtils.injectMetadataIntoAst(ast, metadataQueue)
     }
 
     // The main parse method is now inherited from AbstractAntlrParser.
