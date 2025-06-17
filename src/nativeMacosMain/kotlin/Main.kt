@@ -1,5 +1,8 @@
 package org.giraffemail.xcode
 
-fun main() {
-    println(getHelloWorldMessage() + " on macOS Native.")
+import org.giraffemail.xcode.cli.TranspilerCli
+
+fun main(args: Array<String>) {
+    val cli = TranspilerCli()
+    cli.run(args)
 }
