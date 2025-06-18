@@ -21,6 +21,452 @@ data class LanguageConfig(
 )
 
 /**
+ * Enumeration of supported AST features for selective generation
+ */
+enum class AstFeature {
+    FUNCTION_DEFINITIONS,
+    VARIABLE_ASSIGNMENTS,
+    BINARY_OPERATIONS,
+    PRINT_STATEMENTS,
+    FUNCTION_CALLS,
+    CONSTANT_VALUES,
+    VARIABLE_REFERENCES,
+    CONDITIONAL_STATEMENTS,
+    COMPARISON_OPERATIONS,
+    RETURN_STATEMENTS
+}
+
+/**
+ * Supported common AST features for maximal AST generation
+ */
+object SupportedAstFeatures {
+    
+    /**
+     * Set of all supported AST features
+     */
+    val ALL_FEATURES = setOf(
+        AstFeature.FUNCTION_DEFINITIONS,
+        AstFeature.VARIABLE_ASSIGNMENTS,
+        AstFeature.BINARY_OPERATIONS,
+        AstFeature.PRINT_STATEMENTS,
+        AstFeature.FUNCTION_CALLS,
+        AstFeature.CONSTANT_VALUES,
+        AstFeature.VARIABLE_REFERENCES,
+        AstFeature.RETURN_STATEMENTS
+    )
+    
+    /**
+     * List of supported AST node types and their associated metadata features
+     */
+    val SUPPORTED_FEATURES = listOf(
+        "Function definitions with typed parameters",
+        "Function return type annotations", 
+        "Variable assignments with type annotations",
+        "Function calls as statements",
+        "Print/console.log statements",
+        "Conditional statements (if/else)",
+        "Binary operations (arithmetic, string)",
+        "Comparison operations", 
+        "Constant values (strings, numbers)",
+        "Variable references (Load, Store, Param contexts)"
+    )
+    
+    /**
+     * Supported metadata types from LanguageMetadata
+     */
+    val SUPPORTED_METADATA = listOf(
+        "returnType" to "Function return type annotations",
+        "paramTypes" to "Parameter type mappings", 
+        "variableType" to "Variable type annotations",
+        "individualParamMetadata" to "Per-parameter detailed metadata"
+    )
+}
+
+/**
+ * Utility for generating maximal AST nodes with all supported features
+ */
+object MaximalAstGenerator {
+    
+    /**
+     * Generates a maximal AST that includes specified AST features.
+     * This AST can be used in tests to verify comprehensive transpilation support.
+     * @param features Set of AST features to include. Defaults to all supported features.
+     */
+    fun generateMaximalAst(features: Set<AstFeature> = SupportedAstFeatures.ALL_FEATURES): ModuleNode {
+        val bodyNodes = mutableListOf<StatementNode>()
+        
+        // Generate function definition if requested
+        if (features.contains(AstFeature.FUNCTION_DEFINITIONS)) {
+            val functionBody = mutableListOf<StatementNode>()
+            
+            // Add variable assignment within function if requested
+            if (features.contains(AstFeature.VARIABLE_ASSIGNMENTS)) {
+                val assignValue = if (features.contains(AstFeature.BINARY_OPERATIONS)) {
+                    BinaryOpNode(
+                        left = if (features.contains(AstFeature.VARIABLE_REFERENCES)) 
+                            NameNode(id = "input", ctx = Load) else ConstantNode("input"),
+                        op = "+",
+                        right = if (features.contains(AstFeature.VARIABLE_REFERENCES))
+                            NameNode(id = "count", ctx = Load) else ConstantNode(1)
+                    )
+                } else if (features.contains(AstFeature.CONSTANT_VALUES)) {
+                    ConstantNode("hello")
+                } else {
+                    NameNode(id = "input", ctx = Load)
+                }
+                
+                functionBody.add(
+                    AssignNode(
+                        target = NameNode(id = "result", ctx = Store),
+                        value = assignValue,
+                        metadata = mapOf("variableType" to "string")
+                    )
+                )
+            }
+            
+            // Add print statement if requested
+            if (features.contains(AstFeature.PRINT_STATEMENTS)) {
+                functionBody.add(
+                    PrintNode(
+                        expression = if (features.contains(AstFeature.VARIABLE_REFERENCES))
+                            NameNode(id = "result", ctx = Load) else ConstantNode("output")
+                    )
+                )
+            }
+            
+            // Add return statement if requested
+            if (features.contains(AstFeature.RETURN_STATEMENTS)) {
+                val returnValue = if (features.contains(AstFeature.VARIABLE_REFERENCES) && features.contains(AstFeature.VARIABLE_ASSIGNMENTS)) {
+                    // Return the result variable if we have assignments and variable references
+                    NameNode(id = "result", ctx = Load)
+                } else if (features.contains(AstFeature.BINARY_OPERATIONS)) {
+                    // Return a binary operation
+                    BinaryOpNode(
+                        left = if (features.contains(AstFeature.VARIABLE_REFERENCES)) 
+                            NameNode(id = "input", ctx = Load) else ConstantNode("a"),
+                        op = "+",
+                        right = if (features.contains(AstFeature.VARIABLE_REFERENCES))
+                            NameNode(id = "count", ctx = Load) else ConstantNode(1)
+                    )
+                } else if (features.contains(AstFeature.CONSTANT_VALUES)) {
+                    // Return a constant
+                    ConstantNode("returned_value")
+                } else {
+                    // Return null (void return)
+                    null
+                }
+                
+                functionBody.add(ReturnNode(value = returnValue))
+            }
+            
+            // Create function arguments based on features
+            val functionArgs = if (features.contains(AstFeature.VARIABLE_REFERENCES)) {
+                listOf(
+                    NameNode(id = "input", ctx = Param, metadata = mapOf("type" to "string")),
+                    NameNode(id = "count", ctx = Param, metadata = mapOf("type" to "number"))
+                )
+            } else {
+                emptyList()
+            }
+            
+            // Determine return type based on features
+            val returnType = if (features.contains(AstFeature.RETURN_STATEMENTS)) {
+                if (features.contains(AstFeature.VARIABLE_ASSIGNMENTS) && features.contains(AstFeature.VARIABLE_REFERENCES)) {
+                    "string" // returning result variable
+                } else if (features.contains(AstFeature.BINARY_OPERATIONS)) {
+                    "number" // returning binary operation result
+                } else if (features.contains(AstFeature.CONSTANT_VALUES)) {
+                    "string" // returning constant value
+                } else {
+                    "void" // returning null
+                }
+            } else {
+                "void"
+            }
+            
+            bodyNodes.add(
+                FunctionDefNode(
+                    name = "processData",
+                    args = functionArgs,
+                    body = functionBody,
+                    decoratorList = emptyList(),
+                    metadata = mapOf(
+                        "returnType" to returnType,
+                        "paramTypes" to mapOf("input" to "string", "count" to "number")
+                    )
+                )
+            )
+        }
+        
+        // Generate standalone variable assignment if requested and not already in function
+        if (features.contains(AstFeature.VARIABLE_ASSIGNMENTS) && !features.contains(AstFeature.FUNCTION_DEFINITIONS)) {
+            val assignValue = if (features.contains(AstFeature.CONSTANT_VALUES)) {
+                ConstantNode("standalone")
+            } else {
+                NameNode(id = "defaultValue", ctx = Load)
+            }
+            
+            bodyNodes.add(
+                AssignNode(
+                    target = NameNode(id = "standalone", ctx = Store),
+                    value = assignValue,
+                    metadata = mapOf("variableType" to "string")
+                )
+            )
+        }
+        
+        // Generate function call statement if requested
+        if (features.contains(AstFeature.FUNCTION_CALLS)) {
+            val callArgs = if (features.contains(AstFeature.CONSTANT_VALUES)) {
+                listOf(ConstantNode("hello"), ConstantNode(42))
+            } else {
+                emptyList()
+            }
+            
+            bodyNodes.add(
+                CallStatementNode(
+                    call = CallNode(
+                        func = NameNode(id = "processData", ctx = Load),
+                        args = callArgs,
+                        keywords = emptyList()
+                    )
+                )
+            )
+        }
+        
+        // Generate standalone print statement if requested and not already in function
+        if (features.contains(AstFeature.PRINT_STATEMENTS) && !features.contains(AstFeature.FUNCTION_DEFINITIONS)) {
+            bodyNodes.add(
+                PrintNode(
+                    expression = if (features.contains(AstFeature.CONSTANT_VALUES))
+                        ConstantNode("standalone print") else NameNode(id = "printValue", ctx = Load)
+                )
+            )
+        }
+        
+        return ModuleNode(body = bodyNodes)
+    }
+    
+    /**
+     * Generates a simpler function AST with metadata (function only)
+     */
+    fun generateFunctionWithMetadata(): ModuleNode {
+        return ModuleNode(
+            body = listOf(
+                FunctionDefNode(
+                    name = "test",
+                    args = listOf(),
+                    body = listOf(
+                        AssignNode(
+                            target = NameNode(id = "result", ctx = Store),
+                            value = ConstantNode("hello"),
+                            metadata = mapOf("variableType" to "string")
+                        )
+                    ),
+                    decoratorList = emptyList(),
+                    metadata = mapOf("returnType" to "void")
+                )
+            )
+        )
+    }
+    
+    /**
+     * Generates a simple assignment AST with metadata (assignment only)
+     */
+    fun generateAssignmentWithMetadata(): ModuleNode {
+        return ModuleNode(
+            body = listOf(
+                AssignNode(
+                    target = NameNode(id = "result", ctx = Store),
+                    value = ConstantNode("hello"),
+                    metadata = mapOf("variableType" to "string")
+                ),
+                PrintNode(
+                    expression = NameNode(id = "result", ctx = Load)
+                )
+            )
+        )
+    }
+    
+    /**
+     * Generates a function with simple return statement (no value)
+     */
+    fun generateFunctionWithReturnStatement(): ModuleNode {
+        return ModuleNode(
+            body = listOf(
+                FunctionDefNode(
+                    name = "test_return", 
+                    args = listOf(
+                        NameNode(id = "input", ctx = Param, metadata = mapOf("type" to "string"))
+                    ),
+                    body = listOf(
+                        ReturnNode(value = null)
+                    ),
+                    decoratorList = emptyList(),
+                    metadata = mapOf(
+                        "returnType" to "void",
+                        "paramTypes" to mapOf("input" to "string")
+                    )
+                )
+            )
+        )
+    }
+    
+    /**
+     * Generates a function with return value (binary operation)
+     */
+    fun generateFunctionWithReturnValue(): ModuleNode {
+        return ModuleNode(
+            body = listOf(
+                FunctionDefNode(
+                    name = "add",
+                    args = listOf(
+                        NameNode(id = "a", ctx = Param, metadata = mapOf("type" to "number")),
+                        NameNode(id = "b", ctx = Param, metadata = mapOf("type" to "number"))
+                    ),
+                    body = listOf(
+                        ReturnNode(
+                            value = BinaryOpNode(
+                                left = NameNode(id = "a", ctx = Load),
+                                op = "+",
+                                right = NameNode(id = "b", ctx = Load)
+                            )
+                        )
+                    ),
+                    decoratorList = emptyList(),
+                    metadata = mapOf(
+                        "returnType" to "number",
+                        "paramTypes" to mapOf("a" to "number", "b" to "number")
+                    )
+                )
+            )
+        )
+    }
+}
+
+/**
+ * Unit tests for the MaximalAstGenerator utility
+ */
+class MaximalAstGeneratorTest {
+
+    @Test
+    fun `test generateMaximalAst with all features generates expected structure`() {
+        val ast = MaximalAstGenerator.generateMaximalAst()
+        
+        assertTrue(ast is ModuleNode)
+        assertTrue(ast.body.isNotEmpty())
+        
+        // Should contain function definition, function call
+        val functionDef = ast.body.find { it is FunctionDefNode }
+        assertTrue(functionDef != null, "Should contain function definition")
+        
+        val functionCall = ast.body.find { it is CallStatementNode }
+        assertTrue(functionCall != null, "Should contain function call")
+    }
+
+    @Test
+    fun `test generateMaximalAst with only function definitions`() {
+        val features = setOf(AstFeature.FUNCTION_DEFINITIONS)
+        val ast = MaximalAstGenerator.generateMaximalAst(features)
+        
+        assertTrue(ast is ModuleNode)
+        assertEquals(1, ast.body.size)
+        assertTrue(ast.body[0] is FunctionDefNode)
+        
+        val function = ast.body[0] as FunctionDefNode
+        assertEquals("processData", function.name)
+    }
+
+    @Test
+    fun `test generateMaximalAst with only variable assignments`() {
+        val features = setOf(AstFeature.VARIABLE_ASSIGNMENTS)
+        val ast = MaximalAstGenerator.generateMaximalAst(features)
+        
+        assertTrue(ast is ModuleNode)
+        assertEquals(1, ast.body.size)
+        assertTrue(ast.body[0] is AssignNode)
+        
+        val assignment = ast.body[0] as AssignNode
+        assertTrue(assignment.target is NameNode)
+        assertEquals("standalone", (assignment.target as NameNode).id)
+    }
+
+    @Test
+    fun `test generateMaximalAst with only print statements`() {
+        val features = setOf(AstFeature.PRINT_STATEMENTS)
+        val ast = MaximalAstGenerator.generateMaximalAst(features)
+        
+        assertTrue(ast is ModuleNode)
+        assertEquals(1, ast.body.size)
+        assertTrue(ast.body[0] is PrintNode)
+    }
+
+    @Test
+    fun `test generateMaximalAst with only function calls`() {
+        val features = setOf(AstFeature.FUNCTION_CALLS)
+        val ast = MaximalAstGenerator.generateMaximalAst(features)
+        
+        assertTrue(ast is ModuleNode)
+        assertEquals(1, ast.body.size)
+        assertTrue(ast.body[0] is CallStatementNode)
+        
+        val call = ast.body[0] as CallStatementNode
+        assertTrue(call.call.func is NameNode)
+        assertEquals("processData", (call.call.func as NameNode).id)
+    }
+
+    @Test
+    fun `test generateMaximalAst with function and assignment features`() {
+        val features = setOf(AstFeature.FUNCTION_DEFINITIONS, AstFeature.VARIABLE_ASSIGNMENTS)
+        val ast = MaximalAstGenerator.generateMaximalAst(features)
+        
+        assertTrue(ast is ModuleNode)
+        assertEquals(1, ast.body.size)
+        assertTrue(ast.body[0] is FunctionDefNode)
+        
+        val function = ast.body[0] as FunctionDefNode
+        assertTrue(function.body.any { it is AssignNode })
+    }
+
+    @Test
+    fun `test generateMaximalAst with constant values feature affects assignment`() {
+        val featuresWithConstants = setOf(AstFeature.VARIABLE_ASSIGNMENTS, AstFeature.CONSTANT_VALUES)
+        val ast = MaximalAstGenerator.generateMaximalAst(featuresWithConstants)
+        
+        val assignment = ast.body[0] as AssignNode
+        assertTrue(assignment.value is ConstantNode)
+        assertEquals("standalone", (assignment.value as ConstantNode).value)
+    }
+
+    @Test
+    fun `test generateMaximalAst with binary operations feature`() {
+        val features = setOf(
+            AstFeature.FUNCTION_DEFINITIONS, 
+            AstFeature.VARIABLE_ASSIGNMENTS, 
+            AstFeature.BINARY_OPERATIONS,
+            AstFeature.VARIABLE_REFERENCES
+        )
+        val ast = MaximalAstGenerator.generateMaximalAst(features)
+        
+        val function = ast.body[0] as FunctionDefNode
+        val assignment = function.body.find { it is AssignNode } as AssignNode
+        assertTrue(assignment.value is BinaryOpNode)
+        
+        val binaryOp = assignment.value as BinaryOpNode
+        assertEquals("+", binaryOp.op)
+    }
+
+    @Test
+    fun `test generateMaximalAst with empty features set`() {
+        val features = emptySet<AstFeature>()
+        val ast = MaximalAstGenerator.generateMaximalAst(features)
+        
+        assertTrue(ast is ModuleNode)
+        assertTrue(ast.body.isEmpty())
+    }
+}
+
+/**
  * Test suite for verifying AST preservation through transpilation chains.
  * Tests that ASTs with maximal metadata can round-trip through all supported languages
  * and preserve their metadata and structure.
@@ -244,25 +690,8 @@ class TranspilationTest {
 
     @Test
     fun `test function with return statement transpilation`() {
-        // Define AST for a function with simple return statement (no value) using maximal AST
-        val functionWithReturnAst = ModuleNode(
-            body = listOf(
-                FunctionDefNode(
-                    name = "test_return", 
-                    args = listOf(
-                        NameNode(id = "input", ctx = Param, metadata = mapOf("type" to "string"))
-                    ),
-                    body = listOf(
-                        ReturnNode(value = null)
-                    ),
-                    decoratorList = emptyList(),
-                    metadata = mapOf(
-                        "returnType" to "void",
-                        "paramTypes" to mapOf("input" to "string")
-                    )
-                )
-            )
-        )
+        // Use MaximalAstGenerator for function with return statement
+        val functionWithReturnAst = MaximalAstGenerator.generateFunctionWithReturnStatement()
 
         testAstRoundTrip("Function With Return Statement", functionWithReturnAst)
         testSequentialTranspilation("Function With Return Statement", functionWithReturnAst)
@@ -270,32 +699,8 @@ class TranspilationTest {
 
     @Test
     fun `test function with return value transpilation`() {
-        // Define AST for a function with return value using maximal AST
-        val functionWithReturnValueAst = ModuleNode(
-            body = listOf(
-                FunctionDefNode(
-                    name = "add",
-                    args = listOf(
-                        NameNode(id = "a", ctx = Param, metadata = mapOf("type" to "number")),
-                        NameNode(id = "b", ctx = Param, metadata = mapOf("type" to "number"))
-                    ),
-                    body = listOf(
-                        ReturnNode(
-                            value = BinaryOpNode(
-                                left = NameNode(id = "a", ctx = Load),
-                                op = "+",
-                                right = NameNode(id = "b", ctx = Load)
-                            )
-                        )
-                    ),
-                    decoratorList = emptyList(),
-                    metadata = mapOf(
-                        "returnType" to "number",
-                        "paramTypes" to mapOf("a" to "number", "b" to "number")
-                    )
-                )
-            )
-        )
+        // Use MaximalAstGenerator for function with return value
+        val functionWithReturnValueAst = MaximalAstGenerator.generateFunctionWithReturnValue()
 
         testAstRoundTrip("Function With Return Value", functionWithReturnValueAst)
         testSequentialTranspilation("Function With Return Value", functionWithReturnValueAst)
@@ -347,31 +752,12 @@ class TranspilationTest {
 
     @Test
     fun `test TypeScript to JavaScript metadata preservation`() {
-        // Define AST with TypeScript metadata that should be preserved through JavaScript
-        val functionWithMetadataAst = ModuleNode(
-            body = listOf(
-                FunctionDefNode(
-                    name = "greet",
-                    args = listOf(
-                        NameNode(id = "name", ctx = Param, metadata = mapOf("type" to "string"))
-                    ),
-                    body = listOf(
-                        PrintNode(
-                            expression = BinaryOpNode(
-                                left = ConstantNode("Hello "),
-                                op = "+",
-                                right = NameNode(id = "name", ctx = Load)
-                            )
-                        )
-                    ),
-                    decoratorList = emptyList(),
-                    metadata = mapOf(
-                        "returnType" to "void",
-                        "paramTypes" to mapOf("name" to "string")
-                    )
-                )
-            )
+        // Test isolated function call and constant features for metadata preservation
+        val features = setOf(
+            AstFeature.FUNCTION_CALLS,
+            AstFeature.CONSTANT_VALUES
         )
+        val functionWithMetadataAst = MaximalAstGenerator.generateMaximalAst(features)
 
         testAstRoundTrip("TypeScript to JavaScript Metadata", functionWithMetadataAst)
         testSequentialTranspilation("TypeScript to JavaScript Metadata", functionWithMetadataAst)
@@ -380,19 +766,8 @@ class TranspilationTest {
 
     @Test
     fun `test simple assignment metadata preservation`() {
-        // Define AST with just assignment metadata to debug the issue
-        val assignmentAst = ModuleNode(
-            body = listOf(
-                AssignNode(
-                    target = NameNode(id = "result", ctx = Store),
-                    value = ConstantNode("hello"),
-                    metadata = mapOf("variableType" to "string")
-                ),
-                PrintNode(
-                    expression = NameNode(id = "result", ctx = Load)
-                )
-            )
-        )
+        // Use the assignment utility that includes assignment metadata
+        val assignmentAst = MaximalAstGenerator.generateAssignmentWithMetadata()
 
         testAstRoundTrip("Simple Assignment Metadata", assignmentAst)
         testSequentialTranspilation("Simple Assignment Metadata", assignmentAst)
@@ -400,28 +775,14 @@ class TranspilationTest {
 
     @Test
     fun `test simple function metadata preservation`() {
-        // Define AST with just function metadata to debug the issue
-        val functionAst = ModuleNode(
-            body = listOf(
-                FunctionDefNode(
-                    name = "processData",
-                    args = listOf(
-                        NameNode(id = "input", ctx = Param, metadata = mapOf("type" to "string")),
-                        NameNode(id = "count", ctx = Param, metadata = mapOf("type" to "number"))
-                    ),
-                    body = listOf(
-                        PrintNode(
-                            expression = NameNode(id = "input", ctx = Load)
-                        )
-                    ),
-                    decoratorList = emptyList(),
-                    metadata = mapOf(
-                        "returnType" to "void",
-                        "paramTypes" to mapOf("input" to "string", "count" to "number")
-                    )
-                )
-            )
+        // Test isolated function definition with binary operations
+        val features = setOf(
+            AstFeature.FUNCTION_DEFINITIONS,
+            AstFeature.BINARY_OPERATIONS,
+            AstFeature.VARIABLE_REFERENCES,
+            AstFeature.VARIABLE_ASSIGNMENTS
         )
+        val functionAst = MaximalAstGenerator.generateMaximalAst(features)
 
         testAstRoundTrip("Simple Function Metadata", functionAst)
         testSequentialTranspilation("Simple Function Metadata", functionAst)
@@ -429,24 +790,8 @@ class TranspilationTest {
 
     @Test
     fun `test function and assignment metadata preservation`() {
-        // Define AST with both function and assignment metadata
-        val combinedAst = ModuleNode(
-            body = listOf(
-                FunctionDefNode(
-                    name = "test",
-                    args = listOf(),
-                    body = listOf(
-                        AssignNode(
-                            target = NameNode(id = "result", ctx = Store),
-                            value = ConstantNode("hello"),
-                            metadata = mapOf("variableType" to "string")
-                        )
-                    ),
-                    decoratorList = emptyList(),
-                    metadata = mapOf("returnType" to "void")
-                )
-            )
-        )
+        // Use the function utility that includes both function and assignment metadata
+        val combinedAst = MaximalAstGenerator.generateFunctionWithMetadata()
 
         testAstRoundTrip("Function and Assignment Metadata", combinedAst)
         testSequentialTranspilation("Function and Assignment Metadata", combinedAst)
@@ -454,49 +799,45 @@ class TranspilationTest {
 
     @Test
     fun `test maximal metadata preservation through all languages with parts`() {
-        // Define AST with maximum TypeScript metadata that should be preserved
-        val maximalMetadataAst = ModuleNode(
-            body = listOf(
-                FunctionDefNode(
-                    name = "processData",
-                    args = listOf(
-                        NameNode(id = "input", ctx = Param, metadata = mapOf("type" to "string")),
-                        NameNode(id = "count", ctx = Param, metadata = mapOf("type" to "number"))
-                    ),
-                    body = listOf(
-                        AssignNode(
-                            target = NameNode(id = "result", ctx = Store),
-                            value = BinaryOpNode(
-                                left = NameNode(id = "input", ctx = Load),
-                                op = "+",
-                                right = NameNode(id = "count", ctx = Load)
-                            ),
-                            metadata = mapOf("variableType" to "string")
-                        ),
-                        PrintNode(
-                            expression = NameNode(id = "result", ctx = Load)
-                        )
-                    ),
-                    decoratorList = emptyList(),
-                    metadata = mapOf(
-                        "returnType" to "void",
-                        "paramTypes" to mapOf("input" to "string", "count" to "number")
-                    )
-                ),
-                CallStatementNode(
-                    call = CallNode(
-                        func = NameNode(id = "processData", ctx = Load),
-                        args = listOf(
-                            ConstantNode("hello"),
-                            ConstantNode(42)
-                        ),
-                        keywords = emptyList()
-                    )
-                )
-            )
-        )
+        // Use all features to test comprehensive metadata preservation
+        val maximalMetadataAst = MaximalAstGenerator.generateMaximalAst() // Uses all features by default
 
         testAstRoundTrip("Maximal Metadata Preservation", maximalMetadataAst)
         testSequentialTranspilation("Maximal Metadata Preservation", maximalMetadataAst)
+    }
+    
+    @Test
+    fun `test isolated print statement feature transpilation`() {
+        // Test only print statements to isolate this specific language feature
+        val features = setOf(AstFeature.PRINT_STATEMENTS, AstFeature.CONSTANT_VALUES)
+        val printOnlyAst = MaximalAstGenerator.generateMaximalAst(features)
+
+        testAstRoundTrip("Isolated Print Statement", printOnlyAst)
+        testSequentialTranspilation("Isolated Print Statement", printOnlyAst)
+    }
+    
+    @Test 
+    fun `test isolated variable assignment feature transpilation`() {
+        // Test only variable assignments to isolate this specific language feature
+        val features = setOf(AstFeature.VARIABLE_ASSIGNMENTS, AstFeature.CONSTANT_VALUES)
+        val assignmentOnlyAst = MaximalAstGenerator.generateMaximalAst(features)
+
+        testAstRoundTrip("Isolated Variable Assignment", assignmentOnlyAst)
+        testSequentialTranspilation("Isolated Variable Assignment", assignmentOnlyAst)
+    }
+    
+    @Test
+    fun `test isolated binary operation feature transpilation`() {
+        // Test function with binary operations to isolate this specific language feature
+        val features = setOf(
+            AstFeature.FUNCTION_DEFINITIONS,
+            AstFeature.VARIABLE_ASSIGNMENTS,
+            AstFeature.BINARY_OPERATIONS,
+            AstFeature.VARIABLE_REFERENCES
+        )
+        val binaryOpAst = MaximalAstGenerator.generateMaximalAst(features)
+
+        testAstRoundTrip("Isolated Binary Operation", binaryOpAst)
+        testSequentialTranspilation("Isolated Binary Operation", binaryOpAst)
     }
 }
