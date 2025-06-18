@@ -130,6 +130,35 @@ tasks.configureEach {
     }
 }
 
+// Task to pre-warm Gradle and download dependencies for faster Qodana runs
+tasks.register("qodanaPrep") {
+    group = "verification"
+    description = "Prepares project for Qodana analysis by pre-downloading dependencies"
+    
+    doFirst {
+        println("Preparing project for Qodana analysis...")
+    }
+    
+    // This task just ensures dependencies are resolved without full compilation
+    dependsOn("resolveDependencies")
+}
+
+// Task to resolve all dependencies
+tasks.register("resolveDependencies") {
+    doLast {
+        configurations.forEach { config ->
+            if (config.isCanBeResolved) {
+                try {
+                    config.resolve()
+                } catch (e: Exception) {
+                    // Some configurations might not be resolvable in all contexts
+                    logger.debug("Could not resolve configuration ${config.name}: ${e.message}")
+                }
+            }
+        }
+    }
+}
+
 // Optional: Configure run tasks for native targets if not automatically created as desired
 // tasks.register<Exec>("runNativeLinux") {
 //     group = "application"

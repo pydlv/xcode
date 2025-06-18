@@ -18,6 +18,8 @@ jobs:
 
     env:
       COPILOT_AGENT_FIREWALL_ALLOW_LIST_ADDITIONS: download.jetbrains.com
+      # Optimize Gradle performance during setup
+      GRADLE_OPTS: "-Dorg.gradle.daemon=true -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Xmx2g -XX:MaxMetaspaceSize=512m"
 
     # Set the permissions to the lowest permissions possible needed for your steps.
     # Copilot will be given its own token for its operations.
@@ -41,14 +43,26 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      - name: Install KMP dependencies
-        run: ./gradlew dependencies --refresh-dependencies
-        # This command will build the project and download/cache dependencies.
-        # Alternatively, you could use a more specific task like `./gradlew resolveDependencies`
-        # or `./gradlew :shared:dependencies` if you have a specific module and task.
-        # Ensure your project's build.gradle(.kts) files are configured to use
-        # download.jetbrains.com or other necessary repositories.
+      - name: Pre-warm Gradle daemon and prepare for Qodana
+        run: |
+          # Start Gradle daemon and prepare dependencies for Qodana analysis
+          ./gradlew qodanaPrep --no-build-cache
+          echo "Gradle daemon warmed up and dependencies prepared"
+
+      - name: Cache Qodana CLI
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/bin/qodana
+          key: qodana-cli-v2025.1.2-${{ runner.os }}
+          restore-keys: |
+            qodana-cli-v2025.1.2-
 
       - name: Install Qodana CLI
-        run: bash .github/setup-qodana.sh
-        # Install Qodana CLI for code quality analysis as referenced in copilot-instructions.md
+        run: |
+          if [ ! -f /usr/local/bin/qodana ]; then
+            echo "Installing Qodana CLI..."
+            bash .github/setup-qodana.sh
+          else
+            echo "Qodana CLI already cached, verifying..."
+            qodana --version
+          fi
