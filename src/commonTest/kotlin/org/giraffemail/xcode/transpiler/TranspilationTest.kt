@@ -369,6 +369,24 @@ class TranspilationTest {
     }
 
     @Test
+    fun `test function with return statement transpilation`() {
+        // Use the maximal AST utility for function with return statement
+        val functionWithReturnAst = MaximalAstGenerator.generateFunctionWithMetadata()
+
+        testAstRoundTrip("Function With Return Statement", functionWithReturnAst)
+        testSequentialTranspilation("Function With Return Statement", functionWithReturnAst)
+    }
+
+    @Test
+    fun `test function with return value transpilation`() {
+        // Use the maximal AST utility for function with return value
+        val functionWithReturnValueAst = MaximalAstGenerator.generateMaximalAst()
+
+        testAstRoundTrip("Function With Return Value", functionWithReturnValueAst)
+        testSequentialTranspilation("Function With Return Value", functionWithReturnValueAst)
+    }
+
+    @Test
     fun `test conditional statement transpilation`() {
         // Define AST for if-else without metadata
         val conditionalAst = ModuleNode(
