@@ -74,12 +74,19 @@ xcode --help
 ```python
 def greet(name):
     print("Hello, " + name)
+
+def add(a, b):
+    return a + b
 ```
 
 **Output (example.js):**
 ```javascript
 function greet(name) {
     console.log('Hello, ' + name);
+}
+
+function add(a, b) {
+    return a + b;
 }
 ```
 
@@ -89,12 +96,19 @@ function greet(name) {
 function greet(name: string): void {
     console.log("Hello");
 }
+
+function calculate(x: number, y: number): number {
+    return x * y + 10;
+}
 ```
 
 **Output (simple.py):**
 ```python
 def greet(name):
     print('Hello')
+
+def calculate(x, y):
+    return x * y + 10
 ```
 
 The transpiler preserves type information internally and can restore it when transpiling back to typed languages.
@@ -139,7 +153,7 @@ This enables seamless transpilation chains like TypeScript → JavaScript → Py
 *   **Multi-Language Parsing:**
     *   Java: Utilizes `Java.g4` ANTLR grammar.
     *   JavaScript: Utilizes `JavaScript.g4` ANTLR grammar.
-    *   Python: Utilizes `Python.g4` ANTLR grammar, including indentation handling.
+    *   Python: Utilizes `Python.g4` ANTLR grammar, including indentation handling and function definitions with return statements.
     *   TypeScript: Utilizes `TypeScript.g4` ANTLR grammar with type annotation support.
 *   **Code Generation:** The project includes components for generating code in all supported languages.
 *   **Transpilation:** Full transpilation support between all language pairs with metadata preservation.

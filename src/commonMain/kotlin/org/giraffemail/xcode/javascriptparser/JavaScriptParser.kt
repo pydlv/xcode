@@ -135,6 +135,14 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
         return IfNode(test = condition, body = ifBody, orelse = elseBody)
     }
 
+    // Handle return statements
+    override fun visitReturnStatement(ctx: AntlrJavaScriptParser.ReturnStatementContext): AstNode {
+        val returnValue = ctx.expression()?.let { exprCtx ->
+            visit(exprCtx) as? ExpressionNode
+        }
+        return ReturnNode(value = returnValue)
+    }
+
     private fun createCallNode(funcName: String, argumentsCtx: AntlrJavaScriptParser.ArgumentsContext?): CallNode {
         val funcNameNode = ParserUtils.createFunctionNameNode(funcName)
         val args = mutableListOf<ExpressionNode>()

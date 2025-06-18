@@ -40,6 +40,12 @@ data class CallStatementNode(
 
 data class PrintNode(val expression: ExpressionNode, override val metadata: Map<String, Any>? = null) : StatementNode // For print and console.log statements
 
+// Return statement node for function returns
+data class ReturnNode(
+    val value: ExpressionNode? = null, // Optional return value - Python allows 'return' without value
+    override val metadata: Map<String, Any>? = null
+) : StatementNode
+
 // If statement node for conditional execution
 data class IfNode(
     val test: ExpressionNode,           // The condition to test

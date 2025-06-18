@@ -83,6 +83,7 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
             is AssignNode -> visitAssignNode(statement)
             is CallStatementNode -> visitCallStatementNode(statement)
             is IfNode -> visitIfNode(statement)
+            is ReturnNode -> visitReturnNode(statement)
             is UnknownNode -> visitUnknownNode(statement)
         }
     }
@@ -155,6 +156,7 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
     abstract override fun visitFunctionDefNode(node: FunctionDefNode): String
     abstract override fun visitAssignNode(node: AssignNode): String
     abstract override fun visitCallStatementNode(node: CallStatementNode): String
+    abstract override fun visitReturnNode(node: ReturnNode): String
     abstract override fun visitCallNode(node: CallNode): String
     abstract override fun visitMemberExpressionNode(node: MemberExpressionNode): String
 

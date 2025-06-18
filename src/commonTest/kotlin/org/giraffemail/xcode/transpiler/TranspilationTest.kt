@@ -243,6 +243,65 @@ class TranspilationTest {
     }
 
     @Test
+    fun `test function with return statement transpilation`() {
+        // Define AST for a function with simple return statement (no value) using maximal AST
+        val functionWithReturnAst = ModuleNode(
+            body = listOf(
+                FunctionDefNode(
+                    name = "test_return", 
+                    args = listOf(
+                        NameNode(id = "input", ctx = Param, metadata = mapOf("type" to "string"))
+                    ),
+                    body = listOf(
+                        ReturnNode(value = null)
+                    ),
+                    decoratorList = emptyList(),
+                    metadata = mapOf(
+                        "returnType" to "void",
+                        "paramTypes" to mapOf("input" to "string")
+                    )
+                )
+            )
+        )
+
+        testAstRoundTrip("Function With Return Statement", functionWithReturnAst)
+        testSequentialTranspilation("Function With Return Statement", functionWithReturnAst)
+    }
+
+    @Test
+    fun `test function with return value transpilation`() {
+        // Define AST for a function with return value using maximal AST
+        val functionWithReturnValueAst = ModuleNode(
+            body = listOf(
+                FunctionDefNode(
+                    name = "add",
+                    args = listOf(
+                        NameNode(id = "a", ctx = Param, metadata = mapOf("type" to "number")),
+                        NameNode(id = "b", ctx = Param, metadata = mapOf("type" to "number"))
+                    ),
+                    body = listOf(
+                        ReturnNode(
+                            value = BinaryOpNode(
+                                left = NameNode(id = "a", ctx = Load),
+                                op = "+",
+                                right = NameNode(id = "b", ctx = Load)
+                            )
+                        )
+                    ),
+                    decoratorList = emptyList(),
+                    metadata = mapOf(
+                        "returnType" to "number",
+                        "paramTypes" to mapOf("a" to "number", "b" to "number")
+                    )
+                )
+            )
+        )
+
+        testAstRoundTrip("Function With Return Value", functionWithReturnValueAst)
+        testSequentialTranspilation("Function With Return Value", functionWithReturnValueAst)
+    }
+
+    @Test
     fun `test conditional statement transpilation`() {
         // Define AST for if-else without metadata
         val conditionalAst = ModuleNode(

@@ -10,6 +10,7 @@ statement
     | assignStatement
     | functionCallStatement
     | ifStatement
+    | returnStatement
     ;
 
 consoleLogStatement: 'console' '.' 'log' '(' expression ')' ';'? ; // Using literal chars
@@ -33,6 +34,8 @@ assignStatement: ('let' | 'var' | 'const')? IDENTIFIER typeAnnotation? '=' expre
 functionCallStatement: IDENTIFIER '(' arguments? ')' ';'? ; // Using literal chars
 
 ifStatement: 'if' '(' expression ')' '{' functionBody '}' ('else' '{' functionBody '}')? ; // Using literal chars
+
+returnStatement: 'return' expression? ';'? ; // Return statement with optional expression and semicolon
 
 arguments: expression (',' expression)* ; // Using literal chars
 

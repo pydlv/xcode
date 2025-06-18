@@ -68,6 +68,7 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
             ctx.assignmentStatement() != null -> ctx.assignmentStatement()!!.accept(this) // Added !!
             ctx.callStatement() != null -> ctx.callStatement()!!.accept(this)           // Added !!
             ctx.ifStatement() != null -> ctx.ifStatement()!!.accept(this)               // Added !! for if statements
+            ctx.returnStatement() != null -> ctx.returnStatement()!!.accept(this)       // Added !! for return statements
             else -> {
                 // This case should ideally not be reached if the grammar is complete for 'statement' alternatives
                 // and all alternatives are handled above.
@@ -163,6 +164,14 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         }
 
         return IfNode(test = condition, body = ifBody, orelse = elseBody)
+    }
+
+    // Handle return statements
+    override fun visitReturnStatement(ctx: AntlrJavaParser.ReturnStatementContext): ReturnNode {
+        val returnValue = ctx.expression()?.let { exprCtx ->
+            exprCtx.accept(this) as? ExpressionNode
+        }
+        return ReturnNode(value = returnValue)
     }
 
     // Helper for CallExpression and CallStatement to build CallNode

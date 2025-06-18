@@ -82,6 +82,14 @@ class JavaGenerator : AbstractAstGenerator() {
         return "${generateExpression(node.call)}${getStatementTerminator()}"
     }
 
+    override fun visitReturnNode(node: ReturnNode): String {
+        return if (node.value != null) {
+            "return ${generateExpression(node.value)}${getStatementTerminator()}"
+        } else {
+            "return${getStatementTerminator()}"
+        }
+    }
+
     override fun visitCallNode(node: CallNode): String {
         val funcString = generateExpression(node.func) // func could be NameNode or MemberExpressionNode
         val args = generateArgumentList(node.args)
