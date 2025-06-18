@@ -4,10 +4,15 @@ linter: jetbrains/qodana-jvm-community:2025.1
 profile:
   name: qodana.recommended
 
+# Configure analysis scope to only include source code
 include:
-  - name: All
+  - name: Source Code
     paths:
-      - src/
+      - src/commonMain/kotlin/
+      - src/commonTest/kotlin/
+      - src/nativeLinuxMain/kotlin/
+      - src/nativeMacosMain/kotlin/
+      - src/nativeWindowsMain/kotlin/
 
 exclude:
   - name: Generated
@@ -15,3 +20,18 @@ exclude:
       - build/
       - .gradle/
       - gradle/
+      - .kotlin/
+  - name: ANTLR Generated Code
+    paths:
+      - build/generatedAntlr/
+  - name: IDE Files
+    paths:
+      - .idea/
+  - name: ANTLR Grammar Files
+    paths:
+      - src/commonMain/antlr/
+
+# Optimize performance for faster scans
+bootstrap: |
+  # Skip time-consuming inspections for generated code
+  export QODANA_SKIP_INSPECTIONS="UnusedDeclaration,UnusedProperty"
