@@ -32,13 +32,13 @@ function_body // Sequence of statements within a function - MODIFIED
 parameters: parameter (',' parameter)* ;
 parameter: IDENTIFIER ;
 
-assignStatement: IDENTIFIER '=' expression ;
+assignStatement: IDENTIFIER '=' expression ';'? ; // Optional semicolon for cross-language compatibility
 
-functionCallStatement: IDENTIFIER '(' arguments? ')' ; // Using literal parens
+functionCallStatement: IDENTIFIER '(' arguments? ')' ';'? ; // Optional semicolon for cross-language compatibility
 
 ifStatement: 'if' expression ':' NEWLINE INDENT function_body? DEDENT (NEWLINE* 'else' ':' NEWLINE INDENT function_body? DEDENT)? ;
 
-returnStatement: 'return' expression? ; // Optional expression for return value
+returnStatement: 'return' expression? ';'? ; // Optional expression and optional semicolon for cross-language compatibility
 
 arguments: expression (',' expression)* ;
 
