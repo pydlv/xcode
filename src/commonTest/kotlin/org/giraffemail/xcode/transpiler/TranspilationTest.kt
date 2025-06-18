@@ -268,6 +268,21 @@ object MaximalAstGenerator {
                 )
             }
             
+            // Always ensure class has at least one method to avoid empty class bodies
+            if (classBody.isEmpty()) {
+                classBody.add(
+                    FunctionDefNode(
+                        name = "defaultMethod",
+                        args = emptyList(),
+                        body = listOf(
+                            PrintNode(expression = ConstantNode("Default class method"))
+                        ),
+                        decoratorList = emptyList(),
+                        metadata = mapOf("returnType" to "void")
+                    )
+                )
+            }
+            
             bodyNodes.add(
                 ClassDefNode(
                     name = "DataProcessor",
@@ -1012,9 +1027,8 @@ class TranspilationTest {
 
     @Test
     fun `test maximal metadata preservation through all languages with parts`() {
-        // Use all features except classes (which have metadata preservation issues) to test comprehensive metadata preservation
-        val featuresWithoutClasses = SupportedAstFeatures.ALL_FEATURES - AstFeature.CLASS_DEFINITIONS
-        val maximalMetadataAst = MaximalAstGenerator.generateMaximalAst(featuresWithoutClasses)
+        // Test comprehensive metadata preservation with all features including classes
+        val maximalMetadataAst = MaximalAstGenerator.generateMaximalAst(SupportedAstFeatures.ALL_FEATURES)
 
         testAstRoundTrip("Maximal Metadata Preservation", maximalMetadataAst)
         testSequentialTranspilation("Maximal Metadata Preservation", maximalMetadataAst)
@@ -1072,86 +1086,26 @@ class TranspilationTest {
     @Test
     fun `test isolated class definition feature transpilation`() {
         // Test only class definitions to isolate this specific language feature
-        // Test with a simple class structure without metadata to focus on structure preservation
-        val classOnlyAst = ModuleNode(
-            body = listOf(
-                ClassDefNode(
-                    name = "TestClass",
-                    baseClasses = emptyList(),
-                    body = listOf(
-                        FunctionDefNode(
-                            name = "testMethod",
-                            args = emptyList(),
-                            body = listOf(
-                                PrintNode(expression = ConstantNode("Hello from class"))
-                            ),
-                            decoratorList = emptyList()
-                        )
-                    ),
-                    decoratorList = emptyList()
-                )
-            )
-        )
+        val features = setOf(AstFeature.CLASS_DEFINITIONS)
+        val classOnlyAst = MaximalAstGenerator.generateMaximalAst(features)
 
-        // Test full round-trip transpilation now that parsers support classes
         testAstRoundTrip("Isolated Class Definition", classOnlyAst)
         testSequentialTranspilation("Isolated Class Definition", classOnlyAst)
     }
 
     @Test
     fun `test class with methods transpilation`() {
-        // Test class definitions with methods using simple structure without metadata
-        val classWithMethodsAst = ModuleNode(
-            body = listOf(
-                ClassDefNode(
-                    name = "Calculator",
-                    baseClasses = emptyList(),
-                    body = listOf(
-                        FunctionDefNode(
-                            name = "add",
-                            args = listOf(
-                                NameNode(id = "a", ctx = Param),
-                                NameNode(id = "b", ctx = Param)
-                            ),
-                            body = listOf(
-                                AssignNode(
-                                    target = NameNode(id = "result", ctx = Store),
-                                    value = NameNode(id = "a", ctx = Load)
-                                ),
-                                ReturnNode(value = NameNode(id = "result", ctx = Load))
-                            ),
-                            decoratorList = emptyList()
-                        )
-                    ),
-                    decoratorList = emptyList()
-                )
-            )
+        // Test class definitions with methods using maximal AST generator
+        val features = setOf(
+            AstFeature.CLASS_DEFINITIONS,
+            AstFeature.FUNCTION_DEFINITIONS,
+            AstFeature.VARIABLE_ASSIGNMENTS,
+            AstFeature.RETURN_STATEMENTS,
+            AstFeature.VARIABLE_REFERENCES
         )
+        val classWithMethodsAst = MaximalAstGenerator.generateMaximalAst(features)
 
-        // Test full round-trip transpilation now that parsers support classes
         testAstRoundTrip("Class With Methods", classWithMethodsAst)
         testSequentialTranspilation("Class With Methods", classWithMethodsAst)
-    }
-    
-    /**
-     * Test code generation only (without round-trip parsing)
-     * Used for features that don't yet have full parser support
-     */
-    private fun testCodeGeneration(testName: String, ast: AstNode) {
-        println("\\n=== Testing Code Generation for '$testName' ===")
-        println("Original AST: $ast")
-
-        for (lang in allLanguages) {
-            try {
-                println("\\nTesting ${lang.name} code generation")
-                val codeWithMetadata = lang.generateWithMetadataFn(ast)
-                println("Generated ${lang.name} code: ${codeWithMetadata.code}")
-                println("Generated ${lang.name} metadata: ${codeWithMetadata.metadata}")
-                println("✓ ${lang.name} code generation successful")
-            } catch (e: Exception) {
-                fail("Code generation failed for ${lang.name} with '$testName': ${e.message}")
-            }
-        }
-        println("\\n=== '$testName' Code Generation Complete ===")
     }
 }
