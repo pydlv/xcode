@@ -65,6 +65,19 @@ class JavaGenerator : AbstractAstGenerator() {
         // throw NotImplementedError("Function definition generation for Java needs more AST details (return type, param types).")
     }
 
+    override fun visitClassDefNode(node: ClassDefNode): String {
+        // Generate Java class structure
+        val className = node.name
+        val baseClassDecl = if (node.baseClasses.isNotEmpty()) {
+            " extends ${node.baseClasses.joinToString(", ") { generateExpression(it) }}"
+        } else {
+            ""
+        }
+        val classMethods = node.body.joinToString("\n\n") { "    " + generateStatement(it) }
+        
+        return "public class $className$baseClassDecl {\n$classMethods\n}"
+    }
+
     override fun visitAssignNode(node: AssignNode): String {
         // Assuming target is NameNode based on compiler warnings in other generators.
         // Type declaration might be needed for first assignment in Java.

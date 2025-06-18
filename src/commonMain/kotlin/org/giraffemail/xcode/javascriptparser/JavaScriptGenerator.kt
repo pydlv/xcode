@@ -31,6 +31,19 @@ class JavaScriptGenerator : AbstractAstGenerator() {
         return "function $funcName($params) {\n$body\n}"
     }
 
+    override fun visitClassDefNode(node: ClassDefNode): String {
+        // Generate JavaScript class structure
+        val className = node.name
+        val baseClassDecl = if (node.baseClasses.isNotEmpty()) {
+            " extends ${node.baseClasses.first().let { generateExpression(it) }}"
+        } else {
+            ""
+        }
+        val classMethods = node.body.joinToString("\n\n") { "    " + generateStatement(it) }
+        
+        return "class $className$baseClassDecl {\n$classMethods\n}"
+    }
+
     override fun visitAssignNode(node: AssignNode): String {
         // Compiler warning indicated 'node.target is NameNode' is always true.
         // This implies node.target is already NameNode or a subtype from which .id can be accessed.

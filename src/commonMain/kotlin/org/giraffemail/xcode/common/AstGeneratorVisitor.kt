@@ -7,6 +7,7 @@ interface AstGeneratorVisitor {
     fun visitExprNode(node: ExprNode): String
     fun visitPrintNode(node: PrintNode): String
     fun visitFunctionDefNode(node: FunctionDefNode): String
+    fun visitClassDefNode(node: ClassDefNode): String
     fun visitAssignNode(node: AssignNode): String
     fun visitCallStatementNode(node: CallStatementNode): String
     fun visitReturnNode(node: ReturnNode): String

@@ -32,6 +32,19 @@ class PythonGenerator : AbstractAstGenerator() {
         return "def $funcName($params):\n$body"
     }
 
+    override fun visitClassDefNode(node: ClassDefNode): String {
+        // Generate Python class structure
+        val className = node.name
+        val baseClassDecl = if (node.baseClasses.isNotEmpty()) {
+            "(${node.baseClasses.joinToString(", ") { generateExpression(it) }})"
+        } else {
+            ""
+        }
+        val classMethods = node.body.joinToString("\n\n") { "    " + generateStatement(it) }
+        
+        return "class $className$baseClassDecl:\n$classMethods"
+    }
+
     override fun visitAssignNode(node: AssignNode): String {
         // Compiler warning in JSGenerator implied node.target is always NameNode.
         // If AstNode.AssignNode.target is confirmed to be NameNode, this cast is safe.

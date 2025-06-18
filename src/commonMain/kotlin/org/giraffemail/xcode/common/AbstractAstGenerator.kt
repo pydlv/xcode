@@ -52,6 +52,10 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
                     }
                     node.body.forEach { collectFromNode(it) }
                 }
+                is ClassDefNode -> {
+                    // Extract class metadata and recursively collect from class body
+                    node.body.forEach { collectFromNode(it) }
+                }
                 is AssignNode -> {
                     // Extract assignment metadata
                     if (node.metadata?.get("variableType") != null) {
@@ -80,6 +84,7 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
             is ExprNode -> visitExprNode(statement)
             is PrintNode -> visitPrintNode(statement)
             is FunctionDefNode -> visitFunctionDefNode(statement)
+            is ClassDefNode -> visitClassDefNode(statement)
             is AssignNode -> visitAssignNode(statement)
             is CallStatementNode -> visitCallStatementNode(statement)
             is IfNode -> visitIfNode(statement)
