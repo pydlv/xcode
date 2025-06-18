@@ -110,6 +110,7 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
             is MemberExpressionNode -> visitMemberExpressionNode(expression)
             is BinaryOpNode -> visitBinaryOpNode(expression)
             is CompareNode -> visitCompareNode(expression)
+            is ListNode -> visitListNode(expression)
             is UnknownNode -> visitUnknownNode(expression)
         }
     }
@@ -147,6 +148,11 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
         val leftStr = generateExpression(node.left)
         val rightStr = generateExpression(node.right)
         return "$leftStr ${node.op} $rightStr"
+    }
+
+    override fun visitListNode(node: ListNode): String {
+        val elements = node.elements.joinToString(", ") { generateExpression(it) }
+        return "[$elements]"
     }
 
     override fun visitUnknownNode(node: UnknownNode): String {

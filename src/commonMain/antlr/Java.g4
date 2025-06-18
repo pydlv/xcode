@@ -10,6 +10,7 @@ statement:
     | classDefinition
     | callStatement
     | assignmentStatement
+    | variableDeclaration
     | expressionStatement
     | ifStatement
     | returnStatement
@@ -37,12 +38,22 @@ parameterList:
     ;
 
 parameter:
-    IDENTIFIER IDENTIFIER // Represents type and name, e.g., "Object a"
+    type IDENTIFIER // Supports typed parameters like "String[] args", "int x" 
     ;
 
     // Assignment Statement
 assignmentStatement:
     IDENTIFIER ASSIGN expression SEMI
+    ;
+
+    // Variable Declaration (with type)
+variableDeclaration:
+    type IDENTIFIER ASSIGN expression SEMI
+    ;
+
+    type:
+    IDENTIFIER              // Simple types like int, String
+    | IDENTIFIER LSQUARE RSQUARE   // Array types like String[], int[]
     ;
 
     // Call Statement (for standalone calls like fib(0,1); or fib(b,c);)
@@ -69,9 +80,13 @@ expression:
     | expression ADD expression                       # AdditiveExpression
     | expression ('==' | '!=' | '<' | '>' | '<=' | '>=') expression # ComparisonExpression
     | SYSTEM '.' OUT '.' PRINTLN LPAREN expression RPAREN # PrintlnExpression
+    | '{' expressionList '}' # ArrayLiteral // Java array initialization like {1, 2, 3}
+    | ('true' | 'false')     # BooleanLiteral // Java boolean literals
     | IDENTIFIER                                      # IdentifierAccessExpression // Added for variables like a, b, c
     | IDENTIFIER LPAREN argumentList RPAREN           # CallExpression // Added for calls within expressions (if needed, though callStatement covers current use)
     ;
+
+expressionList: (expression (COMMA expression)*)? ; // List of expressions for arrays
 
 primary:
     literal                                         # LiteralExpression
@@ -101,6 +116,8 @@ PRINTLN: 'println';
 
 LPAREN: '(';
 RPAREN: ')';
+LSQUARE: '[';
+RSQUARE: ']';
 LBRACE: '{'; // Added
 RBRACE: '}'; // Added
 SEMI: ';';

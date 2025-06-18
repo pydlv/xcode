@@ -54,15 +54,34 @@ class JavaGenerator : AbstractAstGenerator() {
     // --- Abstract methods from AbstractAstGenerator that need implementation ---
 
     override fun visitFunctionDefNode(node: FunctionDefNode): String {
-        // Basic Java method structure. Assumes no complex modifiers, return types for now.
-        // This is a simplified version. Real Java generation would need type info.
+        // Basic Java method structure with enhanced type handling
         val funcName = node.name
-        val params = node.args.joinToString(", ") { "Object ${it.id}" } // Assuming args are NameNodes, defaulting type to Object
+        
+        // Extract metadata for type information
+        val (returnType, paramTypes, _) = extractFunctionMetadata(node)
+        
+        // Generate parameters with proper Java types
+        val params = node.args.joinToString(", ") { param ->
+            val paramType = paramTypes[param.id]
+            val javaType = mapTypeScriptTypeToJava(paramType) ?: "Object"
+            "$javaType ${param.id}"
+        }
+        
+        // Generate return type
+        val javaReturnType = mapTypeScriptTypeToJava(returnType) ?: "void"
+        
+        // Special handling for main method
+        val (finalParams, finalReturnType) = if (funcName == "main" && node.args.isEmpty()) {
+            // Convert no-arg main() to standard Java main(String[] args)
+            "String[] args" to "void"
+        } else {
+            params to javaReturnType
+        }
+        
+        // Generate method body
         val bodyStatements = node.body.joinToString("\n") { "        " + generateStatement(it) }
         
-        return "public static void $funcName($params) {\n$bodyStatements\n    }"
-        // For a more complete solution, return type and parameter types are needed from AST.
-        // throw NotImplementedError("Function definition generation for Java needs more AST details (return type, param types).")
+        return "public static $finalReturnType $funcName($finalParams) {\n$bodyStatements\n    }"
     }
 
     override fun visitClassDefNode(node: ClassDefNode): String {
@@ -81,14 +100,20 @@ class JavaGenerator : AbstractAstGenerator() {
     override fun visitAssignNode(node: AssignNode): String {
         // Assuming target is NameNode based on compiler warnings in other generators.
         // Type declaration might be needed for first assignment in Java.
-        // This is a simplified version. Real Java needs type information.
         val targetName = node.target.id // Assuming node.target is of type NameNode
         val valueExpr = generateExpression(node.value)
         
-        // Simplified: Assumes variable is already declared or type inference is not handled.
-        // A real generator would need to manage variable scopes and declarations.
-        return "$targetName = $valueExpr${getStatementTerminator()}"
-        // throw NotImplementedError("Assignment generation for Java needs type information and declaration management.")
+        // Extract type information from metadata to generate proper Java variable declaration
+        val variableType = node.metadata?.get("variableType") as? String
+        val javaType = mapTypeScriptTypeToJava(variableType)
+        
+        // Generate Java variable declaration with type
+        return if (javaType != null) {
+            "$javaType $targetName = $valueExpr${getStatementTerminator()}"
+        } else {
+            // Fallback to simple assignment if no type info
+            "$targetName = $valueExpr${getStatementTerminator()}"
+        }
     }
 
     override fun visitCallStatementNode(node: CallStatementNode): String {
@@ -122,6 +147,108 @@ class JavaGenerator : AbstractAstGenerator() {
         return "$leftStr ${node.op} $rightStr"
     }
 
-    // Other visit methods (visitNameNode, visitUnknownNode, visitExprNode, visitModuleNode)
-    // will use the open implementations from AbstractAstGenerator if not overridden here.
+    override fun visitListNode(node: ListNode): String {
+        val elements = node.elements.joinToString(", ") { generateExpression(it) }
+        return "{$elements}" // Java array initialization syntax
+    }
+
+    // Helper method to map TypeScript types to Java types
+    private fun mapTypeScriptTypeToJava(tsType: String?): String? {
+        return when (tsType) {
+            "number" -> "int"
+            "string" -> "String"
+            "boolean" -> "boolean"
+            "void" -> "void"
+            null -> null
+            else -> {
+                when {
+                    tsType.endsWith("[]") -> {
+                        // Handle array types: string[] -> String[]
+                        val baseType = mapTypeScriptTypeToJava(tsType.substringBeforeLast("[]"))
+                        if (baseType != null) "$baseType[]" else "Object[]"
+                    }
+                    tsType.startsWith("[") && tsType.endsWith("]") -> {
+                        // Handle tuple types: [string, number] -> Object[] for simplicity
+                        "Object[]"
+                    }
+                    else -> tsType // Pass through unknown types
+                }
+            }
+        }
+    }
+
+    override fun visitModuleNode(node: ModuleNode): String {
+        // Java requires all code to be inside a class
+        // If we have standalone functions or statements, wrap them in a default class
+        val moduleBody = node.body
+        
+        // Check if we already have a class at the top level
+        val hasClass = moduleBody.any { it is ClassDefNode }
+        
+        if (hasClass) {
+            // Use default behavior if there's already a class
+            return super.visitModuleNode(node)
+        } else {
+            // Wrap all content in a default class
+            val classBody = mutableListOf<StatementNode>()
+            
+            // Separate functions from other statements
+            val functions = moduleBody.filterIsInstance<FunctionDefNode>()
+            val otherStatements = moduleBody.filterNot { it is FunctionDefNode }
+            
+            // Add all functions to the class (except main if it exists)
+            val mainFunction = functions.find { it.name == "main" }
+            val otherFunctions = functions.filter { it.name != "main" }
+            
+            classBody.addAll(otherFunctions)
+            
+            // Handle main function specially
+            if (mainFunction != null) {
+                // Filter out main() function calls from other statements since they're meaningless in Java
+                val filteredStatements = otherStatements.filterNot { statement ->
+                    statement is CallStatementNode && 
+                    statement.call.func is NameNode && 
+                    (statement.call.func as NameNode).id == "main"
+                }
+                
+                // If there are other statements, append them to the main function body
+                val combinedMainBody = if (filteredStatements.isNotEmpty()) {
+                    mainFunction.body + filteredStatements
+                } else {
+                    mainFunction.body
+                }
+                
+                classBody.add(
+                    FunctionDefNode(
+                        name = "main",
+                        args = listOf(NameNode(id = "args", ctx = Param)),
+                        body = combinedMainBody,
+                        metadata = mapOf("returnType" to "void", "paramTypes" to mapOf("args" to "String[]"))
+                    )
+                )
+            } else if (otherStatements.isNotEmpty()) {
+                // No main function, but there are statements - create a main method
+                classBody.add(
+                    FunctionDefNode(
+                        name = "main",
+                        args = listOf(NameNode(id = "args", ctx = Param)),
+                        body = otherStatements,
+                        metadata = mapOf("returnType" to "void", "paramTypes" to mapOf("args" to "String[]"))
+                    )
+                )
+            }
+            
+            // Create the wrapper class - use a generic name that matches common file names
+            val wrapperClass = ClassDefNode(
+                name = "Sample", // Use a standard name instead of "Main"
+                body = classBody,
+                metadata = mapOf(
+                    "classType" to "StandaloneWrapper", // Use classType to indicate this is a wrapper
+                    "methods" to classBody.filterIsInstance<FunctionDefNode>().map { it.name }
+                )
+            )
+            
+            return visitClassDefNode(wrapperClass)
+        }
+    }
 }

@@ -252,6 +252,25 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
         return ConstantNode(normalizedValue)
     }
 
+    override fun visitArrayLiteral(ctx: AntlrJavaScriptParser.ArrayLiteralContext): AstNode {
+        // Parse array elements if present
+        val elements = ctx.expressionList()?.expression()?.map { 
+            visit(it) as ExpressionNode 
+        } ?: emptyList()
+        
+        return ListNode(elements)
+    }
+
+    override fun visitBooleanLiteral(ctx: AntlrJavaScriptParser.BooleanLiteralContext): AstNode {
+        val boolText = ctx.text
+        val boolValue = when (boolText) {
+            "true" -> true
+            "false" -> false
+            else -> false // Default fallback
+        }
+        return ConstantNode(boolValue)
+    }
+
     override fun defaultResult(): AstNode {
         return UnknownNode("Unhandled ANTLR JavaScript node")
     }
