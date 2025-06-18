@@ -7,6 +7,7 @@ program: statement* EOF;
 statement
     : consoleLogStatement
     | functionDeclaration
+    | classDeclaration
     | assignStatement
     | functionCallStatement
     | ifStatement
@@ -17,6 +18,16 @@ consoleLogStatement: 'console' '.' 'log' '(' expression ')' ';'? ; // Using lite
 
 functionDeclaration:
     'function' IDENTIFIER '(' parameterList? ')' typeAnnotation? '{' functionBody '}' ; // Using literal chars
+
+classDeclaration:
+    'class' IDENTIFIER ('extends' IDENTIFIER)? '{' classBody '}' ; // Class with optional inheritance
+
+classBody: classMember* ;
+
+classMember:
+    functionDeclaration
+    | assignStatement
+    ;
 
 parameterList: parameter (',' parameter)* ; // Using literal chars
 

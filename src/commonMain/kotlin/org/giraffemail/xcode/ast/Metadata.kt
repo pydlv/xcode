@@ -7,7 +7,9 @@ data class LanguageMetadata(
     val returnType: String? = null,
     val paramTypes: Map<String, String> = emptyMap(),
     val variableType: String? = null,
-    val individualParamMetadata: Map<String, Map<String, String>> = emptyMap() // param name -> metadata map
+    val individualParamMetadata: Map<String, Map<String, String>> = emptyMap(), // param name -> metadata map
+    val classType: String? = null,
+    val classMethods: List<String> = emptyList()
 )
 
 /**

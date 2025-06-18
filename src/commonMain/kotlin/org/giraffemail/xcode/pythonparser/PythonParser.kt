@@ -238,6 +238,42 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
         )
     }
 
+    // Handle class definitions
+    override fun visitClassDef(ctx: AntlrPythonParser.ClassDefContext): AstNode {
+        val name = ctx.IDENTIFIER().text
+
+        // Parse base classes for inheritance
+        val baseClasses = mutableListOf<ExpressionNode>()
+        ctx.baseClasses()?.IDENTIFIER()?.forEach { baseCtx ->
+            baseClasses.add(NameNode(id = baseCtx.text, ctx = Load))
+        }
+
+        // Parse class body - visits the optional class_body rule
+        val bodyStmts = ctx.class_body()?.let { visit(it) as? ModuleNode }?.body ?: emptyList()
+
+        return ClassDefNode(
+            name = name,
+            baseClasses = baseClasses,
+            body = bodyStmts,
+            decoratorList = emptyList()
+        )
+    }
+
+    // Handle class_body for sequences of statements within a class
+    override fun visitClass_body(ctx: AntlrPythonParser.Class_bodyContext): AstNode {
+        val statements = ctx.classMember().mapNotNull { visit(it) as? StatementNode }
+        return ModuleNode(statements) // Using ModuleNode to represent a block of statements
+    }
+
+    // Handle class members (functions and statements within a class)
+    override fun visitClassMember(ctx: AntlrPythonParser.ClassMemberContext): AstNode {
+        return when {
+            ctx.functionDef() != null -> ctx.functionDef()?.let { visit(it) } ?: UnknownNode("Null function definition")
+            ctx.statement() != null -> ctx.statement()?.let { visit(it) } ?: UnknownNode("Null statement")
+            else -> UnknownNode("Unknown class member: ${ctx.text}")
+        }
+    }
+
     // NEW: Handle function_body for sequences of statements within a function
     override fun visitFunction_body(ctx: AntlrPythonParser.Function_bodyContext): AstNode {
         val statements = ctx.statement().mapNotNull { visit(it) as? StatementNode }

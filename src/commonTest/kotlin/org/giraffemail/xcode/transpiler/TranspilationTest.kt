@@ -25,6 +25,7 @@ data class LanguageConfig(
  */
 enum class AstFeature {
     FUNCTION_DEFINITIONS,
+    CLASS_DEFINITIONS,
     VARIABLE_ASSIGNMENTS,
     BINARY_OPERATIONS,
     PRINT_STATEMENTS,
@@ -46,6 +47,7 @@ object SupportedAstFeatures {
      */
     val ALL_FEATURES = setOf(
         AstFeature.FUNCTION_DEFINITIONS,
+        AstFeature.CLASS_DEFINITIONS,
         AstFeature.VARIABLE_ASSIGNMENTS,
         AstFeature.BINARY_OPERATIONS,
         AstFeature.PRINT_STATEMENTS,
@@ -62,6 +64,7 @@ object SupportedAstFeatures {
      */
     val SUPPORTED_FEATURES = listOf(
         "Function definitions with typed parameters",
+        "Class definitions with methods",
         "Function return type annotations", 
         "Variable assignments with type annotations",
         "Function calls as statements",
@@ -195,6 +198,100 @@ object MaximalAstGenerator {
                     metadata = mapOf(
                         "returnType" to returnType,
                         "paramTypes" to mapOf("input" to "string", "count" to "number")
+                    )
+                )
+            )
+        }
+        
+        // Generate class definition if requested
+        if (features.contains(AstFeature.CLASS_DEFINITIONS)) {
+            val classBody = mutableListOf<StatementNode>()
+            
+            // Add a method to the class if function definitions are also requested
+            if (features.contains(AstFeature.FUNCTION_DEFINITIONS)) {
+                val methodBody = mutableListOf<StatementNode>()
+                
+                // Add method body based on other features
+                if (features.contains(AstFeature.VARIABLE_ASSIGNMENTS)) {
+                    methodBody.add(
+                        AssignNode(
+                            target = NameNode(id = "instanceValue", ctx = Store),
+                            value = if (features.contains(AstFeature.VARIABLE_REFERENCES))
+                                NameNode(id = "newValue", ctx = Load) else ConstantNode("initialized"),
+                            metadata = mapOf("variableType" to "string")
+                        )
+                    )
+                }
+                
+                if (features.contains(AstFeature.RETURN_STATEMENTS)) {
+                    methodBody.add(
+                        ReturnNode(
+                            value = if (features.contains(AstFeature.VARIABLE_REFERENCES))
+                                NameNode(id = "instanceValue", ctx = Load) else ConstantNode("method_result")
+                        )
+                    )
+                }
+                
+                classBody.add(
+                    FunctionDefNode(
+                        name = "getValue",
+                        args = if (features.contains(AstFeature.VARIABLE_REFERENCES)) {
+                            listOf(NameNode(id = "newValue", ctx = Param, metadata = mapOf("type" to "string")))
+                        } else {
+                            emptyList()
+                        },
+                        body = methodBody,
+                        decoratorList = emptyList(),
+                        metadata = mapOf(
+                            "returnType" to "string",
+                            "paramTypes" to mapOf("newValue" to "string")
+                        )
+                    )
+                )
+            }
+            
+            // Add a simple method even if function definitions are not requested
+            if (!features.contains(AstFeature.FUNCTION_DEFINITIONS) && features.contains(AstFeature.PRINT_STATEMENTS)) {
+                classBody.add(
+                    FunctionDefNode(
+                        name = "display",
+                        args = emptyList(),
+                        body = listOf(
+                            PrintNode(
+                                expression = if (features.contains(AstFeature.CONSTANT_VALUES))
+                                    ConstantNode("Class instance") else ConstantNode("Display method")
+                            )
+                        ),
+                        decoratorList = emptyList(),
+                        metadata = mapOf("returnType" to "void")
+                    )
+                )
+            }
+            
+            // Always ensure class has at least one method to avoid empty class bodies
+            if (classBody.isEmpty()) {
+                classBody.add(
+                    FunctionDefNode(
+                        name = "defaultMethod",
+                        args = emptyList(),
+                        body = listOf(
+                            PrintNode(expression = ConstantNode("Default class method"))
+                        ),
+                        decoratorList = emptyList(),
+                        metadata = mapOf("returnType" to "void")
+                    )
+                )
+            }
+            
+            bodyNodes.add(
+                ClassDefNode(
+                    name = "DataProcessor",
+                    baseClasses = emptyList(), // No inheritance for simplicity
+                    body = classBody,
+                    decoratorList = emptyList(),
+                    metadata = mapOf(
+                        "classType" to "DataProcessor",
+                        "methods" to classBody.filterIsInstance<FunctionDefNode>().map { it.name }
                     )
                 )
             )
@@ -547,6 +644,54 @@ class MaximalAstGeneratorTest {
             statement is PrintNode && (statement.expression as? ConstantNode)?.value == "condition is true"
         })
     }
+
+    @Test
+    fun `test generateMaximalAst with only class definitions`() {
+        val features = setOf(AstFeature.CLASS_DEFINITIONS)
+        val ast = MaximalAstGenerator.generateMaximalAst(features)
+        
+        assertTrue(ast is ModuleNode)
+        assertEquals(1, ast.body.size)
+        assertTrue(ast.body[0] is ClassDefNode)
+        
+        val classDef = ast.body[0] as ClassDefNode
+        assertEquals("DataProcessor", classDef.name)
+        assertEquals(emptyList<ExpressionNode>(), classDef.baseClasses)
+    }
+
+    @Test
+    fun `test generateMaximalAst with class and function definitions`() {
+        val features = setOf(AstFeature.CLASS_DEFINITIONS, AstFeature.FUNCTION_DEFINITIONS)
+        val ast = MaximalAstGenerator.generateMaximalAst(features)
+        
+        assertTrue(ast is ModuleNode)
+        assertTrue(ast.body.any { it is ClassDefNode })
+        assertTrue(ast.body.any { it is FunctionDefNode })
+        
+        val classDef = ast.body.find { it is ClassDefNode } as ClassDefNode
+        assertTrue(classDef.body.any { it is FunctionDefNode })
+        
+        val classMethod = classDef.body.find { it is FunctionDefNode } as FunctionDefNode
+        assertEquals("getValue", classMethod.name)
+    }
+
+    @Test
+    fun `test generateMaximalAst with class definitions and other features`() {
+        val features = setOf(
+            AstFeature.CLASS_DEFINITIONS, 
+            AstFeature.FUNCTION_DEFINITIONS,
+            AstFeature.VARIABLE_ASSIGNMENTS,
+            AstFeature.RETURN_STATEMENTS
+        )
+        val ast = MaximalAstGenerator.generateMaximalAst(features)
+        
+        val classDef = ast.body.find { it is ClassDefNode } as ClassDefNode
+        val classMethod = classDef.body.find { it is FunctionDefNode } as FunctionDefNode
+        
+        // Should have both assignment and return in the method
+        assertTrue(classMethod.body.any { it is AssignNode })
+        assertTrue(classMethod.body.any { it is ReturnNode })
+    }
 }
 
 /**
@@ -882,8 +1027,8 @@ class TranspilationTest {
 
     @Test
     fun `test maximal metadata preservation through all languages with parts`() {
-        // Use all features to test comprehensive metadata preservation
-        val maximalMetadataAst = MaximalAstGenerator.generateMaximalAst() // Uses all features by default
+        // Test comprehensive metadata preservation with all features including classes
+        val maximalMetadataAst = MaximalAstGenerator.generateMaximalAst(SupportedAstFeatures.ALL_FEATURES)
 
         testAstRoundTrip("Maximal Metadata Preservation", maximalMetadataAst)
         testSequentialTranspilation("Maximal Metadata Preservation", maximalMetadataAst)
@@ -936,5 +1081,31 @@ class TranspilationTest {
 
         testAstRoundTrip("Isolated Conditional Statement", conditionalAst)
         testSequentialTranspilation("Isolated Conditional Statement", conditionalAst)
+    }
+
+    @Test
+    fun `test isolated class definition feature transpilation`() {
+        // Test only class definitions to isolate this specific language feature
+        val features = setOf(AstFeature.CLASS_DEFINITIONS)
+        val classOnlyAst = MaximalAstGenerator.generateMaximalAst(features)
+
+        testAstRoundTrip("Isolated Class Definition", classOnlyAst)
+        testSequentialTranspilation("Isolated Class Definition", classOnlyAst)
+    }
+
+    @Test
+    fun `test class with methods transpilation`() {
+        // Test class definitions with methods using maximal AST generator
+        val features = setOf(
+            AstFeature.CLASS_DEFINITIONS,
+            AstFeature.FUNCTION_DEFINITIONS,
+            AstFeature.VARIABLE_ASSIGNMENTS,
+            AstFeature.RETURN_STATEMENTS,
+            AstFeature.VARIABLE_REFERENCES
+        )
+        val classWithMethodsAst = MaximalAstGenerator.generateMaximalAst(features)
+
+        testAstRoundTrip("Class With Methods", classWithMethodsAst)
+        testSequentialTranspilation("Class With Methods", classWithMethodsAst)
     }
 }

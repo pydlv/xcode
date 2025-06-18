@@ -32,6 +32,33 @@ class PythonGenerator : AbstractAstGenerator() {
         return "def $funcName($params):\n$body"
     }
 
+    override fun visitClassDefNode(node: ClassDefNode): String {
+        // Generate Python class structure
+        val className = node.name
+        val baseClassDecl = if (node.baseClasses.isNotEmpty()) {
+            "(${node.baseClasses.joinToString(", ") { generateExpression(it) }})"
+        } else {
+            ""
+        }
+        
+        // Generate class body with proper indentation
+        val classBody = if (node.body.isEmpty()) {
+            "    pass"  // Empty class needs a pass statement
+        } else {
+            node.body.joinToString("\n\n") { statement ->
+                indentLines(generateStatement(statement), "    ")
+            }
+        }
+        
+        return "class $className$baseClassDecl:\n$classBody"
+    }
+    
+    private fun indentLines(text: String, indent: String): String {
+        return text.lines().joinToString("\n") { line ->
+            if (line.isBlank()) line else "$indent$line"
+        }
+    }
+
     override fun visitAssignNode(node: AssignNode): String {
         // Compiler warning in JSGenerator implied node.target is always NameNode.
         // If AstNode.AssignNode.target is confirmed to be NameNode, this cast is safe.

@@ -52,6 +52,18 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
                     }
                     node.body.forEach { collectFromNode(it) }
                 }
+                is ClassDefNode -> {
+                    // Extract class metadata
+                    val (classType, classMethods) = extractClassMetadata(node)
+                    if (classType != null || classMethods.isNotEmpty()) {
+                        metadata.add(LanguageMetadata(
+                            classType = classType,
+                            classMethods = classMethods
+                        ))
+                    }
+                    // Recursively collect from class body
+                    node.body.forEach { collectFromNode(it) }
+                }
                 is AssignNode -> {
                     // Extract assignment metadata
                     if (node.metadata?.get("variableType") != null) {
@@ -80,6 +92,7 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
             is ExprNode -> visitExprNode(statement)
             is PrintNode -> visitPrintNode(statement)
             is FunctionDefNode -> visitFunctionDefNode(statement)
+            is ClassDefNode -> visitClassDefNode(statement)
             is AssignNode -> visitAssignNode(statement)
             is CallStatementNode -> visitCallStatementNode(statement)
             is IfNode -> visitIfNode(statement)
@@ -189,6 +202,14 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
         }.filterValues { it.isNotEmpty() }
         
         return Triple(returnType, paramTypes, individualParamMetadata)
+    }
+
+    protected fun extractClassMetadata(node: ClassDefNode): Pair<String?, List<String>> {
+        val classType = node.metadata?.get("classType") as? String
+        @Suppress("UNCHECKED_CAST")
+        val classMethods = node.metadata?.get("methods") as? List<String> ?: emptyList()
+        
+        return Pair(classType, classMethods)
     }
 
     abstract fun getStatementSeparator(): String

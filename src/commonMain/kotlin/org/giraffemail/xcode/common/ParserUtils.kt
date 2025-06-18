@@ -58,6 +58,14 @@ object ParserUtils {
     }
     
     /**
+     * Filters metadata queue by class-related metadata.
+     * Common pattern used across all parsers.
+     */
+    fun filterClassMetadata(metadataQueue: List<LanguageMetadata>): List<LanguageMetadata> {
+        return metadataQueue.filter { it.classType != null || it.classMethods.isNotEmpty() }
+    }
+    
+    /**
      * Common utility for safely casting visit results to ExpressionNode with fallback.
      * Used across multiple parsers for condition parsing.
      */
@@ -96,9 +104,11 @@ object ParserUtils {
         // Instead of using index, match metadata by type to appropriate nodes
         val functionMetadata = filterFunctionMetadata(metadataQueue)
         val assignmentMetadata = filterAssignmentMetadata(metadataQueue)
+        val classMetadata = filterClassMetadata(metadataQueue)
         
         var functionMetadataIndex = 0
         var assignmentMetadataIndex = 0
+        var classMetadataIndex = 0
         
         fun injectIntoNode(node: AstNode): AstNode {
             return when (node) {
@@ -141,6 +151,34 @@ object ParserUtils {
                         )
                     } else {
                         // No function metadata, but still need to process body
+                        val updatedBody = node.body.map { stmt ->
+                            injectIntoNode(stmt) as StatementNode
+                        }
+                        node.copy(body = updatedBody)
+                    }
+                }
+                is ClassDefNode -> {
+                    if (classMetadataIndex < classMetadata.size) {
+                        val metadata = classMetadata[classMetadataIndex++]
+                        val metadataMap = mutableMapOf<String, Any>()
+                        if (metadata.classType != null) {
+                            metadataMap["classType"] = metadata.classType
+                        }
+                        if (metadata.classMethods.isNotEmpty()) {
+                            metadataMap["methods"] = metadata.classMethods
+                        }
+                        
+                        // Process class body recursively
+                        val updatedBody = node.body.map { stmt ->
+                            injectIntoNode(stmt) as StatementNode
+                        }
+                        
+                        node.copy(
+                            body = updatedBody,
+                            metadata = metadataMap.ifEmpty { null }
+                        )
+                    } else {
+                        // No class metadata, but still need to process body
                         val updatedBody = node.body.map { stmt ->
                             injectIntoNode(stmt) as StatementNode
                         }

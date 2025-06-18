@@ -65,6 +65,7 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         return when {
             ctx.expressionStatement() != null -> ctx.expressionStatement()!!.accept(this) // Added !! based on grammar structure
             ctx.functionDefinition() != null -> ctx.functionDefinition()!!.accept(this)   // Added !!
+            ctx.classDefinition() != null -> ctx.classDefinition()!!.accept(this)         // Added !! for class definitions
             ctx.assignmentStatement() != null -> ctx.assignmentStatement()!!.accept(this) // Added !!
             ctx.callStatement() != null -> ctx.callStatement()!!.accept(this)           // Added !!
             ctx.ifStatement() != null -> ctx.ifStatement()!!.accept(this)               // Added !! for if statements
@@ -86,6 +87,35 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         } ?: emptyList()
         val body = ctx.statement().mapNotNull { it.accept(this) as? StatementNode } // Process body statements
         return FunctionDefNode(name = name, args = params, body = body, decoratorList = emptyList())
+    }
+
+    override fun visitClassDefinition(ctx: AntlrJavaParser.ClassDefinitionContext): ClassDefNode {
+        val name = ctx.IDENTIFIER(0)!!.text // First IDENTIFIER is the class name
+        
+        // Parse base class for inheritance (extends)
+        val baseClasses = mutableListOf<ExpressionNode>()
+        if (ctx.IDENTIFIER().size > 1) {
+            // Second IDENTIFIER is the base class
+            baseClasses.add(NameNode(id = ctx.IDENTIFIER(1)!!.text, ctx = Load))
+        }
+
+        // Parse class body - process class members
+        val body = ctx.classMember().mapNotNull { visit(it) as? StatementNode }
+
+        return ClassDefNode(
+            name = name,
+            baseClasses = baseClasses,
+            body = body,
+            decoratorList = emptyList()
+        )
+    }
+
+    override fun visitClassMember(ctx: AntlrJavaParser.ClassMemberContext): AstNode {
+        return when {
+            ctx.functionDefinition() != null -> ctx.functionDefinition()?.let { visit(it) } ?: UnknownNode("Null function definition")
+            ctx.statement() != null -> ctx.statement()?.let { visit(it) } ?: UnknownNode("Null statement")
+            else -> UnknownNode("Unknown class member: ${ctx.text}")
+        }
     }
 
     // visitParameterList should return a List<NameNode>, but the base visitor might expect AstNode.

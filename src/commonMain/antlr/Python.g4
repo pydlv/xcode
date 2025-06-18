@@ -10,6 +10,7 @@ program_body // Sequence of top-level statements
 
 topLevelStatement
     : functionDef
+    | classDef
     | statement
     ;
 
@@ -24,6 +25,19 @@ statement // Basic statements
 printStatement: 'print' '(' expression ')' ; // Using literal parens
 
 functionDef: 'def' IDENTIFIER '(' parameters? ')' ':' NEWLINE INDENT function_body? DEDENT ; // function_body is now optional
+
+classDef: 'class' IDENTIFIER ('(' baseClasses? ')')? ':' NEWLINE INDENT class_body? DEDENT ; // class definition with optional inheritance and body
+
+class_body // Sequence of statements within a class - similar to function_body
+    : NEWLINE* classMember (NEWLINE+ classMember)* NEWLINE*
+    ;
+
+classMember // Class members can be methods or other statements
+    : functionDef
+    | statement
+    ;
+
+baseClasses: IDENTIFIER (',' IDENTIFIER)* ; // For inheritance like class A(B, C)
 
 function_body // Sequence of statements within a function - MODIFIED
     : NEWLINE* statement (NEWLINE+ statement)* NEWLINE*

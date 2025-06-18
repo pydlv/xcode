@@ -25,6 +25,15 @@ data class FunctionDefNode(
     override val metadata: Map<String, Any>? = null
 ) : StatementNode
 
+// Class definition node for object-oriented languages
+data class ClassDefNode(
+    val name: String,
+    val baseClasses: List<ExpressionNode> = emptyList(), // For inheritance/extends
+    val body: List<StatementNode>, // Methods and other class members
+    val decoratorList: List<ExpressionNode> = emptyList(),
+    override val metadata: Map<String, Any>? = null
+) : StatementNode
+
 // Assignment statement node (x = y)
 data class AssignNode(
     val target: NameNode, // Target of assignment (left side)
