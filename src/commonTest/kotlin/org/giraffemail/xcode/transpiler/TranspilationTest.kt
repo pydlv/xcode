@@ -243,6 +243,26 @@ class TranspilationTest {
     }
 
     @Test
+    fun `test function with return statement transpilation`() {
+        // Define AST for a function with simple return statement (no value)
+        val functionWithReturnAst = ModuleNode(
+            body = listOf(
+                FunctionDefNode(
+                    name = "test_return",
+                    args = emptyList(),
+                    body = listOf(
+                        ReturnNode(value = null)
+                    ),
+                    decoratorList = emptyList()
+                )
+            )
+        )
+
+        testAstRoundTrip("Function With Return Statement", functionWithReturnAst)
+        testSequentialTranspilation("Function With Return Statement", functionWithReturnAst)
+    }
+
+    @Test
     fun `test conditional statement transpilation`() {
         // Define AST for if-else without metadata
         val conditionalAst = ModuleNode(

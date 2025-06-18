@@ -18,6 +18,7 @@ statement // Basic statements
     | assignStatement
     | functionCallStatement
     | ifStatement
+    | returnStatement
     ;
 
 printStatement: 'print' '(' expression ')' ; // Using literal parens
@@ -36,6 +37,8 @@ assignStatement: IDENTIFIER '=' expression ;
 functionCallStatement: IDENTIFIER '(' arguments? ')' ; // Using literal parens
 
 ifStatement: 'if' expression ':' NEWLINE INDENT function_body? DEDENT (NEWLINE* 'else' ':' NEWLINE INDENT function_body? DEDENT)? ;
+
+returnStatement: 'return' expression? ; // Optional expression for return value
 
 arguments: expression (',' expression)* ;
 

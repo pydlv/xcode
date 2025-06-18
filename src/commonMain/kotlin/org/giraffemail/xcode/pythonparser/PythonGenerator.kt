@@ -47,6 +47,14 @@ class PythonGenerator : AbstractAstGenerator() {
         return generateExpression(node.call)
     }
 
+    override fun visitReturnNode(node: ReturnNode): String {
+        return if (node.value != null) {
+            "return ${generateExpression(node.value)}"
+        } else {
+            "return"
+        }
+    }
+
     override fun visitCallNode(node: CallNode): String {
         val funcString = when (val funcNode = node.func) {
             is NameNode -> formatFunctionName(funcNode.id) // Handles mapping like "console.log"
