@@ -32,7 +32,8 @@ enum class AstFeature {
     CONSTANT_VALUES,
     VARIABLE_REFERENCES,
     CONDITIONAL_STATEMENTS,
-    COMPARISON_OPERATIONS
+    COMPARISON_OPERATIONS,
+    RETURN_STATEMENTS
 }
 
 /**
@@ -50,7 +51,8 @@ object SupportedAstFeatures {
         AstFeature.PRINT_STATEMENTS,
         AstFeature.FUNCTION_CALLS,
         AstFeature.CONSTANT_VALUES,
-        AstFeature.VARIABLE_REFERENCES
+        AstFeature.VARIABLE_REFERENCES,
+        AstFeature.RETURN_STATEMENTS
     )
     
     /**
@@ -132,6 +134,31 @@ object MaximalAstGenerator {
                 )
             }
             
+            // Add return statement if requested
+            if (features.contains(AstFeature.RETURN_STATEMENTS)) {
+                val returnValue = if (features.contains(AstFeature.VARIABLE_REFERENCES) && features.contains(AstFeature.VARIABLE_ASSIGNMENTS)) {
+                    // Return the result variable if we have assignments and variable references
+                    NameNode(id = "result", ctx = Load)
+                } else if (features.contains(AstFeature.BINARY_OPERATIONS)) {
+                    // Return a binary operation
+                    BinaryOpNode(
+                        left = if (features.contains(AstFeature.VARIABLE_REFERENCES)) 
+                            NameNode(id = "input", ctx = Load) else ConstantNode("a"),
+                        op = "+",
+                        right = if (features.contains(AstFeature.VARIABLE_REFERENCES))
+                            NameNode(id = "count", ctx = Load) else ConstantNode(1)
+                    )
+                } else if (features.contains(AstFeature.CONSTANT_VALUES)) {
+                    // Return a constant
+                    ConstantNode("returned_value")
+                } else {
+                    // Return null (void return)
+                    null
+                }
+                
+                functionBody.add(ReturnNode(value = returnValue))
+            }
+            
             // Create function arguments based on features
             val functionArgs = if (features.contains(AstFeature.VARIABLE_REFERENCES)) {
                 listOf(
@@ -142,6 +169,21 @@ object MaximalAstGenerator {
                 emptyList()
             }
             
+            // Determine return type based on features
+            val returnType = if (features.contains(AstFeature.RETURN_STATEMENTS)) {
+                if (features.contains(AstFeature.VARIABLE_ASSIGNMENTS) && features.contains(AstFeature.VARIABLE_REFERENCES)) {
+                    "string" // returning result variable
+                } else if (features.contains(AstFeature.BINARY_OPERATIONS)) {
+                    "number" // returning binary operation result
+                } else if (features.contains(AstFeature.CONSTANT_VALUES)) {
+                    "string" // returning constant value
+                } else {
+                    "void" // returning null
+                }
+            } else {
+                "void"
+            }
+            
             bodyNodes.add(
                 FunctionDefNode(
                     name = "processData",
@@ -149,7 +191,7 @@ object MaximalAstGenerator {
                     body = functionBody,
                     decoratorList = emptyList(),
                     metadata = mapOf(
-                        "returnType" to "void",
+                        "returnType" to returnType,
                         "paramTypes" to mapOf("input" to "string", "count" to "number")
                     )
                 )
@@ -241,6 +283,61 @@ object MaximalAstGenerator {
                 ),
                 PrintNode(
                     expression = NameNode(id = "result", ctx = Load)
+                )
+            )
+        )
+    }
+    
+    /**
+     * Generates a function with simple return statement (no value)
+     */
+    fun generateFunctionWithReturnStatement(): ModuleNode {
+        return ModuleNode(
+            body = listOf(
+                FunctionDefNode(
+                    name = "test_return", 
+                    args = listOf(
+                        NameNode(id = "input", ctx = Param, metadata = mapOf("type" to "string"))
+                    ),
+                    body = listOf(
+                        ReturnNode(value = null)
+                    ),
+                    decoratorList = emptyList(),
+                    metadata = mapOf(
+                        "returnType" to "void",
+                        "paramTypes" to mapOf("input" to "string")
+                    )
+                )
+            )
+        )
+    }
+    
+    /**
+     * Generates a function with return value (binary operation)
+     */
+    fun generateFunctionWithReturnValue(): ModuleNode {
+        return ModuleNode(
+            body = listOf(
+                FunctionDefNode(
+                    name = "add",
+                    args = listOf(
+                        NameNode(id = "a", ctx = Param, metadata = mapOf("type" to "number")),
+                        NameNode(id = "b", ctx = Param, metadata = mapOf("type" to "number"))
+                    ),
+                    body = listOf(
+                        ReturnNode(
+                            value = BinaryOpNode(
+                                left = NameNode(id = "a", ctx = Load),
+                                op = "+",
+                                right = NameNode(id = "b", ctx = Load)
+                            )
+                        )
+                    ),
+                    decoratorList = emptyList(),
+                    metadata = mapOf(
+                        "returnType" to "number",
+                        "paramTypes" to mapOf("a" to "number", "b" to "number")
+                    )
                 )
             )
         )
@@ -593,8 +690,8 @@ class TranspilationTest {
 
     @Test
     fun `test function with return statement transpilation`() {
-        // Use the maximal AST utility for function with return statement
-        val functionWithReturnAst = MaximalAstGenerator.generateFunctionWithMetadata()
+        // Use MaximalAstGenerator for function with return statement
+        val functionWithReturnAst = MaximalAstGenerator.generateFunctionWithReturnStatement()
 
         testAstRoundTrip("Function With Return Statement", functionWithReturnAst)
         testSequentialTranspilation("Function With Return Statement", functionWithReturnAst)
@@ -602,13 +699,8 @@ class TranspilationTest {
 
     @Test
     fun `test function with return value transpilation`() {
-        // Test isolated function features with return type metadata
-        val features = setOf(
-            AstFeature.FUNCTION_DEFINITIONS,
-            AstFeature.VARIABLE_ASSIGNMENTS,
-            AstFeature.VARIABLE_REFERENCES
-        )
-        val functionWithReturnValueAst = MaximalAstGenerator.generateMaximalAst(features)
+        // Use MaximalAstGenerator for function with return value
+        val functionWithReturnValueAst = MaximalAstGenerator.generateFunctionWithReturnValue()
 
         testAstRoundTrip("Function With Return Value", functionWithReturnValueAst)
         testSequentialTranspilation("Function With Return Value", functionWithReturnValueAst)

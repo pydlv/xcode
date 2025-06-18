@@ -279,6 +279,12 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
         return IfNode(test = condition, body = ifBody, orelse = elseBody)
     }
 
+    // Handle return statements
+    override fun visitReturnStatement(ctx: AntlrPythonParser.ReturnStatementContext): AstNode {
+        val returnValue = ctx.expression()?.let { visit(it) as? ExpressionNode }
+        return ReturnNode(value = returnValue)
+    }
+
     // Handle function calls in expressions - UPDATED for FunctionCallInExpression label
     override fun visitFunctionCallInExpression(ctx: AntlrPythonParser.FunctionCallInExpressionContext): AstNode {
         val funcName = ctx.IDENTIFIER().text // Removed !!

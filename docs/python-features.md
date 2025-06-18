@@ -17,12 +17,13 @@ This document outlines the Python language features currently supported by the X
 | Cross-Language Transpilation | Transpilation Support | Support for transpiling to/from Python (Round-trip transpilation with metadata preservation) | [TranspilationTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/transpiler/TranspilationTest.kt#L36-L40) |
 | Type Information Preservation | Metadata Preservation | Maintains type information during transpilation (Parts-based metadata system for cross-language type preservation) | [PartsBasedMetadataTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/metadata/PartsBasedMetadataTest.kt#L205-L226) |
 | Parse Error Management | Error Handling | Structured error handling for invalid Python code (AstParseException handling with descriptive error messages) | [PythonParserTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/pythonparser/PythonParserTest.kt#L12-L25) |
+| Function Definitions | Core Language Constructs | Support for Python function definitions with def keyword and parameters (Complete function definition parsing with parameter lists and function bodies) | [TranspilationTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/transpiler/TranspilationTest.kt#L230-L270) |
+| Return Statements | Core Language Constructs | Support for return statements in functions with optional values (Both `return` and `return expression` variants supported) | [TestReturn.kt](../src/commonTest/kotlin/org/giraffemail/xcode/pythonparser/TestReturn.kt) |
 
 ## 🚧 Planned Features
 
 | Feature | Category | Description | Create Issue |
 |---------|----------|-------------|--------------|
-| Function Definitions | Core Language Constructs | def function declarations | [📝 Create Issue](https://github.com/pydlv/xcode/issues/new?title=Implement+Python+Function+Definitions&body=Add+support+for+Python+function+definitions+including+def+keyword,+parameters,+and+return+statements.&labels=enhancement,python) |
 | Variable Assignments | Core Language Constructs | Variable assignment operations | [📝 Create Issue](https://github.com/pydlv/xcode/issues/new?title=Implement+Python+Variable+Assignments&body=Add+support+for+Python+variable+assignments+including+simple+and+augmented+assignment+operators.&labels=enhancement,python) |
 | Class Definitions | Core Language Constructs | Class declarations and methods | [📝 Create Issue](https://github.com/pydlv/xcode/issues/new?title=Implement+Python+Class+Definitions&body=Add+support+for+Python+class+definitions+including+class+keyword,+methods,+and+inheritance.&labels=enhancement,python) |
 | Import Statements | Core Language Constructs | Module import support | [📝 Create Issue](https://github.com/pydlv/xcode/issues/new?title=Implement+Python+Import+Statements&body=Add+support+for+Python+import+statements+including+import,+from-import,+and+relative+imports.&labels=enhancement,python) |
@@ -48,12 +49,12 @@ This document outlines the Python language features currently supported by the X
 
 | Feature Category | Implemented | Planned | Total |
 |-----------------|-------------|---------|-------|
-| Core Constructs | 5 | 4 | 9 |
+| Core Constructs | 7 | 3 | 10 |
 | Data Types | 2 | 5 | 7 |
 | Control Flow | 0 | 4 | 4 |
 | Advanced | 2 | 4 | 6 |
 | Python-Specific | 1 | 4 | 5 |
-| **Total** | **10** | **21** | **31** |
+| **Total** | **12** | **20** | **32** |
 
 ## 🔗 Related Documentation
 
