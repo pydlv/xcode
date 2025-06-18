@@ -337,6 +337,25 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         return tree.accept(this)
     }
 
+    override fun visitArrayLiteral(ctx: AntlrJavaParser.ArrayLiteralContext): AstNode {
+        // Parse array elements if present  
+        val elements = ctx.expressionList()?.expression()?.map { 
+            visit(it) as ExpressionNode 
+        } ?: emptyList()
+        
+        return ListNode(elements)
+    }
+
+    override fun visitBooleanLiteral(ctx: AntlrJavaParser.BooleanLiteralContext): AstNode {
+        val boolText = ctx.text
+        val boolValue = when (boolText) {
+            "true" -> true
+            "false" -> false
+            else -> false // Default fallback
+        }
+        return ConstantNode(boolValue)
+    }
+
     // Default result if a more specific visit method is not overridden for a particular node type
     // and visitChildren is called on its parent.
     override fun defaultResult(): AstNode {

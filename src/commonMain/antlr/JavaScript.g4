@@ -47,10 +47,14 @@ expression
     : expression '+' expression  # Addition
     | expression ('===' | '!==' | '==' | '!=' | '<' | '>' | '<=' | '>=') expression # Comparison
     | IDENTIFIER '(' arguments? ')'  # FunctionCall
+    | '[' expressionList? ']'    # ArrayLiteral   // Array literals like [1, 2, 3]
+    | ('true' | 'false')         # BooleanLiteral // Boolean literals  
     | STRING_LITERAL            # StringLiteral // Uses common STRING_LITERAL
     | IDENTIFIER                # Identifier    // Uses common IDENTIFIER
     | NUMBER                    # NumberLiteral // Uses common NUMBER
     ;
+
+expressionList: expression (',' expression)* ; // List of expressions for arrays
 
 // Lexer Rules - Most are now imported
 // STRING_LITERAL, IDENTIFIER, NUMBER are now imported from CommonLexerRules.

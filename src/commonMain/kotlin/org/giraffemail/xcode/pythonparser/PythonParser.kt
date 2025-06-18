@@ -359,6 +359,25 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
         return ConstantNode(value)
     }
 
+    override fun visitListLiteral(ctx: AntlrPythonParser.ListLiteralContext): AstNode {
+        // Parse list elements if present
+        val elements = ctx.expressionList()?.expression()?.map { 
+            visit(it) as ExpressionNode 
+        } ?: emptyList()
+        
+        return ListNode(elements)
+    }
+
+    override fun visitBooleanLiteral(ctx: AntlrPythonParser.BooleanLiteralContext): AstNode {
+        val boolText = ctx.text
+        val boolValue = when (boolText) {
+            "True" -> true
+            "False" -> false
+            else -> false // Default fallback
+        }
+        return ConstantNode(boolValue)
+    }
+
     override fun defaultResult(): AstNode {
         return UnknownNode("Unhandled ANTLR node")
     }

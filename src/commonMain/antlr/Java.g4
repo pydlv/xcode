@@ -69,9 +69,13 @@ expression:
     | expression ADD expression                       # AdditiveExpression
     | expression ('==' | '!=' | '<' | '>' | '<=' | '>=') expression # ComparisonExpression
     | SYSTEM '.' OUT '.' PRINTLN LPAREN expression RPAREN # PrintlnExpression
+    | '{' expressionList '}' # ArrayLiteral // Java array initialization like {1, 2, 3}
+    | ('true' | 'false')     # BooleanLiteral // Java boolean literals
     | IDENTIFIER                                      # IdentifierAccessExpression // Added for variables like a, b, c
     | IDENTIFIER LPAREN argumentList RPAREN           # CallExpression // Added for calls within expressions (if needed, though callStatement covers current use)
     ;
+
+expressionList: (expression (COMMA expression)*)? ; // List of expressions for arrays
 
 primary:
     literal                                         # LiteralExpression

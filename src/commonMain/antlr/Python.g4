@@ -60,10 +60,14 @@ expression
     : expression '+' expression          # Addition
     | expression ('==' | '!=' | '<' | '>' | '<=' | '>=') expression # Comparison
     | IDENTIFIER '(' arguments? ')'      # FunctionCallInExpression // Using literal parens
+    | '[' expressionList? ']'            # ListLiteral  // Python list literals like [1, 2, 3]
+    | ('True' | 'False')                 # BooleanLiteral // Python boolean literals
     | STRING_LITERAL                     # StringLiteral // Uses common STRING_LITERAL
     | IDENTIFIER                         # Identifier    // Uses common IDENTIFIER
     | NUMBER                             # NumberLiteral // Uses common NUMBER
     ;
+
+expressionList: expression (',' expression)* ; // List of expressions for lists
 
 // Lexer Rules - Most are now imported
 // Keywords/Special Tokens first - order matters for tokens that could also be identifiers
