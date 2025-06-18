@@ -9,6 +9,7 @@ include:
   - name: Source Code
     paths:
       - src/commonMain/kotlin/
+      - src/commonMain/antlr/
       - src/commonTest/kotlin/
       - src/nativeLinuxMain/kotlin/
       - src/nativeMacosMain/kotlin/
@@ -27,11 +28,7 @@ exclude:
   - name: IDE Files
     paths:
       - .idea/
-  - name: ANTLR Grammar Files
-    paths:
-      - src/commonMain/antlr/
-
 # Optimize performance for faster scans
 bootstrap: |
-  # Skip time-consuming inspections for generated code
-  export QODANA_SKIP_INSPECTIONS="UnusedDeclaration,UnusedProperty"
+  # Performance optimizations for faster analysis
+  export GRADLE_OPTS="-Xmx2g -Xms1g"
