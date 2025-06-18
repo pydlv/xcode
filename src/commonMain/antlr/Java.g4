@@ -7,6 +7,7 @@ compilationUnit: statement* EOF;
 
 statement:
       functionDefinition
+    | classDefinition
     | callStatement
     | assignmentStatement
     | expressionStatement
@@ -19,6 +20,16 @@ expressionStatement: expression SEMI; // Changed from ';' to SEMI
 // Function Definition
 functionDefinition:
     PUBLIC STATIC VOID IDENTIFIER LPAREN parameterList RPAREN LBRACE statement* RBRACE
+    ;
+
+// Class Definition  
+classDefinition:
+    PUBLIC CLASS IDENTIFIER (EXTENDS IDENTIFIER)? LBRACE classMember* RBRACE
+    ;
+
+classMember:
+    functionDefinition
+    | statement
     ;
 
 parameterList:
@@ -77,6 +88,8 @@ literal:
 PUBLIC: 'public';
 STATIC: 'static';
 VOID: 'void';
+CLASS: 'class';
+EXTENDS: 'extends';
 IF: 'if';
 ELSE: 'else';
 RETURN: 'return'; // Added return keyword

@@ -86,6 +86,43 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
         )
     }
 
+    override fun visitClassDeclaration(ctx: AntlrJavaScriptParser.ClassDeclarationContext): AstNode {
+        val name = ctx.IDENTIFIER(0)?.text ?: "UnknownClass" // First IDENTIFIER is the class name
+        
+        // Parse base class for inheritance (extends)
+        val baseClasses = mutableListOf<ExpressionNode>()
+        if (ctx.IDENTIFIER().size > 1) {
+            // Second IDENTIFIER is the base class
+            val baseClassName = ctx.IDENTIFIER(1)?.text
+            if (baseClassName != null) {
+                baseClasses.add(NameNode(id = baseClassName, ctx = Load))
+            }
+        }
+
+        // Parse class body - process class members
+        val body = ctx.classBody().classMember().mapNotNull { visit(it) as? StatementNode }
+
+        return ClassDefNode(
+            name = name,
+            baseClasses = baseClasses,
+            body = body,
+            decoratorList = emptyList()
+        )
+    }
+
+    override fun visitClassBody(ctx: AntlrJavaScriptParser.ClassBodyContext): AstNode {
+        val statements = ctx.classMember().mapNotNull { visit(it) as? StatementNode }
+        return ModuleNode(statements) // Using ModuleNode to represent a block of statements
+    }
+
+    override fun visitClassMember(ctx: AntlrJavaScriptParser.ClassMemberContext): AstNode {
+        return when {
+            ctx.functionDeclaration() != null -> ctx.functionDeclaration()?.let { visit(it) } ?: UnknownNode("Null function declaration")
+            ctx.assignStatement() != null -> ctx.assignStatement()?.let { visit(it) } ?: UnknownNode("Null assign statement")
+            else -> UnknownNode("Unknown class member: ${ctx.text}")
+        }
+    }
+
     // Handle function body
     override fun visitFunctionBody(ctx: AntlrJavaScriptParser.FunctionBodyContext): AstNode {
         val statements = ctx.statement().mapNotNull { stmtCtx ->
