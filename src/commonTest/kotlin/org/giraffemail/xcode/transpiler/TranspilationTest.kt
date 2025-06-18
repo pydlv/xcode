@@ -244,16 +244,22 @@ class TranspilationTest {
 
     @Test
     fun `test function with return statement transpilation`() {
-        // Define AST for a function with simple return statement (no value)
+        // Define AST for a function with simple return statement (no value) using maximal AST
         val functionWithReturnAst = ModuleNode(
             body = listOf(
                 FunctionDefNode(
                     name = "test_return", 
-                    args = emptyList(),
+                    args = listOf(
+                        NameNode(id = "input", ctx = Param, metadata = mapOf("type" to "string"))
+                    ),
                     body = listOf(
                         ReturnNode(value = null)
                     ),
-                    decoratorList = emptyList()
+                    decoratorList = emptyList(),
+                    metadata = mapOf(
+                        "returnType" to "void",
+                        "paramTypes" to mapOf("input" to "string")
+                    )
                 )
             )
         )
@@ -264,14 +270,14 @@ class TranspilationTest {
 
     @Test
     fun `test function with return value transpilation`() {
-        // Define AST for a function with return value
+        // Define AST for a function with return value using maximal AST
         val functionWithReturnValueAst = ModuleNode(
             body = listOf(
                 FunctionDefNode(
                     name = "add",
                     args = listOf(
-                        NameNode(id = "a", ctx = Param),
-                        NameNode(id = "b", ctx = Param)
+                        NameNode(id = "a", ctx = Param, metadata = mapOf("type" to "number")),
+                        NameNode(id = "b", ctx = Param, metadata = mapOf("type" to "number"))
                     ),
                     body = listOf(
                         ReturnNode(
@@ -282,7 +288,11 @@ class TranspilationTest {
                             )
                         )
                     ),
-                    decoratorList = emptyList()
+                    decoratorList = emptyList(),
+                    metadata = mapOf(
+                        "returnType" to "number",
+                        "paramTypes" to mapOf("a" to "number", "b" to "number")
+                    )
                 )
             )
         )
