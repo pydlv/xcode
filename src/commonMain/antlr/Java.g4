@@ -11,6 +11,7 @@ statement:
     | assignmentStatement
     | expressionStatement
     | ifStatement
+    | returnStatement
     ;
 
 expressionStatement: expression SEMI; // Changed from ';' to SEMI
@@ -43,6 +44,11 @@ ifStatement:
     IF LPAREN expression RPAREN LBRACE statement* RBRACE (ELSE LBRACE statement* RBRACE)?
     ;
 
+    // Return Statement
+returnStatement:
+    RETURN expression? SEMI // Return statement with optional expression
+    ;
+
 argumentList:
     (expression (COMMA expression)*)?
     ;
@@ -73,6 +79,7 @@ STATIC: 'static';
 VOID: 'void';
 IF: 'if';
 ELSE: 'else';
+RETURN: 'return'; // Added return keyword
 // INT: 'int'; // Example, not strictly needed if types are treated as IDENTIFIER
 
 SYSTEM: 'System';

@@ -162,6 +162,14 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
         )
     }
 
+    // Handle return statements
+    override fun visitReturnStatement(ctx: AntlrTypeScriptParser.ReturnStatementContext): AstNode {
+        val returnValue = ctx.expression()?.let { exprCtx ->
+            visit(exprCtx) as? ExpressionNode
+        }
+        return ReturnNode(value = returnValue)
+    }
+
     // Expression visitors
     override fun visitAddition(ctx: AntlrTypeScriptParser.AdditionContext): AstNode {
         try {
