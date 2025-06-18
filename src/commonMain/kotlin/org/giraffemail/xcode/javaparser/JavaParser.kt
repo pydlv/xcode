@@ -36,8 +36,67 @@ object JavaParser : AbstractAntlrParser<JavaLexer, AntlrJavaParser, AntlrJavaPar
     }
 
     override fun postprocessAst(ast: AstNode): AstNode {
-        // Base class handles metadata injection in parseWithMetadata
-        return ast
+        // Unwrap standalone wrapper classes that were added by Java generator
+        return unwrapStandaloneWrapperClasses(ast)
+    }
+    
+    /**
+     * Unwraps classes that were created as wrappers for standalone statements
+     * to preserve original AST structure in round-trip transpilation
+     */
+    private fun unwrapStandaloneWrapperClasses(ast: AstNode): AstNode {
+        return when (ast) {
+            is ModuleNode -> {
+                val newBody = mutableListOf<StatementNode>()
+                
+                for (statement in ast.body) {
+                    if (statement is ClassDefNode) {
+                        // Detect wrapper classes heuristically:
+                        // 1. Named "Sample" (our wrapper class name)
+                        // 2. Has a main method
+                        // 3. No explicit class metadata indicating it's a real class
+                        val isWrapperClass = statement.name == "Sample" && 
+                                           statement.body.any { it is FunctionDefNode && (it as FunctionDefNode).name == "main" } &&
+                                           statement.metadata?.get("classType") != "RealClass" // Absence of explicit real class marker
+                        
+                        if (isWrapperClass) {
+                            // This is a wrapper class - extract its contents
+                        
+                        // Look for main method and extract its body
+                        val mainMethod = statement.body.find { 
+                            it is FunctionDefNode && it.name == "main" 
+                        } as? FunctionDefNode
+                        
+                        if (mainMethod != null) {
+                            // Add the main method body as standalone statements
+                            newBody.addAll(mainMethod.body)
+                        }
+                        
+                        // Add any other methods as standalone functions
+                        val otherMethods = statement.body.filter { 
+                            it is FunctionDefNode && it.name != "main" 
+                        }
+                        newBody.addAll(otherMethods)
+                        
+                        // Add any other statements (though there shouldn't be any in Java classes)
+                        val otherStatements = statement.body.filter { 
+                            it !is FunctionDefNode 
+                        }
+                        newBody.addAll(otherStatements)
+                        } else {
+                            // Regular class, keep as-is
+                            newBody.add(statement)
+                        }
+                    } else {
+                        // Regular statement, keep as-is
+                        newBody.add(statement)
+                    }
+                }
+                
+                ModuleNode(body = newBody, metadata = ast.metadata)
+            }
+            else -> ast
+        }
     }
     
     override fun preprocessCode(code: String): String {
@@ -67,6 +126,7 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
             ctx.functionDefinition() != null -> ctx.functionDefinition()!!.accept(this)   // Added !!
             ctx.classDefinition() != null -> ctx.classDefinition()!!.accept(this)         // Added !! for class definitions
             ctx.assignmentStatement() != null -> ctx.assignmentStatement()!!.accept(this) // Added !!
+            ctx.variableDeclaration() != null -> ctx.variableDeclaration()!!.accept(this) // Added !! for variable declarations
             ctx.callStatement() != null -> ctx.callStatement()!!.accept(this)           // Added !!
             ctx.ifStatement() != null -> ctx.ifStatement()!!.accept(this)               // Added !! for if statements
             ctx.returnStatement() != null -> ctx.returnStatement()!!.accept(this)       // Added !! for return statements
@@ -142,8 +202,9 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
     }
 
     fun getParameter(ctx: AntlrJavaParser.ParameterContext): NameNode {
-        val paramName = ctx.IDENTIFIER(1)!!.text // Second IDENTIFIER is the name
-        return NameNode(id = paramName, ctx = Param)
+        val paramName = ctx.IDENTIFIER().text // Now only one IDENTIFIER (the parameter name)
+        val paramType = ctx.type().text // Extract the type from the type rule
+        return NameNode(id = paramName, ctx = Param, metadata = mapOf("type" to mapJavaTypeToTypeScript(paramType)))
     }
 
     // This would be the overridden method, now returning a placeholder
@@ -156,8 +217,9 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
 
     // visitParameter is likely also an override and must return AstNode.
     override fun visitParameter(ctx: AntlrJavaParser.ParameterContext): AstNode {
-        val paramName = ctx.IDENTIFIER(1)!!.text
-        return NameNode(id = paramName, ctx = Param)
+        val paramName = ctx.IDENTIFIER().text // Now only one IDENTIFIER (the parameter name)
+        val paramType = ctx.type().text // Extract the type from the type rule
+        return NameNode(id = paramName, ctx = Param, metadata = mapOf("type" to mapJavaTypeToTypeScript(paramType)))
     }
 
     // In visitFunctionDefinition, change to use getParameters:
@@ -170,6 +232,18 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         val value = ctx.expression().accept(this) as? ExpressionNode
             ?: throw IllegalStateException("Assignment value is null or not an ExpressionNode for: ${ctx.text}")
         return AssignNode(target = target, value = value)
+    }
+
+    override fun visitVariableDeclaration(ctx: AntlrJavaParser.VariableDeclarationContext): AssignNode {
+        val target = NameNode(id = ctx.IDENTIFIER().text, ctx = Store)
+        val value = ctx.expression().accept(this) as? ExpressionNode
+            ?: throw IllegalStateException("Variable declaration value is null or not an ExpressionNode for: ${ctx.text}")
+        
+        // Extract type information from the type rule
+        val typeStr = ctx.type().text // This should give us the Java type like "String[]" 
+        val metadata = mapOf("variableType" to mapJavaTypeToTypeScript(typeStr))
+        
+        return AssignNode(target = target, value = value, metadata = metadata)
     }
 
     override fun visitCallStatement(ctx: AntlrJavaParser.CallStatementContext): CallStatementNode {
@@ -368,4 +442,20 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
     // Optional: Override aggregateResult if custom aggregation logic is needed.
     // The default implementation in AbstractParseTreeVisitor is usually sufficient:
     // override fun aggregateResult(aggregate: AstNode?, nextResult: AstNode?): AstNode? = nextResult ?: aggregate
+
+    /**
+     * Map Java types back to TypeScript types for metadata preservation
+     */
+    private fun mapJavaTypeToTypeScript(javaType: String): String {
+        return when (javaType) {
+            "int" -> "number"
+            "String" -> "string"
+            "boolean" -> "boolean"
+            "String[]" -> "string[]"
+            "int[]" -> "number[]"
+            "boolean[]" -> "boolean[]"
+            "Object[]" -> "[string, number]" // Assume tuple for Object arrays
+            else -> javaType // Keep as-is for unknown types
+        }
+    }
 }

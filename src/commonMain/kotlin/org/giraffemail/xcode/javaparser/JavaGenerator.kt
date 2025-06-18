@@ -241,7 +241,11 @@ class JavaGenerator : AbstractAstGenerator() {
             // Create the wrapper class - use a generic name that matches common file names
             val wrapperClass = ClassDefNode(
                 name = "Sample", // Use a standard name instead of "Main"
-                body = classBody
+                body = classBody,
+                metadata = mapOf(
+                    "classType" to "StandaloneWrapper", // Use classType to indicate this is a wrapper
+                    "methods" to classBody.filterIsInstance<FunctionDefNode>().map { it.name }
+                )
             )
             
             return visitClassDefNode(wrapperClass)

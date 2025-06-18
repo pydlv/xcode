@@ -10,6 +10,7 @@ statement:
     | classDefinition
     | callStatement
     | assignmentStatement
+    | variableDeclaration
     | expressionStatement
     | ifStatement
     | returnStatement
@@ -37,12 +38,22 @@ parameterList:
     ;
 
 parameter:
-    IDENTIFIER IDENTIFIER // Represents type and name, e.g., "Object a"
+    type IDENTIFIER // Supports typed parameters like "String[] args", "int x" 
     ;
 
     // Assignment Statement
 assignmentStatement:
     IDENTIFIER ASSIGN expression SEMI
+    ;
+
+    // Variable Declaration (with type)
+variableDeclaration:
+    type IDENTIFIER ASSIGN expression SEMI
+    ;
+
+    type:
+    IDENTIFIER              // Simple types like int, String
+    | IDENTIFIER LSQUARE RSQUARE   // Array types like String[], int[]
     ;
 
     // Call Statement (for standalone calls like fib(0,1); or fib(b,c);)
@@ -105,6 +116,8 @@ PRINTLN: 'println';
 
 LPAREN: '(';
 RPAREN: ')';
+LSQUARE: '[';
+RSQUARE: ']';
 LBRACE: '{'; // Added
 RBRACE: '}'; // Added
 SEMI: ';';
