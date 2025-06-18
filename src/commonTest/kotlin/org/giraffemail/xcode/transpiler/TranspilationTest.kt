@@ -52,6 +52,8 @@ object SupportedAstFeatures {
         AstFeature.FUNCTION_CALLS,
         AstFeature.CONSTANT_VALUES,
         AstFeature.VARIABLE_REFERENCES,
+        AstFeature.CONDITIONAL_STATEMENTS,
+        AstFeature.COMPARISON_OPERATIONS,
         AstFeature.RETURN_STATEMENTS
     )
     
@@ -234,8 +236,47 @@ object MaximalAstGenerator {
             )
         }
         
-        // Generate standalone print statement if requested and not already in function
-        if (features.contains(AstFeature.PRINT_STATEMENTS) && !features.contains(AstFeature.FUNCTION_DEFINITIONS)) {
+        // Generate standalone conditional statement if requested
+        if (features.contains(AstFeature.CONDITIONAL_STATEMENTS) && !features.contains(AstFeature.FUNCTION_DEFINITIONS)) {
+            // Create test condition - use comparison if available
+            val testCondition = if (features.contains(AstFeature.COMPARISON_OPERATIONS)) {
+                CompareNode(
+                    left = if (features.contains(AstFeature.VARIABLE_REFERENCES)) 
+                        NameNode(id = "x", ctx = Load) else ConstantNode(10),
+                    op = ">",
+                    right = if (features.contains(AstFeature.CONSTANT_VALUES)) 
+                        ConstantNode(5) else ConstantNode(0)
+                )
+            } else {
+                // Simple boolean variable or constant
+                if (features.contains(AstFeature.VARIABLE_REFERENCES)) 
+                    NameNode(id = "condition", ctx = Load) else ConstantNode(true)
+            }
+            
+            // Simple if-else with print statements
+            bodyNodes.add(
+                IfNode(
+                    test = testCondition,
+                    body = listOf(
+                        PrintNode(
+                            expression = if (features.contains(AstFeature.CONSTANT_VALUES))
+                                ConstantNode("condition is true") else NameNode(id = "trueMessage", ctx = Load)
+                        )
+                    ),
+                    orelse = listOf(
+                        PrintNode(
+                            expression = if (features.contains(AstFeature.CONSTANT_VALUES))
+                                ConstantNode("condition is false") else NameNode(id = "falseMessage", ctx = Load)
+                        )
+                    )
+                )
+            )
+        }
+        
+        // Generate standalone print statement if requested and not already covered
+        if (features.contains(AstFeature.PRINT_STATEMENTS) && 
+            !features.contains(AstFeature.FUNCTION_DEFINITIONS) && 
+            !features.contains(AstFeature.CONDITIONAL_STATEMENTS)) {
             bodyNodes.add(
                 PrintNode(
                     expression = if (features.contains(AstFeature.CONSTANT_VALUES))
@@ -463,6 +504,48 @@ class MaximalAstGeneratorTest {
         
         assertTrue(ast is ModuleNode)
         assertTrue(ast.body.isEmpty())
+    }
+
+    @Test
+    fun `test generateMaximalAst with only conditional statements`() {
+        val features = setOf(AstFeature.CONDITIONAL_STATEMENTS)
+        val ast = MaximalAstGenerator.generateMaximalAst(features)
+        
+        assertTrue(ast is ModuleNode)
+        assertEquals(1, ast.body.size)
+        assertTrue(ast.body[0] is IfNode)
+        
+        val ifNode = ast.body[0] as IfNode
+        assertTrue(ifNode.body.isNotEmpty())
+        assertTrue(ifNode.orelse.isNotEmpty())
+    }
+
+    @Test
+    fun `test generateMaximalAst with conditional statements and comparisons`() {
+        val features = setOf(AstFeature.CONDITIONAL_STATEMENTS, AstFeature.COMPARISON_OPERATIONS)
+        val ast = MaximalAstGenerator.generateMaximalAst(features)
+        
+        assertTrue(ast is ModuleNode)
+        assertEquals(1, ast.body.size)
+        assertTrue(ast.body[0] is IfNode)
+        
+        val ifNode = ast.body[0] as IfNode
+        assertTrue(ifNode.test is CompareNode)
+    }
+
+    @Test
+    fun `test generateMaximalAst with conditional statements and constant values`() {
+        val features = setOf(AstFeature.CONDITIONAL_STATEMENTS, AstFeature.CONSTANT_VALUES)
+        val ast = MaximalAstGenerator.generateMaximalAst(features)
+        
+        assertTrue(ast is ModuleNode)
+        assertTrue(ast.body[0] is IfNode)
+        
+        val ifNode = ast.body[0] as IfNode
+        // Should use constant values in the condition and print statements
+        assertTrue(ifNode.body.any { statement ->
+            statement is PrintNode && (statement.expression as? ConstantNode)?.value == "condition is true"
+        })
     }
 }
 
@@ -839,5 +922,19 @@ class TranspilationTest {
 
         testAstRoundTrip("Isolated Binary Operation", binaryOpAst)
         testSequentialTranspilation("Isolated Binary Operation", binaryOpAst)
+    }
+    
+    @Test
+    fun `test isolated conditional statement feature transpilation`() {
+        // Test only conditional statements and comparisons to isolate this specific language feature
+        val features = setOf(
+            AstFeature.CONDITIONAL_STATEMENTS,
+            AstFeature.COMPARISON_OPERATIONS,
+            AstFeature.CONSTANT_VALUES
+        )
+        val conditionalAst = MaximalAstGenerator.generateMaximalAst(features)
+
+        testAstRoundTrip("Isolated Conditional Statement", conditionalAst)
+        testSequentialTranspilation("Isolated Conditional Statement", conditionalAst)
     }
 }
