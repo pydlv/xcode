@@ -310,7 +310,7 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
             typeCtx.children?.size == 3 && typeCtx.getChild(0)?.text == "[" && typeCtx.getChild(2)?.text == "]" -> {
                 // For tuples, we'll use a simplified representation
                 val typeList = typeCtx.getChild(1) as? AntlrTypeScriptParser.TypeListContext
-                val types = typeList?.typeExpression()?.map { extractTypeString(it) }?.joinToString(", ") ?: ""
+                val types = typeList?.typeExpression()?.joinToString(", ") { extractTypeString(it) } ?: ""
                 "[$types]"
             }
             // Handle basic types

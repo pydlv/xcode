@@ -70,10 +70,18 @@ class JavaGenerator : AbstractAstGenerator() {
         // Generate return type
         val javaReturnType = mapTypeScriptTypeToJava(returnType) ?: "void"
         
+        // Special handling for main method
+        val (finalParams, finalReturnType) = if (funcName == "main" && node.args.isEmpty()) {
+            // Convert no-arg main() to standard Java main(String[] args)
+            "String[] args" to "void"
+        } else {
+            params to javaReturnType
+        }
+        
         // Generate method body
         val bodyStatements = node.body.joinToString("\n") { "        " + generateStatement(it) }
         
-        return "public static $javaReturnType $funcName($params) {\n$bodyStatements\n    }"
+        return "public static $finalReturnType $funcName($finalParams) {\n$bodyStatements\n    }"
     }
 
     override fun visitClassDefNode(node: ClassDefNode): String {
