@@ -66,7 +66,7 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
         // Handle parameters and extract type information
         val params = ctx.parameterList()?.parameter()?.map { paramCtx ->
             val paramName = paramCtx.IDENTIFIER().text
-            val paramType = paramCtx.typeAnnotation()?.typeExpression()?.text
+            val paramType = paramCtx.typeAnnotation()?.let { extractTypeString(it.typeExpression()) }
             val metadata = if (paramType != null) {
                 mapOf("type" to paramType)
             } else null
@@ -77,7 +77,7 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
         val body = ctx.functionBody()?.let { visit(it) as? ModuleNode }?.body ?: emptyList()
 
         // Extract return type annotation if present
-        val returnType = ctx.typeAnnotation()?.typeExpression()?.text
+        val returnType = ctx.typeAnnotation()?.let { extractTypeString(it.typeExpression()) }
         
         val functionMetadata = if (returnType != null || params.any { it.metadata != null }) {
             val metadata = mutableMapOf<String, Any>()
@@ -155,8 +155,8 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
         val valueExpr = visit(ctx.expression()) as? ExpressionNode
             ?: UnknownNode("Invalid expression in assignment")
 
-        // Extract type annotation if present
-        val variableType = ctx.typeAnnotation()?.typeExpression()?.text
+        // Extract type annotation if present - improved parsing
+        val variableType = ctx.typeAnnotation()?.let { extractTypeString(it.typeExpression()) }
         
         val assignmentMetadata = if (variableType != null) {
             mapOf("variableType" to variableType)
@@ -258,6 +258,20 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
         return ConstantNode(normalizedValue)
     }
 
+    override fun visitBooleanLiteral(ctx: AntlrTypeScriptParser.BooleanLiteralContext): AstNode {
+        val boolValue = ctx.text == "true"
+        return ConstantNode(value = boolValue)
+    }
+
+    override fun visitArrayLiteral(ctx: AntlrTypeScriptParser.ArrayLiteralContext): AstNode {
+        val elements = ctx.expressionList()?.expression()?.map { exprCtx ->
+            visit(exprCtx) as? ExpressionNode ?: UnknownNode("Invalid expression in array literal")
+        } ?: emptyList()
+        
+        // Create a list node to represent the array literal
+        return ListNode(elements = elements)
+    }
+
     override fun visitIdentifier(ctx: AntlrTypeScriptParser.IdentifierContext): AstNode {
         return NameNode(ctx.IDENTIFIER().text, Load)
     }
@@ -282,5 +296,25 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
             }
         }
         return CallNode(func = funcNameNode, args = args, keywords = emptyList())
+    }
+
+    // Helper method to extract type string from type expression context
+    private fun extractTypeString(typeCtx: AntlrTypeScriptParser.TypeExpressionContext): String {
+        return when {
+            // Handle array types like string[], number[]
+            typeCtx.children?.size == 3 && typeCtx.getChild(1)?.text == "[" && typeCtx.getChild(2)?.text == "]" -> {
+                val baseType = extractTypeString(typeCtx.getChild(0) as AntlrTypeScriptParser.TypeExpressionContext)
+                "$baseType[]"
+            }
+            // Handle tuple types like [string, number]
+            typeCtx.children?.size == 3 && typeCtx.getChild(0)?.text == "[" && typeCtx.getChild(2)?.text == "]" -> {
+                // For tuples, we'll use a simplified representation
+                val typeList = typeCtx.getChild(1) as? AntlrTypeScriptParser.TypeListContext
+                val types = typeList?.typeExpression()?.map { extractTypeString(it) }?.joinToString(", ") ?: ""
+                "[$types]"
+            }
+            // Handle basic types
+            else -> typeCtx.text
+        }
     }
 }

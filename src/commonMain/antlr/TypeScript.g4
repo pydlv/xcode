@@ -36,7 +36,12 @@ parameter: IDENTIFIER typeAnnotation? ; // TypeScript parameter with optional ty
 typeAnnotation: ':' typeExpression ; // TypeScript type annotation
 
 typeExpression: 
-    'string' | 'number' | 'boolean' | 'void' | 'any' | IDENTIFIER ; // Basic TypeScript types
+    'string' | 'number' | 'boolean' | 'void' | 'any' | IDENTIFIER 
+    | typeExpression '[' ']'  // Array types like string[], number[]
+    | '[' typeList ']'        // Tuple types like [string, number]
+    ; // Basic TypeScript types and array/tuple types
+
+typeList: typeExpression (',' typeExpression)* ; // Type list for tuples
 
 functionBody: statement* ;
 
@@ -54,10 +59,14 @@ expression
     : expression '+' expression  # Addition
     | expression ('===' | '!==' | '==' | '!=' | '<' | '>' | '<=' | '>=') expression # Comparison
     | IDENTIFIER '(' arguments? ')'  # FunctionCall
+    | '[' expressionList? ']'    # ArrayLiteral   // Array/tuple literals
     | STRING_LITERAL            # StringLiteral // Uses common STRING_LITERAL
+    | ('true' | 'false')        # BooleanLiteral // Boolean literals
     | IDENTIFIER                # Identifier    // Uses common IDENTIFIER
     | NUMBER                    # NumberLiteral // Uses common NUMBER
     ;
+
+expressionList: expression (',' expression)* ; // Expression list for arrays
 
 // Lexer Rules - Most are now imported
 // STRING_LITERAL, IDENTIFIER, NUMBER are now imported from CommonLexerRules.

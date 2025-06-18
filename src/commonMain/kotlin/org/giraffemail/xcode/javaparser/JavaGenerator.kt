@@ -54,15 +54,26 @@ class JavaGenerator : AbstractAstGenerator() {
     // --- Abstract methods from AbstractAstGenerator that need implementation ---
 
     override fun visitFunctionDefNode(node: FunctionDefNode): String {
-        // Basic Java method structure. Assumes no complex modifiers, return types for now.
-        // This is a simplified version. Real Java generation would need type info.
+        // Basic Java method structure with enhanced type handling
         val funcName = node.name
-        val params = node.args.joinToString(", ") { "Object ${it.id}" } // Assuming args are NameNodes, defaulting type to Object
+        
+        // Extract metadata for type information
+        val (returnType, paramTypes, _) = extractFunctionMetadata(node)
+        
+        // Generate parameters with proper Java types
+        val params = node.args.joinToString(", ") { param ->
+            val paramType = paramTypes[param.id]
+            val javaType = mapTypeScriptTypeToJava(paramType) ?: "Object"
+            "$javaType ${param.id}"
+        }
+        
+        // Generate return type
+        val javaReturnType = mapTypeScriptTypeToJava(returnType) ?: "void"
+        
+        // Generate method body
         val bodyStatements = node.body.joinToString("\n") { "        " + generateStatement(it) }
         
-        return "public static void $funcName($params) {\n$bodyStatements\n    }"
-        // For a more complete solution, return type and parameter types are needed from AST.
-        // throw NotImplementedError("Function definition generation for Java needs more AST details (return type, param types).")
+        return "public static $javaReturnType $funcName($params) {\n$bodyStatements\n    }"
     }
 
     override fun visitClassDefNode(node: ClassDefNode): String {
@@ -81,14 +92,20 @@ class JavaGenerator : AbstractAstGenerator() {
     override fun visitAssignNode(node: AssignNode): String {
         // Assuming target is NameNode based on compiler warnings in other generators.
         // Type declaration might be needed for first assignment in Java.
-        // This is a simplified version. Real Java needs type information.
         val targetName = node.target.id // Assuming node.target is of type NameNode
         val valueExpr = generateExpression(node.value)
         
-        // Simplified: Assumes variable is already declared or type inference is not handled.
-        // A real generator would need to manage variable scopes and declarations.
-        return "$targetName = $valueExpr${getStatementTerminator()}"
-        // throw NotImplementedError("Assignment generation for Java needs type information and declaration management.")
+        // Extract type information from metadata to generate proper Java variable declaration
+        val variableType = node.metadata?.get("variableType") as? String
+        val javaType = mapTypeScriptTypeToJava(variableType)
+        
+        // Generate Java variable declaration with type
+        return if (javaType != null) {
+            "$javaType $targetName = $valueExpr${getStatementTerminator()}"
+        } else {
+            // Fallback to simple assignment if no type info
+            "$targetName = $valueExpr${getStatementTerminator()}"
+        }
     }
 
     override fun visitCallStatementNode(node: CallStatementNode): String {
@@ -120,6 +137,36 @@ class JavaGenerator : AbstractAstGenerator() {
         val rightStr = generateExpression(node.right)
         // AST now uses canonical operators, no conversion needed
         return "$leftStr ${node.op} $rightStr"
+    }
+
+    override fun visitListNode(node: ListNode): String {
+        val elements = node.elements.joinToString(", ") { generateExpression(it) }
+        return "{$elements}" // Java array initialization syntax
+    }
+
+    // Helper method to map TypeScript types to Java types
+    private fun mapTypeScriptTypeToJava(tsType: String?): String? {
+        return when (tsType) {
+            "number" -> "int"
+            "string" -> "String"
+            "boolean" -> "boolean"
+            "void" -> "void"
+            null -> null
+            else -> {
+                when {
+                    tsType.endsWith("[]") -> {
+                        // Handle array types: string[] -> String[]
+                        val baseType = mapTypeScriptTypeToJava(tsType.substringBeforeLast("[]"))
+                        if (baseType != null) "$baseType[]" else "Object[]"
+                    }
+                    tsType.startsWith("[") && tsType.endsWith("]") -> {
+                        // Handle tuple types: [string, number] -> Object[] for simplicity
+                        "Object[]"
+                    }
+                    else -> tsType // Pass through unknown types
+                }
+            }
+        }
     }
 
     // Other visit methods (visitNameNode, visitUnknownNode, visitExprNode, visitModuleNode)

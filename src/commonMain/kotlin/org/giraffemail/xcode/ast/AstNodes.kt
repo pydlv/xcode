@@ -98,6 +98,12 @@ data class CompareNode(
     override val metadata: Map<String, Any>? = null
 ) : ExpressionNode
 
+// Node for array/list literals like [1, 2, 3] or ["a", "b"]
+data class ListNode(
+    val elements: List<ExpressionNode> = emptyList(),
+    override val metadata: Map<String, Any>? = null
+) : ExpressionNode
+
 // Node for unhandled or unknown parts of the AST, can be AstNode, StatementNode, or ExpressionNode
 data class UnknownNode(val description: String, override val metadata: Map<String, Any>? = null) : AstNode, StatementNode, ExpressionNode
 

@@ -119,6 +119,6 @@ class TypeScriptGenerator : AbstractAstGenerator() {
     // Numbers and booleans will be formatted by the base class's visitConstantNode.
     // If TypeScript needs specific boolean (true/false) or number formatting different from base, override visitConstantNode.
 
-    // visitNameNode, visitBinaryOpNode, visitUnknownNode, visitExprNode, visitModuleNode
+    // visitNameNode, visitBinaryOpNode, visitUnknownNode, visitExprNode, visitModuleNode, visitListNode
     // will use the open implementations from AbstractAstGenerator.
 }

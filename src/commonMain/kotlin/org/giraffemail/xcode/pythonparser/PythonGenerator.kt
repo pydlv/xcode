@@ -140,6 +140,6 @@ class PythonGenerator : AbstractAstGenerator() {
         return "$leftStr $pythonOp $rightStr"
     }
 
-    // visitNameNode, visitBinaryOpNode, visitUnknownNode, visitExprNode, visitModuleNode
+    // visitNameNode, visitBinaryOpNode, visitUnknownNode, visitExprNode, visitModuleNode, visitListNode
     // will use the open implementations from AbstractAstGenerator.
 }
