@@ -21,6 +21,132 @@ data class LanguageConfig(
 )
 
 /**
+ * Supported common AST features for maximal AST generation
+ */
+object SupportedAstFeatures {
+    
+    /**
+     * List of supported AST node types and their associated metadata features
+     */
+    val SUPPORTED_FEATURES = listOf(
+        "Function definitions with typed parameters",
+        "Function return type annotations", 
+        "Variable assignments with type annotations",
+        "Function calls as statements",
+        "Print/console.log statements",
+        "Conditional statements (if/else)",
+        "Binary operations (arithmetic, string)",
+        "Comparison operations", 
+        "Constant values (strings, numbers)",
+        "Variable references (Load, Store, Param contexts)"
+    )
+    
+    /**
+     * Supported metadata types from LanguageMetadata
+     */
+    val SUPPORTED_METADATA = listOf(
+        "returnType" to "Function return type annotations",
+        "paramTypes" to "Parameter type mappings", 
+        "variableType" to "Variable type annotations",
+        "individualParamMetadata" to "Per-parameter detailed metadata"
+    )
+}
+
+/**
+ * Utility for generating maximal AST nodes with all supported features
+ */
+object MaximalAstGenerator {
+    
+    /**
+     * Generates a maximal AST that includes all supported common AST features.
+     * This AST can be used in tests to verify comprehensive transpilation support.
+     */
+    fun generateMaximalAst(): ModuleNode {
+        return ModuleNode(
+            body = listOf(
+                FunctionDefNode(
+                    name = "processData",
+                    args = listOf(
+                        NameNode(id = "input", ctx = Param, metadata = mapOf("type" to "string")),
+                        NameNode(id = "count", ctx = Param, metadata = mapOf("type" to "number"))
+                    ),
+                    body = listOf(
+                        AssignNode(
+                            target = NameNode(id = "result", ctx = Store),
+                            value = BinaryOpNode(
+                                left = NameNode(id = "input", ctx = Load),
+                                op = "+",
+                                right = NameNode(id = "count", ctx = Load)
+                            ),
+                            metadata = mapOf("variableType" to "string")
+                        ),
+                        PrintNode(
+                            expression = NameNode(id = "result", ctx = Load)
+                        )
+                    ),
+                    decoratorList = emptyList(),
+                    metadata = mapOf(
+                        "returnType" to "void",
+                        "paramTypes" to mapOf("input" to "string", "count" to "number")
+                    )
+                ),
+                CallStatementNode(
+                    call = CallNode(
+                        func = NameNode(id = "processData", ctx = Load),
+                        args = listOf(
+                            ConstantNode("hello"),
+                            ConstantNode(42)
+                        ),
+                        keywords = emptyList()
+                    )
+                )
+            )
+        )
+    }
+    
+    /**
+     * Generates a simpler function AST with metadata (function only)
+     */
+    fun generateFunctionWithMetadata(): ModuleNode {
+        return ModuleNode(
+            body = listOf(
+                FunctionDefNode(
+                    name = "test",
+                    args = listOf(),
+                    body = listOf(
+                        AssignNode(
+                            target = NameNode(id = "result", ctx = Store),
+                            value = ConstantNode("hello"),
+                            metadata = mapOf("variableType" to "string")
+                        )
+                    ),
+                    decoratorList = emptyList(),
+                    metadata = mapOf("returnType" to "void")
+                )
+            )
+        )
+    }
+    
+    /**
+     * Generates a simple assignment AST with metadata (assignment only)
+     */
+    fun generateAssignmentWithMetadata(): ModuleNode {
+        return ModuleNode(
+            body = listOf(
+                AssignNode(
+                    target = NameNode(id = "result", ctx = Store),
+                    value = ConstantNode("hello"),
+                    metadata = mapOf("variableType" to "string")
+                ),
+                PrintNode(
+                    expression = NameNode(id = "result", ctx = Load)
+                )
+            )
+        )
+    }
+}
+
+/**
  * Test suite for verifying AST preservation through transpilation chains.
  * Tests that ASTs with maximal metadata can round-trip through all supported languages
  * and preserve their metadata and structure.
@@ -288,31 +414,8 @@ class TranspilationTest {
 
     @Test
     fun `test TypeScript to JavaScript metadata preservation`() {
-        // Define AST with TypeScript metadata that should be preserved through JavaScript
-        val functionWithMetadataAst = ModuleNode(
-            body = listOf(
-                FunctionDefNode(
-                    name = "greet",
-                    args = listOf(
-                        NameNode(id = "name", ctx = Param, metadata = mapOf("type" to "string"))
-                    ),
-                    body = listOf(
-                        PrintNode(
-                            expression = BinaryOpNode(
-                                left = ConstantNode("Hello "),
-                                op = "+",
-                                right = NameNode(id = "name", ctx = Load)
-                            )
-                        )
-                    ),
-                    decoratorList = emptyList(),
-                    metadata = mapOf(
-                        "returnType" to "void",
-                        "paramTypes" to mapOf("name" to "string")
-                    )
-                )
-            )
-        )
+        // Use the maximal AST utility that includes comprehensive metadata
+        val functionWithMetadataAst = MaximalAstGenerator.generateMaximalAst()
 
         testAstRoundTrip("TypeScript to JavaScript Metadata", functionWithMetadataAst)
         testSequentialTranspilation("TypeScript to JavaScript Metadata", functionWithMetadataAst)
@@ -321,19 +424,8 @@ class TranspilationTest {
 
     @Test
     fun `test simple assignment metadata preservation`() {
-        // Define AST with just assignment metadata to debug the issue
-        val assignmentAst = ModuleNode(
-            body = listOf(
-                AssignNode(
-                    target = NameNode(id = "result", ctx = Store),
-                    value = ConstantNode("hello"),
-                    metadata = mapOf("variableType" to "string")
-                ),
-                PrintNode(
-                    expression = NameNode(id = "result", ctx = Load)
-                )
-            )
-        )
+        // Use the assignment utility that includes assignment metadata
+        val assignmentAst = MaximalAstGenerator.generateAssignmentWithMetadata()
 
         testAstRoundTrip("Simple Assignment Metadata", assignmentAst)
         testSequentialTranspilation("Simple Assignment Metadata", assignmentAst)
@@ -341,28 +433,8 @@ class TranspilationTest {
 
     @Test
     fun `test simple function metadata preservation`() {
-        // Define AST with just function metadata to debug the issue
-        val functionAst = ModuleNode(
-            body = listOf(
-                FunctionDefNode(
-                    name = "processData",
-                    args = listOf(
-                        NameNode(id = "input", ctx = Param, metadata = mapOf("type" to "string")),
-                        NameNode(id = "count", ctx = Param, metadata = mapOf("type" to "number"))
-                    ),
-                    body = listOf(
-                        PrintNode(
-                            expression = NameNode(id = "input", ctx = Load)
-                        )
-                    ),
-                    decoratorList = emptyList(),
-                    metadata = mapOf(
-                        "returnType" to "void",
-                        "paramTypes" to mapOf("input" to "string", "count" to "number")
-                    )
-                )
-            )
-        )
+        // Use the maximal AST utility that includes comprehensive metadata
+        val functionAst = MaximalAstGenerator.generateMaximalAst()
 
         testAstRoundTrip("Simple Function Metadata", functionAst)
         testSequentialTranspilation("Simple Function Metadata", functionAst)
@@ -370,24 +442,8 @@ class TranspilationTest {
 
     @Test
     fun `test function and assignment metadata preservation`() {
-        // Define AST with both function and assignment metadata
-        val combinedAst = ModuleNode(
-            body = listOf(
-                FunctionDefNode(
-                    name = "test",
-                    args = listOf(),
-                    body = listOf(
-                        AssignNode(
-                            target = NameNode(id = "result", ctx = Store),
-                            value = ConstantNode("hello"),
-                            metadata = mapOf("variableType" to "string")
-                        )
-                    ),
-                    decoratorList = emptyList(),
-                    metadata = mapOf("returnType" to "void")
-                )
-            )
-        )
+        // Use the function utility that includes both function and assignment metadata
+        val combinedAst = MaximalAstGenerator.generateFunctionWithMetadata()
 
         testAstRoundTrip("Function and Assignment Metadata", combinedAst)
         testSequentialTranspilation("Function and Assignment Metadata", combinedAst)
@@ -395,47 +451,8 @@ class TranspilationTest {
 
     @Test
     fun `test maximal metadata preservation through all languages with parts`() {
-        // Define AST with maximum TypeScript metadata that should be preserved
-        val maximalMetadataAst = ModuleNode(
-            body = listOf(
-                FunctionDefNode(
-                    name = "processData",
-                    args = listOf(
-                        NameNode(id = "input", ctx = Param, metadata = mapOf("type" to "string")),
-                        NameNode(id = "count", ctx = Param, metadata = mapOf("type" to "number"))
-                    ),
-                    body = listOf(
-                        AssignNode(
-                            target = NameNode(id = "result", ctx = Store),
-                            value = BinaryOpNode(
-                                left = NameNode(id = "input", ctx = Load),
-                                op = "+",
-                                right = NameNode(id = "count", ctx = Load)
-                            ),
-                            metadata = mapOf("variableType" to "string")
-                        ),
-                        PrintNode(
-                            expression = NameNode(id = "result", ctx = Load)
-                        )
-                    ),
-                    decoratorList = emptyList(),
-                    metadata = mapOf(
-                        "returnType" to "void",
-                        "paramTypes" to mapOf("input" to "string", "count" to "number")
-                    )
-                ),
-                CallStatementNode(
-                    call = CallNode(
-                        func = NameNode(id = "processData", ctx = Load),
-                        args = listOf(
-                            ConstantNode("hello"),
-                            ConstantNode(42)
-                        ),
-                        keywords = emptyList()
-                    )
-                )
-            )
-        )
+        // Use the maximal AST utility that includes all supported features
+        val maximalMetadataAst = MaximalAstGenerator.generateMaximalAst()
 
         testAstRoundTrip("Maximal Metadata Preservation", maximalMetadataAst)
         testSequentialTranspilation("Maximal Metadata Preservation", maximalMetadataAst)
