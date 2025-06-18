@@ -34,7 +34,10 @@ enum class AstFeature {
     VARIABLE_REFERENCES,
     CONDITIONAL_STATEMENTS,
     COMPARISON_OPERATIONS,
-    RETURN_STATEMENTS
+    RETURN_STATEMENTS,
+    ARRAY_LITERALS,
+    TUPLE_LITERALS,
+    BOOLEAN_LITERALS
 }
 
 /**
@@ -56,7 +59,10 @@ object SupportedAstFeatures {
         AstFeature.VARIABLE_REFERENCES,
         AstFeature.CONDITIONAL_STATEMENTS,
         AstFeature.COMPARISON_OPERATIONS,
-        AstFeature.RETURN_STATEMENTS
+        AstFeature.RETURN_STATEMENTS,
+        AstFeature.ARRAY_LITERALS,
+        AstFeature.TUPLE_LITERALS,
+        AstFeature.BOOLEAN_LITERALS
     )
     
     /**
@@ -73,7 +79,10 @@ object SupportedAstFeatures {
         "Binary operations (arithmetic, string)",
         "Comparison operations", 
         "Constant values (strings, numbers)",
-        "Variable references (Load, Store, Param contexts)"
+        "Variable references (Load, Store, Param contexts)",
+        "Array literals with typed elements",
+        "Tuple literals with mixed types",
+        "Boolean literals (true, false)"
     )
     
     /**
@@ -378,6 +387,59 @@ object MaximalAstGenerator {
                 PrintNode(
                     expression = if (features.contains(AstFeature.CONSTANT_VALUES))
                         ConstantNode("standalone print") else NameNode(id = "printValue", ctx = Load)
+                )
+            )
+        }
+        
+        // Generate array literal assignments if requested
+        if (features.contains(AstFeature.ARRAY_LITERALS)) {
+            bodyNodes.add(
+                AssignNode(
+                    target = NameNode(id = "arrayVar", ctx = Store),
+                    value = ListNode(
+                        elements = if (features.contains(AstFeature.CONSTANT_VALUES)) {
+                            listOf(ConstantNode("item1"), ConstantNode("item2"), ConstantNode("item3"))
+                        } else {
+                            listOf(NameNode(id = "a", ctx = Load), NameNode(id = "b", ctx = Load))
+                        }
+                    ),
+                    metadata = mapOf("variableType" to "string[]")
+                )
+            )
+        }
+        
+        // Generate tuple literal assignments if requested
+        if (features.contains(AstFeature.TUPLE_LITERALS)) {
+            bodyNodes.add(
+                AssignNode(
+                    target = NameNode(id = "tupleVar", ctx = Store),
+                    value = ListNode(
+                        elements = if (features.contains(AstFeature.CONSTANT_VALUES)) {
+                            listOf(ConstantNode("name"), ConstantNode(25))
+                        } else {
+                            listOf(NameNode(id = "firstName", ctx = Load), NameNode(id = "age", ctx = Load))
+                        },
+                        metadata = mapOf("tupleType" to "[string, number]")
+                    ),
+                    metadata = mapOf("variableType" to "[string, number]")
+                )
+            )
+        }
+        
+        // Generate boolean literal assignments if requested
+        if (features.contains(AstFeature.BOOLEAN_LITERALS)) {
+            bodyNodes.add(
+                AssignNode(
+                    target = NameNode(id = "boolVar1", ctx = Store),
+                    value = ConstantNode(true),
+                    metadata = mapOf("variableType" to "boolean")
+                )
+            )
+            bodyNodes.add(
+                AssignNode(
+                    target = NameNode(id = "boolVar2", ctx = Store),
+                    value = ConstantNode(false),
+                    metadata = mapOf("variableType" to "boolean")
                 )
             )
         }
@@ -1107,5 +1169,51 @@ class TranspilationTest {
 
         testAstRoundTrip("Class With Methods", classWithMethodsAst)
         testSequentialTranspilation("Class With Methods", classWithMethodsAst)
+    }
+
+    @Test
+    fun `test isolated array literal feature transpilation`() {
+        // Test only array literals to isolate this specific language feature
+        val features = setOf(AstFeature.ARRAY_LITERALS, AstFeature.CONSTANT_VALUES)
+        val arrayOnlyAst = MaximalAstGenerator.generateMaximalAst(features)
+
+        testAstRoundTrip("Isolated Array Literal", arrayOnlyAst)
+        testSequentialTranspilation("Isolated Array Literal", arrayOnlyAst)
+    }
+
+    @Test
+    fun `test isolated tuple literal feature transpilation`() {
+        // Test only tuple literals to isolate this specific language feature
+        val features = setOf(AstFeature.TUPLE_LITERALS, AstFeature.CONSTANT_VALUES)
+        val tupleOnlyAst = MaximalAstGenerator.generateMaximalAst(features)
+
+        testAstRoundTrip("Isolated Tuple Literal", tupleOnlyAst)
+        testSequentialTranspilation("Isolated Tuple Literal", tupleOnlyAst)
+    }
+
+    @Test
+    fun `test isolated boolean literal feature transpilation`() {
+        // Test only boolean literals to isolate this specific language feature
+        val features = setOf(AstFeature.BOOLEAN_LITERALS)
+        val booleanOnlyAst = MaximalAstGenerator.generateMaximalAst(features)
+
+        testAstRoundTrip("Isolated Boolean Literal", booleanOnlyAst)
+        testSequentialTranspilation("Isolated Boolean Literal", booleanOnlyAst)
+    }
+
+    @Test
+    fun `test combined new features transpilation`() {
+        // Test arrays, tuples, and booleans together
+        val features = setOf(
+            AstFeature.ARRAY_LITERALS,
+            AstFeature.TUPLE_LITERALS,
+            AstFeature.BOOLEAN_LITERALS,
+            AstFeature.CONSTANT_VALUES,
+            AstFeature.VARIABLE_ASSIGNMENTS
+        )
+        val combinedNewFeaturesAst = MaximalAstGenerator.generateMaximalAst(features)
+
+        testAstRoundTrip("Combined New Features", combinedNewFeaturesAst)
+        testSequentialTranspilation("Combined New Features", combinedNewFeaturesAst)
     }
 }

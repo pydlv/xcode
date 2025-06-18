@@ -177,6 +177,74 @@ class JavaGenerator : AbstractAstGenerator() {
         }
     }
 
-    // Other visit methods (visitNameNode, visitUnknownNode, visitExprNode, visitModuleNode)
-    // will use the open implementations from AbstractAstGenerator if not overridden here.
+    override fun visitModuleNode(node: ModuleNode): String {
+        // Java requires all code to be inside a class
+        // If we have standalone functions or statements, wrap them in a default class
+        val moduleBody = node.body
+        
+        // Check if we already have a class at the top level
+        val hasClass = moduleBody.any { it is ClassDefNode }
+        
+        if (hasClass) {
+            // Use default behavior if there's already a class
+            return super.visitModuleNode(node)
+        } else {
+            // Wrap all content in a default class
+            val classBody = mutableListOf<StatementNode>()
+            
+            // Separate functions from other statements
+            val functions = moduleBody.filterIsInstance<FunctionDefNode>()
+            val otherStatements = moduleBody.filterNot { it is FunctionDefNode }
+            
+            // Add all functions to the class (except main if it exists)
+            val mainFunction = functions.find { it.name == "main" }
+            val otherFunctions = functions.filter { it.name != "main" }
+            
+            classBody.addAll(otherFunctions)
+            
+            // Handle main function specially
+            if (mainFunction != null) {
+                // Filter out main() function calls from other statements since they're meaningless in Java
+                val filteredStatements = otherStatements.filterNot { statement ->
+                    statement is CallStatementNode && 
+                    statement.call.func is NameNode && 
+                    (statement.call.func as NameNode).id == "main"
+                }
+                
+                // If there are other statements, append them to the main function body
+                val combinedMainBody = if (filteredStatements.isNotEmpty()) {
+                    mainFunction.body + filteredStatements
+                } else {
+                    mainFunction.body
+                }
+                
+                classBody.add(
+                    FunctionDefNode(
+                        name = "main",
+                        args = listOf(NameNode(id = "args", ctx = Param)),
+                        body = combinedMainBody,
+                        metadata = mapOf("returnType" to "void", "paramTypes" to mapOf("args" to "String[]"))
+                    )
+                )
+            } else if (otherStatements.isNotEmpty()) {
+                // No main function, but there are statements - create a main method
+                classBody.add(
+                    FunctionDefNode(
+                        name = "main",
+                        args = listOf(NameNode(id = "args", ctx = Param)),
+                        body = otherStatements,
+                        metadata = mapOf("returnType" to "void", "paramTypes" to mapOf("args" to "String[]"))
+                    )
+                )
+            }
+            
+            // Create the wrapper class - use a generic name that matches common file names
+            val wrapperClass = ClassDefNode(
+                name = "Sample", // Use a standard name instead of "Main"
+                body = classBody
+            )
+            
+            return visitClassDefNode(wrapperClass)
+        }
+    }
 }

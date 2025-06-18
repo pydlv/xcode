@@ -10,15 +10,15 @@ class TranspilerTest {
     @Test
     fun `test TypeScript to Java transpilation with sample program`() {
         val tsCode = """
-            class Sample {
-              function main() {
-                let age: number = 30;
-                let name: string = "Alice";
-                let isActive: boolean = true;
-                let hobbies: string[] = ["reading", "hiking"];
-                let person: [string, number] = ["Bob", 25];
-              }
+            function main() {
+              let age: number = 30;
+              let name: string = "Alice";
+              let isActive: boolean = true;
+              let hobbies: string[] = ["reading", "hiking"];
+              let person: [string, number] = ["Bob", 25];
             }
+            
+            main()
         """.trimIndent()
 
         // Parse TypeScript to AST
@@ -38,6 +38,7 @@ class TranspilerTest {
         assertTrue(javaCode.contains("boolean isActive = true"), "Should contain boolean variable declaration")
         assertTrue(javaCode.contains("String[] hobbies = {\"reading\", \"hiking\"}"), "Should contain array declaration")
         assertTrue(javaCode.contains("Object[] person = {\"Bob\", 25}"), "Should contain tuple as Object array")
+        assertTrue(!javaCode.contains("main();"), "Should not contain standalone main() call")
         
         // Verify type mappings work
         assertTrue(javaCode.contains("int"), "Should map number to int")
