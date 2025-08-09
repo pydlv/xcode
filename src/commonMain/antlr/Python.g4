@@ -60,10 +60,16 @@ expression
     : expression '+' expression          # Addition
     | expression ('==' | '!=' | '<' | '>' | '<=' | '>=') expression # Comparison
     | IDENTIFIER '(' arguments? ')'      # FunctionCallInExpression // Using literal parens
+    | '[' listElements? ']'              # ListLiteral   // List literal support
+    | '(' tupleElements ')'               # TupleLiteral  // Tuple literal support - requires at least one comma
+    | '(' expression ')'                  # ParenthesizedExpression // Single expression in parens
     | STRING_LITERAL                     # StringLiteral // Uses common STRING_LITERAL
     | IDENTIFIER                         # Identifier    // Uses common IDENTIFIER
     | NUMBER                             # NumberLiteral // Uses common NUMBER
     ;
+
+listElements: expression (',' expression)* ;
+tupleElements: expression ',' (expression (',' expression)*)? ;  // At least one comma to distinguish from parenthesized expression
 
 // Lexer Rules - Most are now imported
 // Keywords/Special Tokens first - order matters for tokens that could also be identifiers

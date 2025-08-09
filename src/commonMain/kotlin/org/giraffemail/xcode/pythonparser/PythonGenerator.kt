@@ -139,6 +139,23 @@ class PythonGenerator : AbstractAstGenerator() {
         }
         return "$leftStr $pythonOp $rightStr"
     }
+    
+    override fun visitListNode(node: ListNode): String {
+        // Generate Python list literal
+        val elements = node.elements.joinToString(", ") { generateExpression(it) }
+        return "[$elements]"
+    }
+    
+    override fun visitTupleNode(node: TupleNode): String {
+        // Generate Python tuple literal
+        val elements = node.elements.joinToString(", ") { generateExpression(it) }
+        // Python requires comma for single-element tuples
+        return if (node.elements.size == 1) {
+            "($elements,)"
+        } else {
+            "($elements)"
+        }
+    }
 
     // visitNameNode, visitBinaryOpNode, visitUnknownNode, visitExprNode, visitModuleNode
     // will use the open implementations from AbstractAstGenerator.

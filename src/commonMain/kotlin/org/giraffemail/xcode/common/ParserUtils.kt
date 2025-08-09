@@ -97,6 +97,33 @@ object ParserUtils {
     }
     
     /**
+     * Helper function to convert a ListNode to TupleNode when metadata indicates it should be a tuple.
+     * This handles the case where languages like JavaScript don't have native tuple support
+     * but the original source language (like Python) used tuples.
+     */
+    private fun convertListToTupleIfNeeded(listNode: ListNode, variableType: String): ExpressionNode {
+        // Check if the variableType indicates this should be a tuple
+        // Tuple types are typically represented as "[type1, type2, ...]" or similar patterns
+        val isTupleType = variableType.startsWith("[") && variableType.endsWith("]") && 
+                          variableType.contains(",") && !variableType.contains("[]")
+        
+        return if (isTupleType) {
+            // Extract individual types from the tuple type string
+            val typeContent = variableType.substring(1, variableType.length - 1).trim()
+            val individualTypes = typeContent.split(",").map { it.trim() }
+            
+            // Convert ListNode to TupleNode with appropriate metadata
+            TupleNode(
+                elements = listNode.elements,
+                metadata = mapOf("tupleTypes" to individualTypes)
+            )
+        } else {
+            // Keep as ListNode but preserve any existing metadata
+            listNode
+        }
+    }
+    
+    /**
      * Common utility for injecting metadata into AST nodes.
      * Used across all parsers to avoid code duplication.
      */
@@ -186,6 +213,9 @@ object ParserUtils {
                     }
                 }
                 is AssignNode -> {
+                    // Always process the value expression recursively
+                    val processedValue = injectIntoNode(node.value) as ExpressionNode
+                    
                     if (assignmentMetadataIndex < assignmentMetadata.size) {
                         val metadata = assignmentMetadata[assignmentMetadataIndex++]
                         val metadataMap = mutableMapOf<String, Any>()
@@ -193,9 +223,19 @@ object ParserUtils {
                             metadataMap["variableType"] = metadata.variableType
                         }
                         
-                        node.copy(metadata = metadataMap.ifEmpty { null })
+                        // Check if we need to convert ListNode to TupleNode based on metadata
+                        val finalValue = if (processedValue is ListNode && metadata.variableType != null) {
+                            convertListToTupleIfNeeded(processedValue, metadata.variableType.toString())
+                        } else {
+                            processedValue
+                        }
+                        
+                        node.copy(
+                            value = finalValue,
+                            metadata = metadataMap.ifEmpty { null }
+                        )
                     } else {
-                        node
+                        node.copy(value = processedValue)
                     }
                 }
                 else -> node

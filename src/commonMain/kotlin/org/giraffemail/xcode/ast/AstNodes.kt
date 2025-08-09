@@ -98,6 +98,18 @@ data class CompareNode(
     override val metadata: Map<String, Any>? = null
 ) : ExpressionNode
 
+// New node for list/array literals like '[1, 2, 3]' or '["a", "b", "c"]'
+data class ListNode(
+    val elements: List<ExpressionNode>,
+    override val metadata: Map<String, Any>? = null
+) : ExpressionNode
+
+// New node for tuple literals like '["Bob", 25]' with type information
+data class TupleNode(
+    val elements: List<ExpressionNode>,
+    override val metadata: Map<String, Any>? = null  // Can store tuple type info like ["string", "number"]
+) : ExpressionNode
+
 // Node for unhandled or unknown parts of the AST, can be AstNode, StatementNode, or ExpressionNode
 data class UnknownNode(val description: String, override val metadata: Map<String, Any>? = null) : AstNode, StatementNode, ExpressionNode
 

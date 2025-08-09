@@ -143,7 +143,16 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
 
     fun getParameter(ctx: AntlrJavaParser.ParameterContext): NameNode {
         val paramName = ctx.IDENTIFIER(1)!!.text // Second IDENTIFIER is the name
-        return NameNode(id = paramName, ctx = Param)
+        val paramType = ctx.IDENTIFIER(0)!!.text.lowercase() // First IDENTIFIER is the type, normalize to lowercase
+        
+        // Only add type metadata if it's not the default Object type
+        val typeMetadata = if (paramType != "object") {
+            mapOf("type" to paramType)
+        } else {
+            null
+        }
+        
+        return NameNode(id = paramName, ctx = Param, metadata = typeMetadata)
     }
 
     // This would be the overridden method, now returning a placeholder
@@ -157,7 +166,16 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
     // visitParameter is likely also an override and must return AstNode.
     override fun visitParameter(ctx: AntlrJavaParser.ParameterContext): AstNode {
         val paramName = ctx.IDENTIFIER(1)!!.text
-        return NameNode(id = paramName, ctx = Param)
+        val paramType = ctx.IDENTIFIER(0)!!.text.lowercase() // First IDENTIFIER is the type, normalize to lowercase
+        
+        // Only add type metadata if it's not the default Object type
+        val typeMetadata = if (paramType != "object") {
+            mapOf("type" to paramType)
+        } else {
+            null
+        }
+        
+        return NameNode(id = paramName, ctx = Param, metadata = typeMetadata)
     }
 
     // In visitFunctionDefinition, change to use getParameters:
@@ -166,10 +184,32 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
 
 
     override fun visitAssignmentStatement(ctx: AntlrJavaParser.AssignmentStatementContext): AssignNode {
-        val target = NameNode(id = ctx.IDENTIFIER().text, ctx = Store)
-        val value = ctx.expression().accept(this) as? ExpressionNode
+        // ANTLR's Java.g4 has been updated to support typed declarations
+        // The grammar is: (type IDENTIFIER ASSIGN expression | IDENTIFIER ASSIGN expression) SEMI
+        
+        val targetName: String 
+        val variableType: String?
+        
+        if (ctx.type() != null) {
+            // Typed declaration: type IDENTIFIER = expression
+            variableType = ctx.type()!!.text.lowercase() // Normalize type to lowercase for consistency
+            targetName = ctx.IDENTIFIER()!!.text  // When type is present, there's only one IDENTIFIER
+        } else {
+            // Simple assignment: IDENTIFIER = expression
+            targetName = ctx.IDENTIFIER()!!.text
+            variableType = null
+        }
+        
+        val target = NameNode(id = targetName, ctx = Store)
+        val value = ctx.expression()!!.accept(this) as? ExpressionNode
             ?: throw IllegalStateException("Assignment value is null or not an ExpressionNode for: ${ctx.text}")
-        return AssignNode(target = target, value = value)
+        
+        // Add metadata if we have type information
+        val metadata = if (variableType != null) {
+            mapOf("variableType" to variableType)
+        } else null
+        
+        return AssignNode(target = target, value = value, metadata = metadata)
     }
 
     override fun visitCallStatement(ctx: AntlrJavaParser.CallStatementContext): CallStatementNode {
@@ -324,6 +364,25 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
             }
             else -> throw IllegalArgumentException("Unknown literal type in LiteralContext: ${ctx.text}")
         }
+    }
+    
+    // Handle array initializer expressions
+    override fun visitArrayInitializerExpression(ctx: AntlrJavaParser.ArrayInitializerExpressionContext): AstNode {
+        return visit(ctx.arrayInitializer())
+    }
+    
+    override fun visitArrayInit(ctx: AntlrJavaParser.ArrayInitContext): AstNode {
+        val elements = ctx.arrayElements()?.expression()?.mapNotNull { exprCtx ->
+            visit(exprCtx) as? ExpressionNode
+        } ?: emptyList()
+        
+        // Extract array type if available and normalize to lowercase for consistency
+        val arrayType = ctx.type()?.text?.replace("[]", "")?.lowercase() // Remove [] from type and normalize
+        val metadata = if (arrayType != null) {
+            mapOf("arrayType" to arrayType)
+        } else null
+        
+        return ListNode(elements = elements, metadata = metadata)
     }
 
     // Generic visit method from AbstractParseTreeVisitor.

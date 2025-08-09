@@ -251,6 +251,27 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
         
         return ConstantNode(normalizedValue)
     }
+    
+    override fun visitArrayLiteral(ctx: AntlrJavaScriptParser.ArrayLiteralContext): AstNode {
+        val elements = ctx.arrayElements()?.expression()?.mapNotNull { exprCtx ->
+            visit(exprCtx) as? ExpressionNode
+        } ?: emptyList()
+        
+        // Try to infer element type from the array contents
+        val elementType = when {
+            elements.isEmpty() -> null
+            elements.all { it is ConstantNode && it.value is String } -> "string"
+            elements.all { it is ConstantNode && (it.value is Int || it.value is Double) } -> "number"
+            elements.all { it is ConstantNode && it.value is Boolean } -> "boolean"
+            else -> null
+        }
+        
+        val metadata = if (elementType != null) {
+            mapOf("arrayType" to elementType)  // Changed from "elementType" to "arrayType" for consistency
+        } else null
+        
+        return ListNode(elements = elements, metadata = metadata)
+    }
 
     override fun defaultResult(): AstNode {
         return UnknownNode("Unhandled ANTLR JavaScript node")
