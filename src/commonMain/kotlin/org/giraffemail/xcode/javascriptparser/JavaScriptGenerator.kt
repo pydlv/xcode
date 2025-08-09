@@ -95,6 +95,18 @@ class JavaScriptGenerator : AbstractAstGenerator() {
     // visitConstantNode will use the base implementation which calls formatStringLiteral for strings.
     // Numbers and booleans will be formatted by the base class's visitConstantNode.
     // If JS needs specific boolean (true/false) or number formatting different from base, override visitConstantNode.
+    
+    override fun visitListNode(node: ListNode): String {
+        // Generate JavaScript array literal
+        val elements = node.elements.joinToString(", ") { generateExpression(it) }
+        return "[$elements]"
+    }
+    
+    override fun visitTupleNode(node: TupleNode): String {
+        // JavaScript doesn't have tuples, so generate as array
+        val elements = node.elements.joinToString(", ") { generateExpression(it) }
+        return "[$elements]"
+    }
 
     // visitNameNode, visitBinaryOpNode, visitUnknownNode, visitExprNode, visitModuleNode
     // will use the open implementations from AbstractAstGenerator.

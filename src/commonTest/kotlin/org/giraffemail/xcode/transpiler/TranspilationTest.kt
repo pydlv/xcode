@@ -11,6 +11,7 @@ import org.giraffemail.xcode.typescriptparser.TypeScriptGenerator
 import org.giraffemail.xcode.typescriptparser.TypeScriptParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -34,14 +35,16 @@ enum class AstFeature {
     VARIABLE_REFERENCES,
     CONDITIONAL_STATEMENTS,
     COMPARISON_OPERATIONS,
-    RETURN_STATEMENTS
+    RETURN_STATEMENTS,
+    ARRAY_LITERALS,
+    TUPLE_LITERALS
 }
 
 /**
  * Supported common AST features for maximal AST generation
  */
 object SupportedAstFeatures {
-    
+
     /**
      * Set of all supported AST features
      */
@@ -56,32 +59,36 @@ object SupportedAstFeatures {
         AstFeature.VARIABLE_REFERENCES,
         AstFeature.CONDITIONAL_STATEMENTS,
         AstFeature.COMPARISON_OPERATIONS,
-        AstFeature.RETURN_STATEMENTS
+        AstFeature.RETURN_STATEMENTS,
+        AstFeature.ARRAY_LITERALS,
+        AstFeature.TUPLE_LITERALS
     )
-    
+
     /**
      * List of supported AST node types and their associated metadata features
      */
     val SUPPORTED_FEATURES = listOf(
         "Function definitions with typed parameters",
         "Class definitions with methods",
-        "Function return type annotations", 
+        "Function return type annotations",
         "Variable assignments with type annotations",
         "Function calls as statements",
         "Print/console.log statements",
         "Conditional statements (if/else)",
         "Binary operations (arithmetic, string)",
-        "Comparison operations", 
+        "Comparison operations",
         "Constant values (strings, numbers)",
-        "Variable references (Load, Store, Param contexts)"
+        "Variable references (Load, Store, Param contexts)",
+        "Array literals with type preservation",
+        "Tuple literals with mixed types"
     )
-    
+
     /**
      * Supported metadata types from LanguageMetadata
      */
     val SUPPORTED_METADATA = listOf(
         "returnType" to "Function return type annotations",
-        "paramTypes" to "Parameter type mappings", 
+        "paramTypes" to "Parameter type mappings",
         "variableType" to "Variable type annotations",
         "individualParamMetadata" to "Per-parameter detailed metadata"
     )
@@ -91,7 +98,7 @@ object SupportedAstFeatures {
  * Utility for generating maximal AST nodes with all supported features
  */
 object MaximalAstGenerator {
-    
+
     /**
      * Generates a maximal AST that includes specified AST features.
      * This AST can be used in tests to verify comprehensive transpilation support.
@@ -99,16 +106,16 @@ object MaximalAstGenerator {
      */
     fun generateMaximalAst(features: Set<AstFeature> = SupportedAstFeatures.ALL_FEATURES): ModuleNode {
         val bodyNodes = mutableListOf<StatementNode>()
-        
+
         // Generate function definition if requested
         if (features.contains(AstFeature.FUNCTION_DEFINITIONS)) {
             val functionBody = mutableListOf<StatementNode>()
-            
+
             // Add variable assignment within function if requested
             if (features.contains(AstFeature.VARIABLE_ASSIGNMENTS)) {
                 val assignValue = if (features.contains(AstFeature.BINARY_OPERATIONS)) {
                     BinaryOpNode(
-                        left = if (features.contains(AstFeature.VARIABLE_REFERENCES)) 
+                        left = if (features.contains(AstFeature.VARIABLE_REFERENCES))
                             NameNode(id = "input", ctx = Load) else ConstantNode("input"),
                         op = "+",
                         right = if (features.contains(AstFeature.VARIABLE_REFERENCES))
@@ -119,7 +126,7 @@ object MaximalAstGenerator {
                 } else {
                     NameNode(id = "input", ctx = Load)
                 }
-                
+
                 functionBody.add(
                     AssignNode(
                         target = NameNode(id = "result", ctx = Store),
@@ -128,7 +135,7 @@ object MaximalAstGenerator {
                     )
                 )
             }
-            
+
             // Add print statement if requested
             if (features.contains(AstFeature.PRINT_STATEMENTS)) {
                 functionBody.add(
@@ -138,32 +145,33 @@ object MaximalAstGenerator {
                     )
                 )
             }
-            
+
             // Add return statement if requested
             if (features.contains(AstFeature.RETURN_STATEMENTS)) {
-                val returnValue = if (features.contains(AstFeature.VARIABLE_REFERENCES) && features.contains(AstFeature.VARIABLE_ASSIGNMENTS)) {
-                    // Return the result variable if we have assignments and variable references
-                    NameNode(id = "result", ctx = Load)
-                } else if (features.contains(AstFeature.BINARY_OPERATIONS)) {
-                    // Return a binary operation
-                    BinaryOpNode(
-                        left = if (features.contains(AstFeature.VARIABLE_REFERENCES)) 
-                            NameNode(id = "input", ctx = Load) else ConstantNode("a"),
-                        op = "+",
-                        right = if (features.contains(AstFeature.VARIABLE_REFERENCES))
-                            NameNode(id = "count", ctx = Load) else ConstantNode(1)
-                    )
-                } else if (features.contains(AstFeature.CONSTANT_VALUES)) {
-                    // Return a constant
-                    ConstantNode("returned_value")
-                } else {
-                    // Return null (void return)
-                    null
-                }
-                
+                val returnValue =
+                    if (features.contains(AstFeature.VARIABLE_REFERENCES) && features.contains(AstFeature.VARIABLE_ASSIGNMENTS)) {
+                        // Return the result variable if we have assignments and variable references
+                        NameNode(id = "result", ctx = Load)
+                    } else if (features.contains(AstFeature.BINARY_OPERATIONS)) {
+                        // Return a binary operation
+                        BinaryOpNode(
+                            left = if (features.contains(AstFeature.VARIABLE_REFERENCES))
+                                NameNode(id = "input", ctx = Load) else ConstantNode("a"),
+                            op = "+",
+                            right = if (features.contains(AstFeature.VARIABLE_REFERENCES))
+                                NameNode(id = "count", ctx = Load) else ConstantNode(1)
+                        )
+                    } else if (features.contains(AstFeature.CONSTANT_VALUES)) {
+                        // Return a constant
+                        ConstantNode("returned_value")
+                    } else {
+                        // Return null (void return)
+                        null
+                    }
+
                 functionBody.add(ReturnNode(value = returnValue))
             }
-            
+
             // Create function arguments based on features
             val functionArgs = if (features.contains(AstFeature.VARIABLE_REFERENCES)) {
                 listOf(
@@ -173,7 +181,7 @@ object MaximalAstGenerator {
             } else {
                 emptyList()
             }
-            
+
             // Determine return type based on features
             val returnType = if (features.contains(AstFeature.RETURN_STATEMENTS)) {
                 if (features.contains(AstFeature.VARIABLE_ASSIGNMENTS) && features.contains(AstFeature.VARIABLE_REFERENCES)) {
@@ -188,7 +196,7 @@ object MaximalAstGenerator {
             } else {
                 "void"
             }
-            
+
             bodyNodes.add(
                 FunctionDefNode(
                     name = "processData",
@@ -202,15 +210,15 @@ object MaximalAstGenerator {
                 )
             )
         }
-        
+
         // Generate class definition if requested
         if (features.contains(AstFeature.CLASS_DEFINITIONS)) {
             val classBody = mutableListOf<StatementNode>()
-            
+
             // Add a method to the class if function definitions are also requested
             if (features.contains(AstFeature.FUNCTION_DEFINITIONS)) {
                 val methodBody = mutableListOf<StatementNode>()
-                
+
                 // Add method body based on other features
                 if (features.contains(AstFeature.VARIABLE_ASSIGNMENTS)) {
                     methodBody.add(
@@ -222,7 +230,7 @@ object MaximalAstGenerator {
                         )
                     )
                 }
-                
+
                 if (features.contains(AstFeature.RETURN_STATEMENTS)) {
                     methodBody.add(
                         ReturnNode(
@@ -231,7 +239,7 @@ object MaximalAstGenerator {
                         )
                     )
                 }
-                
+
                 classBody.add(
                     FunctionDefNode(
                         name = "getValue",
@@ -249,7 +257,7 @@ object MaximalAstGenerator {
                     )
                 )
             }
-            
+
             // Add a simple method even if function definitions are not requested
             if (!features.contains(AstFeature.FUNCTION_DEFINITIONS) && features.contains(AstFeature.PRINT_STATEMENTS)) {
                 classBody.add(
@@ -267,7 +275,7 @@ object MaximalAstGenerator {
                     )
                 )
             }
-            
+
             // Always ensure class has at least one method to avoid empty class bodies
             if (classBody.isEmpty()) {
                 classBody.add(
@@ -282,7 +290,7 @@ object MaximalAstGenerator {
                     )
                 )
             }
-            
+
             bodyNodes.add(
                 ClassDefNode(
                     name = "DataProcessor",
@@ -296,7 +304,7 @@ object MaximalAstGenerator {
                 )
             )
         }
-        
+
         // Generate standalone variable assignment if requested and not already in function
         if (features.contains(AstFeature.VARIABLE_ASSIGNMENTS) && !features.contains(AstFeature.FUNCTION_DEFINITIONS)) {
             val assignValue = if (features.contains(AstFeature.CONSTANT_VALUES)) {
@@ -304,7 +312,7 @@ object MaximalAstGenerator {
             } else {
                 NameNode(id = "defaultValue", ctx = Load)
             }
-            
+
             bodyNodes.add(
                 AssignNode(
                     target = NameNode(id = "standalone", ctx = Store),
@@ -313,7 +321,7 @@ object MaximalAstGenerator {
                 )
             )
         }
-        
+
         // Generate function call statement if requested
         if (features.contains(AstFeature.FUNCTION_CALLS)) {
             val callArgs = if (features.contains(AstFeature.CONSTANT_VALUES)) {
@@ -321,7 +329,7 @@ object MaximalAstGenerator {
             } else {
                 emptyList()
             }
-            
+
             bodyNodes.add(
                 CallStatementNode(
                     call = CallNode(
@@ -332,24 +340,24 @@ object MaximalAstGenerator {
                 )
             )
         }
-        
+
         // Generate standalone conditional statement if requested
         if (features.contains(AstFeature.CONDITIONAL_STATEMENTS) && !features.contains(AstFeature.FUNCTION_DEFINITIONS)) {
             // Create test condition - use comparison if available
             val testCondition = if (features.contains(AstFeature.COMPARISON_OPERATIONS)) {
                 CompareNode(
-                    left = if (features.contains(AstFeature.VARIABLE_REFERENCES)) 
+                    left = if (features.contains(AstFeature.VARIABLE_REFERENCES))
                         NameNode(id = "x", ctx = Load) else ConstantNode(10),
                     op = ">",
-                    right = if (features.contains(AstFeature.CONSTANT_VALUES)) 
+                    right = if (features.contains(AstFeature.CONSTANT_VALUES))
                         ConstantNode(5) else ConstantNode(0)
                 )
             } else {
                 // Simple boolean variable or constant
-                if (features.contains(AstFeature.VARIABLE_REFERENCES)) 
+                if (features.contains(AstFeature.VARIABLE_REFERENCES))
                     NameNode(id = "condition", ctx = Load) else ConstantNode(true)
             }
-            
+
             // Simple if-else with print statements
             bodyNodes.add(
                 IfNode(
@@ -369,11 +377,12 @@ object MaximalAstGenerator {
                 )
             )
         }
-        
+
         // Generate standalone print statement if requested and not already covered
-        if (features.contains(AstFeature.PRINT_STATEMENTS) && 
-            !features.contains(AstFeature.FUNCTION_DEFINITIONS) && 
-            !features.contains(AstFeature.CONDITIONAL_STATEMENTS)) {
+        if (features.contains(AstFeature.PRINT_STATEMENTS) &&
+            !features.contains(AstFeature.FUNCTION_DEFINITIONS) &&
+            !features.contains(AstFeature.CONDITIONAL_STATEMENTS)
+        ) {
             bodyNodes.add(
                 PrintNode(
                     expression = if (features.contains(AstFeature.CONSTANT_VALUES))
@@ -381,10 +390,99 @@ object MaximalAstGenerator {
                 )
             )
         }
-        
+
+        // Generate array literal assignment if requested
+        if (features.contains(AstFeature.ARRAY_LITERALS)) {
+            val arrayElements = if (features.contains(AstFeature.CONSTANT_VALUES)) {
+                listOf(ConstantNode("item1"), ConstantNode("item2"), ConstantNode("item3"))
+            } else {
+                listOf(
+                    NameNode(id = "elem1", ctx = Load),
+                    NameNode(id = "elem2", ctx = Load),
+                    NameNode(id = "elem3", ctx = Load)
+                )
+            }
+
+            // If in a function, add to function body; otherwise standalone
+            if (features.contains(AstFeature.FUNCTION_DEFINITIONS) && bodyNodes.isNotEmpty()) {
+                val function = bodyNodes.find { it is FunctionDefNode } as? FunctionDefNode
+                if (function != null && features.contains(AstFeature.VARIABLE_ASSIGNMENTS)) {
+                    val newBody = function.body.toMutableList()
+                    // Find the index of the return statement (if any)
+                    val returnIndex = newBody.indexOfFirst { it is ReturnNode }
+                    val insertIndex = if (returnIndex >= 0) returnIndex else newBody.size
+                    // Insert before the return statement, or at the end if no return
+                    newBody.add(
+                        insertIndex,
+                        AssignNode(
+                            target = NameNode(id = "arrayData", ctx = Store),
+                            value = ListNode(elements = arrayElements, metadata = mapOf("arrayType" to "string")),
+                            metadata = mapOf("variableType" to "string[]")
+                        )
+                    )
+                    bodyNodes[bodyNodes.indexOf(function)] = function.copy(body = newBody)
+                }
+            } else if (features.contains(AstFeature.VARIABLE_ASSIGNMENTS)) {
+                bodyNodes.add(
+                    AssignNode(
+                        target = NameNode(id = "arrayData", ctx = Store),
+                        value = ListNode(elements = arrayElements, metadata = mapOf("arrayType" to "string")),
+                        metadata = mapOf("variableType" to "string[]")
+                    )
+                )
+            }
+        }
+
+        // Generate tuple literal assignment if requested
+        if (features.contains(AstFeature.TUPLE_LITERALS)) {
+            val tupleElements = if (features.contains(AstFeature.CONSTANT_VALUES)) {
+                listOf(ConstantNode("name"), ConstantNode(42))  // Mixed types: string and number
+            } else {
+                listOf(
+                    NameNode(id = "first", ctx = Load),
+                    NameNode(id = "second", ctx = Load)
+                )
+            }
+
+            // If in a function, add to function body; otherwise standalone
+            if (features.contains(AstFeature.FUNCTION_DEFINITIONS) && bodyNodes.isNotEmpty()) {
+                val function = bodyNodes.find { it is FunctionDefNode } as? FunctionDefNode
+                if (function != null && features.contains(AstFeature.VARIABLE_ASSIGNMENTS)) {
+                    val newBody = function.body.toMutableList()
+                    // Find the index of the return statement (if any)
+                    val returnIndex = newBody.indexOfFirst { it is ReturnNode }
+                    val insertIndex = if (returnIndex >= 0) returnIndex else newBody.size
+                    // Insert before the return statement, or at the end if no return
+                    newBody.add(
+                        insertIndex,
+                        AssignNode(
+                            target = NameNode(id = "tupleData", ctx = Store),
+                            value = TupleNode(
+                                elements = tupleElements,
+                                metadata = mapOf("tupleTypes" to listOf("string", "number"))
+                            ),
+                            metadata = mapOf("variableType" to "[string, number]")
+                        )
+                    )
+                    bodyNodes[bodyNodes.indexOf(function)] = function.copy(body = newBody)
+                }
+            } else if (features.contains(AstFeature.VARIABLE_ASSIGNMENTS)) {
+                bodyNodes.add(
+                    AssignNode(
+                        target = NameNode(id = "tupleData", ctx = Store),
+                        value = TupleNode(
+                            elements = tupleElements,
+                            metadata = mapOf("tupleTypes" to listOf("string", "number"))
+                        ),
+                        metadata = mapOf("variableType" to "[string, number]")
+                    )
+                )
+            }
+        }
+
         return ModuleNode(body = bodyNodes)
     }
-    
+
     /**
      * Generates a simpler function AST with metadata (function only)
      */
@@ -407,7 +505,7 @@ object MaximalAstGenerator {
             )
         )
     }
-    
+
     /**
      * Generates a simple assignment AST with metadata (assignment only)
      */
@@ -425,7 +523,7 @@ object MaximalAstGenerator {
             )
         )
     }
-    
+
     /**
      * Generates a function with simple return statement (no value)
      */
@@ -433,7 +531,7 @@ object MaximalAstGenerator {
         return ModuleNode(
             body = listOf(
                 FunctionDefNode(
-                    name = "test_return", 
+                    name = "test_return",
                     args = listOf(
                         NameNode(id = "input", ctx = Param, metadata = mapOf("type" to "string"))
                     ),
@@ -449,7 +547,7 @@ object MaximalAstGenerator {
             )
         )
     }
-    
+
     /**
      * Generates a function with return value (binary operation)
      */
@@ -490,14 +588,14 @@ class MaximalAstGeneratorTest {
     @Test
     fun `test generateMaximalAst with all features generates expected structure`() {
         val ast = MaximalAstGenerator.generateMaximalAst()
-        
+
         assertTrue(ast is ModuleNode)
         assertTrue(ast.body.isNotEmpty())
-        
+
         // Should contain function definition, function call
         val functionDef = ast.body.find { it is FunctionDefNode }
         assertTrue(functionDef != null, "Should contain function definition")
-        
+
         val functionCall = ast.body.find { it is CallStatementNode }
         assertTrue(functionCall != null, "Should contain function call")
     }
@@ -506,11 +604,11 @@ class MaximalAstGeneratorTest {
     fun `test generateMaximalAst with only function definitions`() {
         val features = setOf(AstFeature.FUNCTION_DEFINITIONS)
         val ast = MaximalAstGenerator.generateMaximalAst(features)
-        
+
         assertTrue(ast is ModuleNode)
         assertEquals(1, ast.body.size)
         assertTrue(ast.body[0] is FunctionDefNode)
-        
+
         val function = ast.body[0] as FunctionDefNode
         assertEquals("processData", function.name)
     }
@@ -519,11 +617,11 @@ class MaximalAstGeneratorTest {
     fun `test generateMaximalAst with only variable assignments`() {
         val features = setOf(AstFeature.VARIABLE_ASSIGNMENTS)
         val ast = MaximalAstGenerator.generateMaximalAst(features)
-        
+
         assertTrue(ast is ModuleNode)
         assertEquals(1, ast.body.size)
         assertTrue(ast.body[0] is AssignNode)
-        
+
         val assignment = ast.body[0] as AssignNode
         assertTrue(assignment.target is NameNode)
         assertEquals("standalone", (assignment.target as NameNode).id)
@@ -533,7 +631,7 @@ class MaximalAstGeneratorTest {
     fun `test generateMaximalAst with only print statements`() {
         val features = setOf(AstFeature.PRINT_STATEMENTS)
         val ast = MaximalAstGenerator.generateMaximalAst(features)
-        
+
         assertTrue(ast is ModuleNode)
         assertEquals(1, ast.body.size)
         assertTrue(ast.body[0] is PrintNode)
@@ -543,11 +641,11 @@ class MaximalAstGeneratorTest {
     fun `test generateMaximalAst with only function calls`() {
         val features = setOf(AstFeature.FUNCTION_CALLS)
         val ast = MaximalAstGenerator.generateMaximalAst(features)
-        
+
         assertTrue(ast is ModuleNode)
         assertEquals(1, ast.body.size)
         assertTrue(ast.body[0] is CallStatementNode)
-        
+
         val call = ast.body[0] as CallStatementNode
         assertTrue(call.call.func is NameNode)
         assertEquals("processData", (call.call.func as NameNode).id)
@@ -557,11 +655,11 @@ class MaximalAstGeneratorTest {
     fun `test generateMaximalAst with function and assignment features`() {
         val features = setOf(AstFeature.FUNCTION_DEFINITIONS, AstFeature.VARIABLE_ASSIGNMENTS)
         val ast = MaximalAstGenerator.generateMaximalAst(features)
-        
+
         assertTrue(ast is ModuleNode)
         assertEquals(1, ast.body.size)
         assertTrue(ast.body[0] is FunctionDefNode)
-        
+
         val function = ast.body[0] as FunctionDefNode
         assertTrue(function.body.any { it is AssignNode })
     }
@@ -570,7 +668,7 @@ class MaximalAstGeneratorTest {
     fun `test generateMaximalAst with constant values feature affects assignment`() {
         val featuresWithConstants = setOf(AstFeature.VARIABLE_ASSIGNMENTS, AstFeature.CONSTANT_VALUES)
         val ast = MaximalAstGenerator.generateMaximalAst(featuresWithConstants)
-        
+
         val assignment = ast.body[0] as AssignNode
         assertTrue(assignment.value is ConstantNode)
         assertEquals("standalone", (assignment.value as ConstantNode).value)
@@ -579,17 +677,17 @@ class MaximalAstGeneratorTest {
     @Test
     fun `test generateMaximalAst with binary operations feature`() {
         val features = setOf(
-            AstFeature.FUNCTION_DEFINITIONS, 
-            AstFeature.VARIABLE_ASSIGNMENTS, 
+            AstFeature.FUNCTION_DEFINITIONS,
+            AstFeature.VARIABLE_ASSIGNMENTS,
             AstFeature.BINARY_OPERATIONS,
             AstFeature.VARIABLE_REFERENCES
         )
         val ast = MaximalAstGenerator.generateMaximalAst(features)
-        
+
         val function = ast.body[0] as FunctionDefNode
         val assignment = function.body.find { it is AssignNode } as AssignNode
         assertTrue(assignment.value is BinaryOpNode)
-        
+
         val binaryOp = assignment.value as BinaryOpNode
         assertEquals("+", binaryOp.op)
     }
@@ -598,7 +696,7 @@ class MaximalAstGeneratorTest {
     fun `test generateMaximalAst with empty features set`() {
         val features = emptySet<AstFeature>()
         val ast = MaximalAstGenerator.generateMaximalAst(features)
-        
+
         assertTrue(ast is ModuleNode)
         assertTrue(ast.body.isEmpty())
     }
@@ -607,11 +705,11 @@ class MaximalAstGeneratorTest {
     fun `test generateMaximalAst with only conditional statements`() {
         val features = setOf(AstFeature.CONDITIONAL_STATEMENTS)
         val ast = MaximalAstGenerator.generateMaximalAst(features)
-        
+
         assertTrue(ast is ModuleNode)
         assertEquals(1, ast.body.size)
         assertTrue(ast.body[0] is IfNode)
-        
+
         val ifNode = ast.body[0] as IfNode
         assertTrue(ifNode.body.isNotEmpty())
         assertTrue(ifNode.orelse.isNotEmpty())
@@ -621,11 +719,11 @@ class MaximalAstGeneratorTest {
     fun `test generateMaximalAst with conditional statements and comparisons`() {
         val features = setOf(AstFeature.CONDITIONAL_STATEMENTS, AstFeature.COMPARISON_OPERATIONS)
         val ast = MaximalAstGenerator.generateMaximalAst(features)
-        
+
         assertTrue(ast is ModuleNode)
         assertEquals(1, ast.body.size)
         assertTrue(ast.body[0] is IfNode)
-        
+
         val ifNode = ast.body[0] as IfNode
         assertTrue(ifNode.test is CompareNode)
     }
@@ -634,10 +732,10 @@ class MaximalAstGeneratorTest {
     fun `test generateMaximalAst with conditional statements and constant values`() {
         val features = setOf(AstFeature.CONDITIONAL_STATEMENTS, AstFeature.CONSTANT_VALUES)
         val ast = MaximalAstGenerator.generateMaximalAst(features)
-        
+
         assertTrue(ast is ModuleNode)
         assertTrue(ast.body[0] is IfNode)
-        
+
         val ifNode = ast.body[0] as IfNode
         // Should use constant values in the condition and print statements
         assertTrue(ifNode.body.any { statement ->
@@ -649,11 +747,11 @@ class MaximalAstGeneratorTest {
     fun `test generateMaximalAst with only class definitions`() {
         val features = setOf(AstFeature.CLASS_DEFINITIONS)
         val ast = MaximalAstGenerator.generateMaximalAst(features)
-        
+
         assertTrue(ast is ModuleNode)
         assertEquals(1, ast.body.size)
         assertTrue(ast.body[0] is ClassDefNode)
-        
+
         val classDef = ast.body[0] as ClassDefNode
         assertEquals("DataProcessor", classDef.name)
         assertEquals(emptyList<ExpressionNode>(), classDef.baseClasses)
@@ -663,14 +761,14 @@ class MaximalAstGeneratorTest {
     fun `test generateMaximalAst with class and function definitions`() {
         val features = setOf(AstFeature.CLASS_DEFINITIONS, AstFeature.FUNCTION_DEFINITIONS)
         val ast = MaximalAstGenerator.generateMaximalAst(features)
-        
+
         assertTrue(ast is ModuleNode)
         assertTrue(ast.body.any { it is ClassDefNode })
         assertTrue(ast.body.any { it is FunctionDefNode })
-        
+
         val classDef = ast.body.find { it is ClassDefNode } as ClassDefNode
         assertTrue(classDef.body.any { it is FunctionDefNode })
-        
+
         val classMethod = classDef.body.find { it is FunctionDefNode } as FunctionDefNode
         assertEquals("getValue", classMethod.name)
     }
@@ -678,19 +776,115 @@ class MaximalAstGeneratorTest {
     @Test
     fun `test generateMaximalAst with class definitions and other features`() {
         val features = setOf(
-            AstFeature.CLASS_DEFINITIONS, 
+            AstFeature.CLASS_DEFINITIONS,
             AstFeature.FUNCTION_DEFINITIONS,
             AstFeature.VARIABLE_ASSIGNMENTS,
             AstFeature.RETURN_STATEMENTS
         )
         val ast = MaximalAstGenerator.generateMaximalAst(features)
-        
+
         val classDef = ast.body.find { it is ClassDefNode } as ClassDefNode
         val classMethod = classDef.body.find { it is FunctionDefNode } as FunctionDefNode
-        
+
         // Should have both assignment and return in the method
         assertTrue(classMethod.body.any { it is AssignNode })
         assertTrue(classMethod.body.any { it is ReturnNode })
+    }
+
+    @Test
+    fun `test generateMaximalAst with array literals feature`() {
+        val features = setOf(AstFeature.ARRAY_LITERALS, AstFeature.VARIABLE_ASSIGNMENTS)
+        val ast = MaximalAstGenerator.generateMaximalAst(features)
+
+        assertTrue(ast is ModuleNode)
+        assertTrue(ast.body.isNotEmpty(), "AST body should not be empty")
+
+        // Find assignment with array literal
+        val assignment =
+            ast.body.find { it is AssignNode && (it as AssignNode).target.id == "arrayData" } as? AssignNode
+        assertNotNull(assignment, "Should contain an assignment node for arrayData")
+
+        // Check if the value is a ListNode (array literal)
+        assertTrue(assignment.value is ListNode, "Assignment value should be a ListNode")
+
+        val listNode = assignment.value as ListNode
+        assertTrue(listNode.elements.isNotEmpty(), "Array should have elements")
+        assertEquals(3, listNode.elements.size, "Array should have 3 elements")
+    }
+
+    @Test
+    fun `test generateMaximalAst with tuple literals feature`() {
+        val features = setOf(AstFeature.TUPLE_LITERALS, AstFeature.VARIABLE_ASSIGNMENTS)
+        val ast = MaximalAstGenerator.generateMaximalAst(features)
+
+        assertTrue(ast is ModuleNode)
+        assertTrue(ast.body.isNotEmpty(), "AST body should not be empty")
+
+        // Find assignment with tuple literal
+        val assignment =
+            ast.body.find { it is AssignNode && (it as AssignNode).target.id == "tupleData" } as? AssignNode
+        assertNotNull(assignment, "Should contain an assignment node for tupleData")
+
+        // Check if the value is a TupleNode
+        assertTrue(assignment.value is TupleNode, "Assignment value should be a TupleNode")
+
+        val tupleNode = assignment.value as TupleNode
+        assertTrue(tupleNode.elements.isNotEmpty(), "Tuple should have elements")
+        // Tuples typically have mixed types
+        assertEquals(2, tupleNode.elements.size, "Tuple should have 2 elements for mixed types")
+    }
+
+    @Test
+    fun `test generateMaximalAst with arrays and constant values`() {
+        val features = setOf(
+            AstFeature.ARRAY_LITERALS,
+            AstFeature.CONSTANT_VALUES,
+            AstFeature.VARIABLE_ASSIGNMENTS
+        )
+        val ast = MaximalAstGenerator.generateMaximalAst(features)
+
+        val assignment =
+            ast.body.find { it is AssignNode && (it as AssignNode).target.id == "arrayData" } as? AssignNode
+        assertNotNull(assignment, "Should contain an assignment node for arrayData")
+
+        val listNode = assignment.value as? ListNode
+        assertNotNull(listNode, "Should have a ListNode")
+
+        // Array elements should be constant values
+        assertTrue(
+            listNode.elements.all { it is ConstantNode },
+            "All array elements should be constants"
+        )
+
+        // Check the actual values
+        val values = listNode.elements.map { (it as ConstantNode).value }
+        assertEquals(listOf("item1", "item2", "item3"), values, "Array should contain expected string constants")
+    }
+
+    @Test
+    fun `test generateMaximalAst with tuples in function`() {
+        val features = setOf(
+            AstFeature.TUPLE_LITERALS,
+            AstFeature.FUNCTION_DEFINITIONS,
+            AstFeature.VARIABLE_ASSIGNMENTS,
+            AstFeature.RETURN_STATEMENTS
+        )
+        val ast = MaximalAstGenerator.generateMaximalAst(features)
+
+        val function = ast.body.find { it is FunctionDefNode } as? FunctionDefNode
+        assertNotNull(function, "Should have a function definition")
+
+        // Check for tuple assignment inside function
+        val assignment = function!!.body.find { it is AssignNode } as? AssignNode
+        if (assignment != null) {
+            val value = assignment.value
+            if (value is TupleNode) {
+                assertTrue(value.elements.isNotEmpty(), "Tuple in function should have elements")
+            }
+        }
+
+        // Function should have return statement
+        assertTrue(function.body.any { it is ReturnNode }, "Function should have return statement")
     }
 }
 
@@ -702,22 +896,22 @@ class MaximalAstGeneratorTest {
 class TranspilationTest {
 
     private val pythonConfig = LanguageConfig(
-        "Python", 
+        "Python",
         PythonParser::parseWithMetadata,
         { ast -> PythonGenerator().generateWithMetadata(ast) }
     )
     private val javaScriptConfig = LanguageConfig(
-        "JavaScript", 
+        "JavaScript",
         JavaScriptParser::parseWithMetadata,
         { ast -> JavaScriptGenerator().generateWithMetadata(ast) }
     )
     private val javaConfig = LanguageConfig(
-        "Java", 
+        "Java",
         JavaParser::parseWithMetadata,
         { ast -> JavaGenerator().generateWithMetadata(ast) }
     )
     private val typeScriptConfig = LanguageConfig(
-        "TypeScript", 
+        "TypeScript",
         TypeScriptParser::parseWithMetadata,
         { ast -> TypeScriptGenerator().generateWithMetadata(ast) }
     )
@@ -746,8 +940,9 @@ class TranspilationTest {
                     println("Generated ${fromLang.name} metadata: ${sourceCodeWithMetadata.metadata}")
 
                     // Step 2: Parse back to AST to verify generation didn't lose information
-                    val parsedFromSource = fromLang.parseWithMetadataFn(sourceCodeWithMetadata.code, sourceCodeWithMetadata.metadata)
-                    
+                    val parsedFromSource =
+                        fromLang.parseWithMetadataFn(sourceCodeWithMetadata.code, sourceCodeWithMetadata.metadata)
+
                     // All languages should preserve metadata through parts-based system
                     assertEquals(
                         originalAst, parsedFromSource,
@@ -760,7 +955,10 @@ class TranspilationTest {
                     println("Generated ${toLang.name} metadata: ${intermediateCodeWithMetadata.metadata}")
 
                     // Step 4: Parse intermediate code back to AST with metadata
-                    val parsedFromTarget = toLang.parseWithMetadataFn(intermediateCodeWithMetadata.code, intermediateCodeWithMetadata.metadata)
+                    val parsedFromTarget = toLang.parseWithMetadataFn(
+                        intermediateCodeWithMetadata.code,
+                        intermediateCodeWithMetadata.metadata
+                    )
 
                     // Step 5: Generate final code with metadata back to source language
                     val finalCodeWithMetadata = fromLang.generateWithMetadataFn(parsedFromTarget)
@@ -768,8 +966,9 @@ class TranspilationTest {
                     println("Final ${fromLang.name} metadata: ${finalCodeWithMetadata.metadata}")
 
                     // Step 6: Parse final code and verify AST preservation
-                    val finalAst = fromLang.parseWithMetadataFn(finalCodeWithMetadata.code, finalCodeWithMetadata.metadata)
-                    
+                    val finalAst =
+                        fromLang.parseWithMetadataFn(finalCodeWithMetadata.code, finalCodeWithMetadata.metadata)
+
                     // Compare AST preservation through transpilation
                     // All languages should preserve metadata through parts-based system
                     assertEquals(
@@ -799,7 +998,7 @@ class TranspilationTest {
         // Test all possible starting points
         for (startLangIndex in allLanguages.indices) {
             val sequence = mutableListOf<LanguageConfig>()
-            
+
             // Create a sequence that visits every language once, starting from startLangIndex
             for (i in allLanguages.indices) {
                 sequence.add(allLanguages[(startLangIndex + i) % allLanguages.size])
@@ -817,7 +1016,7 @@ class TranspilationTest {
                     val nextLang = if (i < sequence.size - 1) sequence[i + 1] else sequence[0]
 
                     println("Step ${i + 1}: ${currentLang.name} -> ${nextLang.name}")
-                    
+
                     // Generate code with metadata in current language
                     val codeWithMetadata = currentLang.generateWithMetadataFn(currentAst)
                     println("Generated ${currentLang.name} code: ${codeWithMetadata.code}")
@@ -825,7 +1024,7 @@ class TranspilationTest {
 
                     // Parse to verify AST preservation
                     val parsedAst = currentLang.parseWithMetadataFn(codeWithMetadata.code, codeWithMetadata.metadata)
-                    
+
                     // All languages should preserve metadata through parts-based system
                     assertEquals(
                         currentAst, parsedAst,
@@ -1033,7 +1232,7 @@ class TranspilationTest {
         testAstRoundTrip("Maximal Metadata Preservation", maximalMetadataAst)
         testSequentialTranspilation("Maximal Metadata Preservation", maximalMetadataAst)
     }
-    
+
     @Test
     fun `test isolated print statement feature transpilation`() {
         // Test only print statements to isolate this specific language feature
@@ -1043,8 +1242,8 @@ class TranspilationTest {
         testAstRoundTrip("Isolated Print Statement", printOnlyAst)
         testSequentialTranspilation("Isolated Print Statement", printOnlyAst)
     }
-    
-    @Test 
+
+    @Test
     fun `test isolated variable assignment feature transpilation`() {
         // Test only variable assignments to isolate this specific language feature
         val features = setOf(AstFeature.VARIABLE_ASSIGNMENTS, AstFeature.CONSTANT_VALUES)
@@ -1053,7 +1252,7 @@ class TranspilationTest {
         testAstRoundTrip("Isolated Variable Assignment", assignmentOnlyAst)
         testSequentialTranspilation("Isolated Variable Assignment", assignmentOnlyAst)
     }
-    
+
     @Test
     fun `test isolated binary operation feature transpilation`() {
         // Test function with binary operations to isolate this specific language feature
@@ -1068,7 +1267,7 @@ class TranspilationTest {
         testAstRoundTrip("Isolated Binary Operation", binaryOpAst)
         testSequentialTranspilation("Isolated Binary Operation", binaryOpAst)
     }
-    
+
     @Test
     fun `test isolated conditional statement feature transpilation`() {
         // Test only conditional statements and comparisons to isolate this specific language feature
@@ -1107,5 +1306,20 @@ class TranspilationTest {
 
         testAstRoundTrip("Class With Methods", classWithMethodsAst)
         testSequentialTranspilation("Class With Methods", classWithMethodsAst)
+    }
+
+    @Test
+    fun `test array and tuple literals transpilation`() {
+        // Test array and tuple literals to verify cross-language support
+        val features = setOf(
+            AstFeature.ARRAY_LITERALS,
+            AstFeature.TUPLE_LITERALS,
+            AstFeature.VARIABLE_ASSIGNMENTS,
+            AstFeature.CONSTANT_VALUES
+        )
+        val arrayTupleAst = MaximalAstGenerator.generateMaximalAst(features)
+
+        testAstRoundTrip("Array and Tuple Literals", arrayTupleAst)
+        testSequentialTranspilation("Array and Tuple Literals", arrayTupleAst)
     }
 }

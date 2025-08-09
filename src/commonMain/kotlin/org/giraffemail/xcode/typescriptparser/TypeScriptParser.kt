@@ -156,13 +156,41 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
             ?: UnknownNode("Invalid expression in assignment")
 
         // Extract type annotation if present
-        val variableType = ctx.typeAnnotation()?.typeExpression()?.text
+        val variableType = extractTypeExpression(ctx.typeAnnotation()?.typeExpression())
+        
+        // Check if the value is a list and handle accordingly
+        val finalValue = when {
+            variableType != null && variableType.startsWith("[") && variableType.contains(",") && valueExpr is ListNode -> {
+                // This is a tuple - convert ListNode to TupleNode
+                // Parse the tuple type string into individual types
+                val typeContent = variableType.substring(1, variableType.length - 1).trim()
+                val individualTypes = typeContent.split(",").map { it.trim() }
+                TupleNode(elements = valueExpr.elements, metadata = mapOf("tupleTypes" to individualTypes))
+            }
+            variableType != null && variableType.endsWith("[]") && valueExpr is ListNode -> {
+                // This is an array with type information - add type to ListNode metadata
+                val elementType = variableType.substring(0, variableType.length - 2)
+                ListNode(elements = valueExpr.elements, metadata = mapOf("arrayType" to elementType))
+            }
+            else -> valueExpr
+        }
         
         val assignmentMetadata = if (variableType != null) {
             mapOf("variableType" to variableType)
         } else null
 
-        return AssignNode(target = targetNode, value = valueExpr, metadata = assignmentMetadata)
+        return AssignNode(target = targetNode, value = finalValue, metadata = assignmentMetadata)
+    }
+    
+    // Helper method to extract type expression including array and tuple types
+    private fun extractTypeExpression(ctx: AntlrTypeScriptParser.TypeExpressionContext?): String? {
+        if (ctx == null) return null
+        
+        // Get the full text of the type expression
+        val text = ctx.text
+        
+        // Clean up the text representation if needed
+        return text
     }
 
     // Handle function calls as statements
@@ -260,6 +288,14 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
 
     override fun visitIdentifier(ctx: AntlrTypeScriptParser.IdentifierContext): AstNode {
         return NameNode(ctx.IDENTIFIER().text, Load)
+    }
+
+    override fun visitArrayLiteral(ctx: AntlrTypeScriptParser.ArrayLiteralContext): AstNode {
+        val elements = ctx.arrayElements()?.expression()?.mapNotNull { exprCtx ->
+            visit(exprCtx) as? ExpressionNode
+        } ?: emptyList()
+        
+        return ListNode(elements = elements)
     }
 
     override fun defaultResult(): AstNode {

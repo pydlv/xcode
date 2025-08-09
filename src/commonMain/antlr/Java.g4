@@ -40,9 +40,19 @@ parameter:
     IDENTIFIER IDENTIFIER // Represents type and name, e.g., "Object a"
     ;
 
-    // Assignment Statement
+    // Assignment Statement - supports both typed and untyped
 assignmentStatement:
-    IDENTIFIER ASSIGN expression SEMI
+    (type IDENTIFIER ASSIGN expression | IDENTIFIER ASSIGN expression) SEMI
+    ;
+
+// Type declaration - supports arrays
+type:
+    IDENTIFIER ('[' ']')*  // e.g., String, String[], Object[][]
+    | primitiveType ('[' ']')*  // e.g., int, double, boolean, int[]
+    ;
+
+primitiveType:
+    'int' | 'double' | 'float' | 'boolean' | 'char' | 'byte' | 'short' | 'long'
     ;
 
     // Call Statement (for standalone calls like fib(0,1); or fib(b,c);)
@@ -75,8 +85,17 @@ expression:
 
 primary:
     literal                                         # LiteralExpression
+    | arrayInitializer                              # ArrayInitializerExpression
     | IDENTIFIER                                    # IdentifierPrimary // Added to allow identifiers as primary expressions
     | LPAREN expression RPAREN                      # ParenthesizedExpression
+    ;
+
+arrayInitializer:
+    'new' type '[' ']' '{' arrayElements? '}'      # ArrayInit
+    ;
+
+arrayElements:
+    expression (',' expression)*
     ;
 
 literal:

@@ -47,10 +47,13 @@ expression
     : expression '+' expression  # Addition
     | expression ('===' | '!==' | '==' | '!=' | '<' | '>' | '<=' | '>=') expression # Comparison
     | IDENTIFIER '(' arguments? ')'  # FunctionCall
+    | '[' arrayElements? ']'   # ArrayLiteral  // Array literal support
     | STRING_LITERAL            # StringLiteral // Uses common STRING_LITERAL
     | IDENTIFIER                # Identifier    // Uses common IDENTIFIER
     | NUMBER                    # NumberLiteral // Uses common NUMBER
     ;
+
+arrayElements: expression (',' expression)* ;
 
 // Lexer Rules - Most are now imported
 // STRING_LITERAL, IDENTIFIER, NUMBER are now imported from CommonLexerRules.

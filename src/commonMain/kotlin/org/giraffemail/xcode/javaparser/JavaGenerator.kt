@@ -80,15 +80,24 @@ class JavaGenerator : AbstractAstGenerator() {
 
     override fun visitAssignNode(node: AssignNode): String {
         // Assuming target is NameNode based on compiler warnings in other generators.
-        // Type declaration might be needed for first assignment in Java.
-        // This is a simplified version. Real Java needs type information.
         val targetName = node.target.id // Assuming node.target is of type NameNode
         val valueExpr = generateExpression(node.value)
         
-        // Simplified: Assumes variable is already declared or type inference is not handled.
-        // A real generator would need to manage variable scopes and declarations.
-        return "$targetName = $valueExpr${getStatementTerminator()}"
-        // throw NotImplementedError("Assignment generation for Java needs type information and declaration management.")
+        // Check if we have type information from metadata
+        val variableType = node.metadata?.get("variableType") as? String
+        
+        return if (variableType != null) {
+            // Generate typed declaration with proper spacing
+            val javaType = when {
+                // Check if it's a tuple type (e.g., "[string,number]")
+                variableType.startsWith("[") && variableType.contains(",") -> "Object[]"
+                else -> mapTypeToJava(variableType)
+            }
+            "$javaType $targetName = $valueExpr${getStatementTerminator()}"
+        } else {
+            // Fall back to simple assignment (assuming var already declared)
+            "$targetName = $valueExpr${getStatementTerminator()}"
+        }
     }
 
     override fun visitCallStatementNode(node: CallStatementNode): String {
@@ -120,6 +129,67 @@ class JavaGenerator : AbstractAstGenerator() {
         val rightStr = generateExpression(node.right)
         // AST now uses canonical operators, no conversion needed
         return "$leftStr ${node.op} $rightStr"
+    }
+    
+    override fun visitListNode(node: ListNode): String {
+        // Generate Java array initialization
+        val elements = node.elements.joinToString(", ") { generateExpression(it) }
+        
+        // Check if we have array type information from parent assignment's metadata
+        val parentMetadata = node.metadata
+        val arrayType = parentMetadata?.get("arrayType") as? String
+        
+        // Infer element type from the list elements or metadata
+        val elementType = when {
+            arrayType != null -> arrayType
+            node.metadata?.containsKey("elementType") == true -> node.metadata["elementType"] as String
+            node.elements.isNotEmpty() -> {
+                // Check if all elements are strings
+                if (node.elements.all { it is ConstantNode && it.value is String }) {
+                    "String"
+                } else {
+                    inferJavaType(node.elements.first())
+                }
+            }
+            else -> "Object"
+        }
+        
+        // Generate array initialization syntax
+        val javaType = mapTypeToJava(elementType)
+        return "new $javaType[]{$elements}"
+    }
+    
+    override fun visitTupleNode(node: TupleNode): String {
+        // Java doesn't have native tuples, so we use Object arrays
+        val elements = node.elements.joinToString(", ") { generateExpression(it) }
+        return "new Object[]{$elements}"
+    }
+    
+    private fun inferJavaType(node: ExpressionNode): String {
+        return when (node) {
+            is ConstantNode -> when (node.value) {
+                is String -> "String"
+                is Int -> "Integer"
+                is Double -> "Double"
+                is Boolean -> "Boolean"
+                else -> "Object"
+            }
+            is NameNode -> "Object"
+            else -> "Object"
+        }
+    }
+    
+    private fun mapTypeToJava(tsType: String): String {
+        return when {
+            tsType == "string" -> "String"
+            tsType == "number" -> "double"  // Use primitive type
+            tsType == "boolean" -> "boolean" // Use primitive type
+            tsType.endsWith("[]") -> {
+                val baseType = tsType.substring(0, tsType.length - 2)
+                mapTypeToJava(baseType) + "[]"
+            }
+            else -> "Object"
+        }
     }
 
     // Other visit methods (visitNameNode, visitUnknownNode, visitExprNode, visitModuleNode)

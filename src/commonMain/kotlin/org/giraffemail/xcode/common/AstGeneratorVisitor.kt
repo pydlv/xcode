@@ -18,6 +18,8 @@ interface AstGeneratorVisitor {
     fun visitBinaryOpNode(node: BinaryOpNode): String
     fun visitCompareNode(node: CompareNode): String
     fun visitIfNode(node: IfNode): String
+    fun visitListNode(node: ListNode): String
+    fun visitTupleNode(node: TupleNode): String
     fun visitUnknownNode(node: UnknownNode): String
 }
 

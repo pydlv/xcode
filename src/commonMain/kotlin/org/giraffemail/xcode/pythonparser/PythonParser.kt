@@ -358,6 +358,57 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
         val value = numText.toIntOrNull() ?: numText.toDoubleOrNull() ?: 0
         return ConstantNode(value)
     }
+    
+    override fun visitListLiteral(ctx: AntlrPythonParser.ListLiteralContext): AstNode {
+        val elements = ctx.listElements()?.expression()?.mapNotNull { exprCtx ->
+            visit(exprCtx) as? ExpressionNode
+        } ?: emptyList()
+        
+        // Try to infer element type from the list contents
+        val elementType = when {
+            elements.isEmpty() -> null
+            elements.all { it is ConstantNode && it.value is String } -> "string"
+            elements.all { it is ConstantNode && (it.value is Int || it.value is Double) } -> "number"
+            elements.all { it is ConstantNode && it.value is Boolean } -> "boolean"
+            else -> null
+        }
+        
+        val metadata = if (elementType != null) {
+            mapOf("arrayType" to elementType)  // Changed from "elementType" to "arrayType" for consistency
+        } else null
+        
+        return ListNode(elements = elements, metadata = metadata)
+    }
+    
+    override fun visitTupleLiteral(ctx: AntlrPythonParser.TupleLiteralContext): AstNode {
+        val elements = ctx.tupleElements().expression().mapNotNull { exprCtx ->
+            visit(exprCtx) as? ExpressionNode
+        }
+        
+        // For tuples, store the types of individual elements
+        val tupleTypes = elements.map { element ->
+            when (element) {
+                is ConstantNode -> when (element.value) {
+                    is String -> "string"
+                    is Int, is Double -> "number"
+                    is Boolean -> "boolean"
+                    else -> "any"
+                }
+                else -> "any"
+            }
+        }
+        
+        val metadata = if (tupleTypes.isNotEmpty()) {
+            mapOf("tupleTypes" to tupleTypes)
+        } else null
+        
+        return TupleNode(elements = elements, metadata = metadata)
+    }
+    
+    override fun visitParenthesizedExpression(ctx: AntlrPythonParser.ParenthesizedExpressionContext): AstNode {
+        // Simply return the inner expression
+        return visit(ctx.expression())
+    }
 
     override fun defaultResult(): AstNode {
         return UnknownNode("Unhandled ANTLR node")
