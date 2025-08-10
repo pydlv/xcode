@@ -555,6 +555,30 @@ object MaximalAstGenerator {
     }
 
     /**
+     * Generates an AST for a for-each loop.
+     * Example: `for (item in collection) { print(item) }`
+     */
+    fun generateForEachLoop(): ForEachNode {
+        val iterable = NameNode(id = "myCollection", ctx = Load, metadata = mapOf("type" to "List<number>"))
+        val variable = NameNode(id = "item", ctx = Store, metadata = mapOf("type" to "number"))
+        val body = listOf(
+            PrintNode(
+                expression = NameNode(id = "item", ctx = Load)
+            )
+        )
+        return ForEachNode(
+            iterable = iterable,
+            variable = variable,
+            body = body,
+            metadata = mapOf(
+                "loopType" to "forEach",
+                "iterableType" to "List<number>",
+                "itemType" to "number"
+            )
+        )
+    }
+
+    /**
      * Generates a function with simple return statement (no value)
      */
     fun generateFunctionWithReturnStatement(): ModuleNode {
@@ -615,4 +639,5 @@ data class LanguageConfig(
     val parseWithMetadataFn: (String, List<LanguageMetadata>) -> AstNode,
     val generateWithMetadataFn: (AstNode) -> CodeWithMetadata
 )
+
 
