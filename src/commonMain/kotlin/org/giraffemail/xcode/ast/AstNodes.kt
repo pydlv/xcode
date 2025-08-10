@@ -114,6 +114,12 @@ data class TupleNode(
 data class UnknownNode(val description: String, override val metadata: Map<String, Any>? = null) : AstNode, StatementNode, ExpressionNode
 
 // Exception class for parsing errors
+data class ForEachNode(
+    val iterable: ExpressionNode,
+    val variable: NameNode,
+    val body: List<StatementNode>,
+    override val metadata: Map<String, Any>? = null
+) : StatementNode
 
 // For-each loop node
 data class ForEachNode(
@@ -123,4 +129,5 @@ data class ForEachNode(
     override val metadata: Map<String, Any>? = null
 ) : StatementNode
 class AstParseException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
+
 
