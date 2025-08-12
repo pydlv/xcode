@@ -573,14 +573,14 @@ object MaximalAstGenerator {
                     target = NameNode(id = "my_dict", ctx = Store, metadata = mapOf("type" to "dict")),
                     value = DictNode(
                         keys = listOf(
-                            ConstantNode(value = "name", type = "string"),
-                            ConstantNode(value = 123, type = "number"),
-                            ConstantNode(value = true, type = "boolean")
+                            ConstantNode(value = "name", metadata = mapOf("type" to "string")),
+                            ConstantNode(value = 123, metadata = mapOf("type" to "number")),
+                            ConstantNode(value = true, metadata = mapOf("type" to "boolean"))
                         ),
                         values = listOf(
-                            ConstantNode(value = "John Doe", type = "string"),
-                            ConstantNode(value = 456, type = "number"),
-                            ConstantNode(value = false, type = "boolean")
+                            ConstantNode(value = "John Doe", metadata = mapOf("type" to "string")),
+                            ConstantNode(value = 456, metadata = mapOf("type" to "number")),
+                            ConstantNode(value = false, metadata = mapOf("type" to "boolean"))
                         ),
                         metadata = mapOf(
                             "keyTypes" to listOf("string", "number", "boolean"),
