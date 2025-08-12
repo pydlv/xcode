@@ -112,7 +112,7 @@ object MaximalAstGenerator {
                     AssignNode(
                         target = NameNode(id = "result", ctx = Store),
                         value = assignValue,
-                        metadata = mapOf("variableType" to "string")
+                        variableType = CanonicalTypes.String
                     )
                 )
             }
@@ -156,8 +156,8 @@ object MaximalAstGenerator {
             // Create function arguments based on features
             val functionArgs = if (features.contains(AstFeature.VARIABLE_REFERENCES)) {
                 listOf(
-                    NameNode(id = "input", ctx = Param, metadata = mapOf("type" to "string")),
-                    NameNode(id = "count", ctx = Param, metadata = mapOf("type" to "number"))
+                    NameNode(id = "input", ctx = Param, type = CanonicalTypes.String),
+                    NameNode(id = "count", ctx = Param, type = CanonicalTypes.Number)
                 )
             } else {
                 emptyList()
@@ -166,16 +166,16 @@ object MaximalAstGenerator {
             // Determine return type based on features
             val returnType = if (features.contains(AstFeature.RETURN_STATEMENTS)) {
                 if (features.contains(AstFeature.VARIABLE_ASSIGNMENTS) && features.contains(AstFeature.VARIABLE_REFERENCES)) {
-                    "string" // returning result variable
+                    CanonicalTypes.String // returning result variable
                 } else if (features.contains(AstFeature.BINARY_OPERATIONS)) {
-                    "number" // returning binary operation result
+                    CanonicalTypes.Number // returning binary operation result
                 } else if (features.contains(AstFeature.CONSTANT_VALUES)) {
-                    "string" // returning constant value
+                    CanonicalTypes.String // returning constant value
                 } else {
-                    "void" // returning null
+                    CanonicalTypes.Void // returning null
                 }
             } else {
-                "void"
+                CanonicalTypes.Void
             }
 
             bodyNodes.add(
@@ -184,10 +184,8 @@ object MaximalAstGenerator {
                     args = functionArgs,
                     body = functionBody,
                     decoratorList = emptyList(),
-                    metadata = mapOf(
-                        "returnType" to returnType,
-                        "paramTypes" to mapOf("input" to "string", "count" to "number")
-                    )
+                    returnType = returnType,
+                    paramTypes = mapOf("input" to CanonicalTypes.String, "count" to CanonicalTypes.Number)
                 )
             )
         }
@@ -207,7 +205,7 @@ object MaximalAstGenerator {
                             target = NameNode(id = "instanceValue", ctx = Store),
                             value = if (features.contains(AstFeature.VARIABLE_REFERENCES))
                                 NameNode(id = "newValue", ctx = Load) else ConstantNode("initialized"),
-                            metadata = mapOf("variableType" to "string")
+                            variableType = CanonicalTypes.String
                         )
                     )
                 }
@@ -225,16 +223,14 @@ object MaximalAstGenerator {
                     FunctionDefNode(
                         name = "getValue",
                         args = if (features.contains(AstFeature.VARIABLE_REFERENCES)) {
-                            listOf(NameNode(id = "newValue", ctx = Param, metadata = mapOf("type" to "string")))
+                            listOf(NameNode(id = "newValue", ctx = Param, type = CanonicalTypes.String))
                         } else {
                             emptyList()
                         },
                         body = methodBody,
                         decoratorList = emptyList(),
-                        metadata = mapOf(
-                            "returnType" to "string",
-                            "paramTypes" to mapOf("newValue" to "string")
-                        )
+                        returnType = CanonicalTypes.String,
+                        paramTypes = mapOf("newValue" to CanonicalTypes.String)
                     )
                 )
             }
@@ -252,7 +248,7 @@ object MaximalAstGenerator {
                             )
                         ),
                         decoratorList = emptyList(),
-                        metadata = mapOf("returnType" to "void")
+                        returnType = CanonicalTypes.Void
                     )
                 )
             }
@@ -267,7 +263,7 @@ object MaximalAstGenerator {
                             PrintNode(expression = ConstantNode("Default class method"))
                         ),
                         decoratorList = emptyList(),
-                        metadata = mapOf("returnType" to "void")
+                        returnType = CanonicalTypes.Void
                     )
                 )
             }
@@ -278,10 +274,8 @@ object MaximalAstGenerator {
                     baseClasses = emptyList(), // No inheritance for simplicity
                     body = classBody,
                     decoratorList = emptyList(),
-                    metadata = mapOf(
-                        "classType" to "DataProcessor",
-                        "methods" to classBody.filterIsInstance<FunctionDefNode>().map { it.name }
-                    )
+                    classType = CanonicalTypes.Any,
+                    methods = classBody.filterIsInstance<FunctionDefNode>().map { it.name }
                 )
             )
         }
@@ -298,7 +292,7 @@ object MaximalAstGenerator {
                 AssignNode(
                     target = NameNode(id = "standalone", ctx = Store),
                     value = assignValue,
-                    metadata = mapOf("variableType" to "string")
+                    variableType = CanonicalTypes.String
                 )
             )
         }
@@ -397,8 +391,8 @@ object MaximalAstGenerator {
                         insertIndex,
                         AssignNode(
                             target = NameNode(id = "arrayData", ctx = Store),
-                            value = ListNode(elements = arrayElements, metadata = mapOf("arrayType" to "string")),
-                            metadata = mapOf("variableType" to "string[]")
+                            value = ListNode(elements = arrayElements, arrayType = CanonicalTypes.String),
+                            variableType = CanonicalTypes.String
                         )
                     )
                     bodyNodes[bodyNodes.indexOf(function)] = function.copy(body = newBody)
@@ -407,8 +401,8 @@ object MaximalAstGenerator {
                 bodyNodes.add(
                     AssignNode(
                         target = NameNode(id = "arrayData", ctx = Store),
-                        value = ListNode(elements = arrayElements, metadata = mapOf("arrayType" to "string")),
-                        metadata = mapOf("variableType" to "string[]")
+                        value = ListNode(elements = arrayElements, arrayType = CanonicalTypes.String),
+                        variableType = CanonicalTypes.String
                     )
                 )
             }
@@ -440,9 +434,9 @@ object MaximalAstGenerator {
                             target = NameNode(id = "tupleData", ctx = Store),
                             value = TupleNode(
                                 elements = tupleElements,
-                                metadata = mapOf("tupleTypes" to listOf("string", "number"))
+                                tupleTypes = listOf(CanonicalTypes.String, CanonicalTypes.Number)
                             ),
-                            metadata = mapOf("variableType" to "[string, number]")
+                            variableType = CanonicalTypes.Any
                         )
                     )
                     bodyNodes[bodyNodes.indexOf(function)] = function.copy(body = newBody)
@@ -453,9 +447,9 @@ object MaximalAstGenerator {
                         target = NameNode(id = "tupleData", ctx = Store),
                         value = TupleNode(
                             elements = tupleElements,
-                            metadata = mapOf("tupleTypes" to listOf("string", "number"))
+                            tupleTypes = listOf(CanonicalTypes.String, CanonicalTypes.Number)
                         ),
-                        metadata = mapOf("variableType" to "[string, number]")
+                        variableType = CanonicalTypes.Any
                     )
                 )
             }
@@ -477,11 +471,11 @@ object MaximalAstGenerator {
                         AssignNode(
                             target = NameNode(id = "result", ctx = Store),
                             value = ConstantNode("hello"),
-                            metadata = mapOf("variableType" to "string")
+                            variableType = CanonicalTypes.String
                         )
                     ),
                     decoratorList = emptyList(),
-                    metadata = mapOf("returnType" to "void")
+                    returnType = CanonicalTypes.Void
                 )
             )
         )
@@ -496,7 +490,7 @@ object MaximalAstGenerator {
                 AssignNode(
                     target = NameNode(id = "result", ctx = Store),
                     value = ConstantNode("hello"),
-                    metadata = mapOf("variableType" to "string")
+                    variableType = CanonicalTypes.String
                 ),
                 PrintNode(
                     expression = NameNode(id = "result", ctx = Load)
@@ -514,16 +508,14 @@ object MaximalAstGenerator {
                 FunctionDefNode(
                     name = "test_return",
                     args = listOf(
-                        NameNode(id = "input", ctx = Param, metadata = mapOf("type" to "string"))
+                        NameNode(id = "input", ctx = Param, type = CanonicalTypes.String)
                     ),
                     body = listOf(
                         ReturnNode(value = null)
                     ),
                     decoratorList = emptyList(),
-                    metadata = mapOf(
-                        "returnType" to "void",
-                        "paramTypes" to mapOf("input" to "string")
-                    )
+                    returnType = CanonicalTypes.Void,
+                    paramTypes = mapOf("input" to CanonicalTypes.String)
                 )
             )
         )
@@ -538,23 +530,22 @@ object MaximalAstGenerator {
                 FunctionDefNode(
                     name = "add",
                     args = listOf(
-                        NameNode(id = "a", ctx = Param, metadata = mapOf("type" to "number")),
-                        NameNode(id = "b", ctx = Param, metadata = mapOf("type" to "number"))
+                        NameNode(id = "a", ctx = Param, type = CanonicalTypes.Number),
+                        NameNode(id = "b", ctx = Param, type = CanonicalTypes.Number)
                     ),
                     body = listOf(
                         ReturnNode(
                             value = BinaryOpNode(
                                 left = NameNode(id = "a", ctx = Load),
                                 op = "+",
-                                right = NameNode(id = "b", ctx = Load)
+                                right = NameNode(id = "b", ctx = Load),
+                                resultType = CanonicalTypes.Number
                             )
                         )
                     ),
                     decoratorList = emptyList(),
-                    metadata = mapOf(
-                        "returnType" to "number",
-                        "paramTypes" to mapOf("a" to "number", "b" to "number")
-                    )
+                    returnType = CanonicalTypes.Number,
+                    paramTypes = mapOf("a" to CanonicalTypes.Number, "b" to CanonicalTypes.Number)
                 )
             )
         )
