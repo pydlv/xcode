@@ -225,7 +225,7 @@ object ParserUtils {
                         
                         // Check if we need to convert ListNode to TupleNode based on metadata
                         val finalValue = if (processedValue is ListNode && metadata.variableType != null) {
-                            convertListToTupleIfNeeded(processedValue, metadata.variableType.toString())
+                            convertListToTupleIfNeeded(processedValue, metadata.variableType)
                         } else {
                             processedValue
                         }
