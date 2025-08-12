@@ -18,7 +18,8 @@ enum class AstFeature {
     COMPARISON_OPERATIONS,
     RETURN_STATEMENTS,
     ARRAY_LITERALS,
-    TUPLE_LITERALS
+    TUPLE_LITERALS,
+    EXPRESSION_STATEMENTS
 }
 
 /**
@@ -42,7 +43,8 @@ object SupportedAstFeatures {
         AstFeature.COMPARISON_OPERATIONS,
         AstFeature.RETURN_STATEMENTS,
         AstFeature.ARRAY_LITERALS,
-        AstFeature.TUPLE_LITERALS
+        AstFeature.TUPLE_LITERALS,
+        AstFeature.EXPRESSION_STATEMENTS
     )
 
     /**
@@ -61,7 +63,8 @@ object SupportedAstFeatures {
         "Constant values (strings, numbers)",
         "Variable references (Load, Store, Param contexts)",
         "Array literals with type preservation",
-        "Tuple literals with mixed types"
+        "Tuple literals with mixed types",
+        "Expression statements (expressions evaluated for side effects)"
     )
 
     /**
@@ -318,6 +321,35 @@ object MaximalAstGenerator {
                         args = callArgs,
                         keywords = emptyList()
                     )
+                )
+            )
+        }
+
+        // Generate expression statement if requested
+        if (features.contains(AstFeature.EXPRESSION_STATEMENTS)) {
+            // Create a simple expression statement using binary operation
+            val expressionValue = if (features.contains(AstFeature.BINARY_OPERATIONS)) {
+                BinaryOpNode(
+                    left = if (features.contains(AstFeature.CONSTANT_VALUES)) ConstantNode(5) else NameNode(id = "x", ctx = Load),
+                    op = "+",
+                    right = if (features.contains(AstFeature.CONSTANT_VALUES)) ConstantNode(3) else NameNode(id = "y", ctx = Load)
+                )
+            } else if (features.contains(AstFeature.FUNCTION_CALLS)) {
+                CallNode(
+                    func = NameNode(id = "getValue", ctx = Load),
+                    args = if (features.contains(AstFeature.CONSTANT_VALUES)) listOf(ConstantNode("param")) else emptyList(),
+                    keywords = emptyList()
+                )
+            } else if (features.contains(AstFeature.CONSTANT_VALUES)) {
+                ConstantNode("expression_value")
+            } else {
+                NameNode(id = "expr", ctx = Load)
+            }
+
+            bodyNodes.add(
+                ExprNode(
+                    value = expressionValue,
+                    metadata = mapOf("statementType" to "expression")
                 )
             )
         }

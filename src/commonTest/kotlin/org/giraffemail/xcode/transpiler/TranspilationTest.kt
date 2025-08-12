@@ -447,4 +447,50 @@ class TranspilationTest {
         testAstRoundTrip("Array and Tuple Literals", arrayTupleAst)
         testSequentialTranspilation("Array and Tuple Literals", arrayTupleAst)
     }
+
+    @Test
+    fun `test isolated expression statement feature transpilation`() {
+        // Test only expression statements to isolate this specific language feature
+        val features = setOf(AstFeature.EXPRESSION_STATEMENTS, AstFeature.CONSTANT_VALUES, AstFeature.BINARY_OPERATIONS)
+        val expressionStatementAst = MaximalAstGenerator.generateMaximalAst(features)
+
+        testAstRoundTrip("Isolated Expression Statement", expressionStatementAst)
+        testSequentialTranspilation("Isolated Expression Statement", expressionStatementAst)
+    }
+
+    @Test
+    fun `test expression statement with function calls transpilation`() {
+        // Test expression statements combined with function calls for more comprehensive testing
+        val features = setOf(
+            AstFeature.EXPRESSION_STATEMENTS,
+            AstFeature.FUNCTION_CALLS,
+            AstFeature.CONSTANT_VALUES,
+            AstFeature.VARIABLE_REFERENCES
+        )
+        val expressionWithCallsAst = MaximalAstGenerator.generateMaximalAst(features)
+
+        testAstRoundTrip("Expression Statement with Function Calls", expressionWithCallsAst)
+        testSequentialTranspilation("Expression Statement with Function Calls", expressionWithCallsAst)
+    }
+
+    @Test
+    fun `test expression statement cross language compatibility`() {
+        // Create a specific test for expression statements that tests cross-language compatibility
+        // This tests simple expression statements which should be universally supported
+        val expressionStatementAst = ModuleNode(
+            body = listOf(
+                ExprNode(
+                    value = BinaryOpNode(
+                        left = ConstantNode(10),
+                        op = "+",
+                        right = ConstantNode(5)
+                    ),
+                    metadata = mapOf("statementType" to "expression")
+                )
+            )
+        )
+
+        testAstRoundTrip("Expression Statement Cross Language", expressionStatementAst)
+        testSequentialTranspilation("Expression Statement Cross Language", expressionStatementAst)
+    }
 }
