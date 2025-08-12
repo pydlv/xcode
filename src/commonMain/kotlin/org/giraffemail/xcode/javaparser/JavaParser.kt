@@ -145,14 +145,14 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         val paramName = ctx.IDENTIFIER(1)!!.text // Second IDENTIFIER is the name
         val paramType = ctx.IDENTIFIER(0)!!.text.lowercase() // First IDENTIFIER is the type, normalize to lowercase
         
-        // Only add type metadata if it's not the default Object type
-        val typeMetadata = if (paramType != "object") {
-            mapOf("type" to paramType)
+        // Convert to CanonicalTypes
+        val canonicalType = if (paramType != "object") {
+            CanonicalTypes.fromString(paramType)
         } else {
-            null
+            CanonicalTypes.Any
         }
         
-        return NameNode(id = paramName, ctx = Param, metadata = typeMetadata)
+        return NameNode(id = paramName, ctx = Param, type = canonicalType)
     }
 
     // This would be the overridden method, now returning a placeholder
@@ -168,14 +168,14 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         val paramName = ctx.IDENTIFIER(1)!!.text
         val paramType = ctx.IDENTIFIER(0)!!.text.lowercase() // First IDENTIFIER is the type, normalize to lowercase
         
-        // Only add type metadata if it's not the default Object type
-        val typeMetadata = if (paramType != "object") {
-            mapOf("type" to paramType)
+        // Convert to CanonicalTypes
+        val canonicalType = if (paramType != "object") {
+            CanonicalTypes.fromString(paramType)
         } else {
-            null
+            CanonicalTypes.Any
         }
         
-        return NameNode(id = paramName, ctx = Param, metadata = typeMetadata)
+        return NameNode(id = paramName, ctx = Param, type = canonicalType)
     }
 
     // In visitFunctionDefinition, change to use getParameters:
@@ -204,12 +204,14 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         val value = ctx.expression()!!.accept(this) as? ExpressionNode
             ?: throw IllegalStateException("Assignment value is null or not an ExpressionNode for: ${ctx.text}")
         
-        // Add metadata if we have type information
-        val metadata = if (variableType != null) {
-            mapOf("variableType" to variableType)
-        } else null
+        // Convert type to CanonicalTypes
+        val canonicalType = if (variableType != null) {
+            CanonicalTypes.fromString(variableType)
+        } else {
+            CanonicalTypes.Unknown
+        }
         
-        return AssignNode(target = target, value = value, metadata = metadata)
+        return AssignNode(target = target, value = value, variableType = canonicalType)
     }
 
     override fun visitCallStatement(ctx: AntlrJavaParser.CallStatementContext): CallStatementNode {
@@ -378,11 +380,13 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         
         // Extract array type if available and normalize to lowercase for consistency
         val arrayType = ctx.type()?.text?.replace("[]", "")?.lowercase() // Remove [] from type and normalize
-        val metadata = if (arrayType != null) {
-            mapOf("arrayType" to arrayType)
-        } else null
+        val canonicalArrayType = if (arrayType != null) {
+            CanonicalTypes.fromString(arrayType)
+        } else {
+            CanonicalTypes.Unknown
+        }
         
-        return ListNode(elements = elements, metadata = metadata)
+        return ListNode(elements = elements, arrayType = canonicalArrayType)
     }
 
     // Generic visit method from AbstractParseTreeVisitor.

@@ -68,8 +68,10 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         val targetName = node.target.id // Assuming node.target is of type NameNode
         val valueExpr = generateExpression(node.value)
         
-        // Generate type annotation from metadata
-        val variableType = node.metadata?.get("variableType") as? String
+        // Generate type annotation from explicit field
+        val variableType = if (node.variableType != CanonicalTypes.Unknown) {
+            node.variableType.name.lowercase()
+        } else null
         val typeAnnotation = if (variableType != null) ": $variableType" else ""
         
         // Using 'let' for assignments, could be 'var' or 'const' based on further requirements

@@ -373,11 +373,13 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
             else -> null
         }
         
-        val metadata = if (elementType != null) {
-            mapOf("arrayType" to elementType)  // Changed from "elementType" to "arrayType" for consistency
-        } else null
+        val canonicalType = if (elementType != null) {
+            CanonicalTypes.fromString(elementType)
+        } else {
+            CanonicalTypes.Unknown
+        }
         
-        return ListNode(elements = elements, metadata = metadata)
+        return ListNode(elements = elements, arrayType = canonicalType)
     }
     
     override fun visitTupleLiteral(ctx: AntlrPythonParser.TupleLiteralContext): AstNode {
@@ -398,11 +400,9 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
             }
         }
         
-        val metadata = if (tupleTypes.isNotEmpty()) {
-            mapOf("tupleTypes" to tupleTypes)
-        } else null
+        val canonicalTypes = tupleTypes.map { CanonicalTypes.fromString(it) }
         
-        return TupleNode(elements = elements, metadata = metadata)
+        return TupleNode(elements = elements, tupleTypes = canonicalTypes)
     }
     
     override fun visitParenthesizedExpression(ctx: AntlrPythonParser.ParenthesizedExpressionContext): AstNode {

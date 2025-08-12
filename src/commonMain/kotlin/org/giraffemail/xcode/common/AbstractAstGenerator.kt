@@ -66,8 +66,8 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
                 }
                 is AssignNode -> {
                     // Extract assignment metadata
-                    if (node.metadata?.get("variableType") != null) {
-                        val variableType = node.metadata["variableType"] as String
+                    if (node.variableType != CanonicalTypes.Unknown) {
+                        val variableType = node.variableType.name.lowercase()
                         metadata.add(LanguageMetadata(variableType = variableType))
                     }
                 }
@@ -194,22 +194,30 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
      * Used across multiple generators.
      */
     protected fun extractFunctionMetadata(node: FunctionDefNode): Triple<String?, Map<String, String>, Map<String, Map<String, String>>> {
-        val returnType = node.metadata?.get("returnType") as? String
-        @Suppress("UNCHECKED_CAST")
-        val paramTypes = node.metadata?.get("paramTypes") as? Map<String, String> ?: emptyMap()
+        val returnType = if (node.returnType != CanonicalTypes.Void && node.returnType != CanonicalTypes.Unknown) {
+            node.returnType.name.lowercase()
+        } else null
         
-        // Collect individual parameter metadata
+        val paramTypes = node.paramTypes.mapValues { it.value.name.lowercase() }
+        
+        // Collect individual parameter metadata (currently only type info)
         val individualParamMetadata = node.args.associate { param ->
-            param.id to (param.metadata?.mapValues { it.value.toString() } ?: emptyMap())
+            param.id to if (param.type != CanonicalTypes.Unknown) {
+                mapOf("type" to param.type.name.lowercase())
+            } else {
+                emptyMap()
+            }
         }.filterValues { it.isNotEmpty() }
         
         return Triple(returnType, paramTypes, individualParamMetadata)
     }
 
     protected fun extractClassMetadata(node: ClassDefNode): Pair<String?, List<String>> {
-        val classType = node.metadata?.get("classType") as? String
-        @Suppress("UNCHECKED_CAST")
-        val classMethods = node.metadata?.get("methods") as? List<String> ?: emptyList()
+        val classType = if (node.classType != CanonicalTypes.Any && node.classType != CanonicalTypes.Unknown) {
+            node.classType.name.lowercase()
+        } else null
+        
+        val classMethods = node.methods
         
         return Pair(classType, classMethods)
     }

@@ -111,11 +111,12 @@ object ParserUtils {
             // Extract individual types from the tuple type string
             val typeContent = variableType.substring(1, variableType.length - 1).trim()
             val individualTypes = typeContent.split(",").map { it.trim() }
+            val canonicalTypes = individualTypes.map { CanonicalTypes.fromString(it) }
             
             // Convert ListNode to TupleNode with appropriate metadata
             TupleNode(
                 elements = listNode.elements,
-                metadata = mapOf("tupleTypes" to individualTypes)
+                tupleTypes = canonicalTypes
             )
         } else {
             // Keep as ListNode but preserve any existing metadata
@@ -148,19 +149,12 @@ object ParserUtils {
                 is FunctionDefNode -> {
                     if (functionMetadataIndex < functionMetadata.size) {
                         val metadata = functionMetadata[functionMetadataIndex++]
-                        val metadataMap = mutableMapOf<String, Any>()
-                        if (metadata.returnType != null) {
-                            metadataMap["returnType"] = metadata.returnType
-                        }
-                        if (metadata.paramTypes.isNotEmpty()) {
-                            metadataMap["paramTypes"] = metadata.paramTypes
-                        }
                         
-                        // Restore individual parameter metadata
+                        // Restore individual parameter metadata with types
                         val updatedArgs = node.args.map { param ->
-                            val paramMetadata = metadata.individualParamMetadata[param.id]
-                            if (paramMetadata != null && paramMetadata.isNotEmpty()) {
-                                param.copy(metadata = paramMetadata)
+                            val paramType = metadata.paramTypes[param.id]
+                            if (paramType != null) {
+                                param.copy(type = CanonicalTypes.fromString(paramType))
                             } else {
                                 param
                             }
@@ -174,7 +168,8 @@ object ParserUtils {
                         node.copy(
                             args = updatedArgs,
                             body = updatedBody,
-                            metadata = metadataMap.ifEmpty { null }
+                            returnType = if (metadata.returnType != null) CanonicalTypes.fromString(metadata.returnType) else CanonicalTypes.Void,
+                            paramTypes = metadata.paramTypes.mapValues { CanonicalTypes.fromString(it.value) }
                         )
                     } else {
                         // No function metadata, but still need to process body
@@ -187,13 +182,6 @@ object ParserUtils {
                 is ClassDefNode -> {
                     if (classMetadataIndex < classMetadata.size) {
                         val metadata = classMetadata[classMetadataIndex++]
-                        val metadataMap = mutableMapOf<String, Any>()
-                        if (metadata.classType != null) {
-                            metadataMap["classType"] = metadata.classType
-                        }
-                        if (metadata.classMethods.isNotEmpty()) {
-                            metadataMap["methods"] = metadata.classMethods
-                        }
                         
                         // Process class body recursively
                         val updatedBody = node.body.map { stmt ->
@@ -202,7 +190,8 @@ object ParserUtils {
                         
                         node.copy(
                             body = updatedBody,
-                            metadata = metadataMap.ifEmpty { null }
+                            classType = if (metadata.classType != null) CanonicalTypes.fromString(metadata.classType) else CanonicalTypes.Any,
+                            methods = metadata.classMethods
                         )
                     } else {
                         // No class metadata, but still need to process body
@@ -218,10 +207,6 @@ object ParserUtils {
                     
                     if (assignmentMetadataIndex < assignmentMetadata.size) {
                         val metadata = assignmentMetadata[assignmentMetadataIndex++]
-                        val metadataMap = mutableMapOf<String, Any>()
-                        if (metadata.variableType != null) {
-                            metadataMap["variableType"] = metadata.variableType
-                        }
                         
                         // Check if we need to convert ListNode to TupleNode based on metadata
                         val finalValue = if (processedValue is ListNode && metadata.variableType != null) {
@@ -232,7 +217,7 @@ object ParserUtils {
                         
                         node.copy(
                             value = finalValue,
-                            metadata = metadataMap.ifEmpty { null }
+                            variableType = if (metadata.variableType != null) CanonicalTypes.fromString(metadata.variableType) else CanonicalTypes.Unknown
                         )
                     } else {
                         node.copy(value = processedValue)

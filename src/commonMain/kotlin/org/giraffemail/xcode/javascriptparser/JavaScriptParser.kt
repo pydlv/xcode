@@ -266,11 +266,13 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
             else -> null
         }
         
-        val metadata = if (elementType != null) {
-            mapOf("arrayType" to elementType)  // Changed from "elementType" to "arrayType" for consistency
-        } else null
+        val canonicalType = if (elementType != null) {
+            CanonicalTypes.fromString(elementType)
+        } else {
+            CanonicalTypes.Unknown
+        }
         
-        return ListNode(elements = elements, metadata = metadata)
+        return ListNode(elements = elements, arrayType = canonicalType)
     }
 
     override fun defaultResult(): AstNode {

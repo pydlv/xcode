@@ -32,13 +32,12 @@ class MetadataPreservationTest {
         val functionDef = ast.body[0] as FunctionDefNode
         assertEquals("greet", functionDef.name)
         
-        // Verify metadata contains type information
-        val metadata = functionDef.metadata
-        println("Function metadata: $metadata")
+        // Verify explicit fields contain type information
+        println("Function returnType: ${functionDef.returnType}")
+        println("Function paramTypes: ${functionDef.paramTypes}")
         
-        assertEquals("void", metadata?.get("returnType"))
-        val paramTypes = metadata?.get("paramTypes") as? Map<*, *>
-        assertEquals("string", paramTypes?.get("name"))
+        assertEquals(CanonicalTypes.Void, functionDef.returnType)
+        assertEquals(CanonicalTypes.String, functionDef.paramTypes["name"])
     }
     
     @Test
@@ -49,27 +48,20 @@ class MetadataPreservationTest {
         val ast = TypeScriptParser.parseWithMetadata(tsCode, emptyList()) as ModuleNode
         println("Generated AST: $ast")
 
-        // Check that the assignment has metadata with type information
+        // Check that the assignment has type information
         val assignment = ast.body[0] as AssignNode
         assertEquals("message", assignment.target.id)
         
-        // Verify metadata contains type information
-        val metadata = assignment.metadata
-        println("Assignment metadata: $metadata")
+        // Verify explicit field contains type information
+        println("Assignment variableType: ${assignment.variableType}")
         
-        assertEquals("string", metadata?.get("variableType"))
+        assertEquals(CanonicalTypes.String, assignment.variableType)
     }
 
     @Test
     fun `test TypeScript generation with type annotations from metadata`() {
-        // Create an AST with metadata containing type information
-        val paramMetadata = mapOf("type" to "string")
-        val nameParam = NameNode(id = "name", ctx = Param, metadata = paramMetadata)
-        
-        val functionMetadata = mapOf(
-            "returnType" to "void",
-            "paramTypes" to mapOf("name" to "string")
-        )
+        // Create an AST with explicit type information
+        val nameParam = NameNode(id = "name", ctx = Param, type = CanonicalTypes.String)
         
         val functionAst = FunctionDefNode(
             name = "greet",
@@ -77,7 +69,8 @@ class MetadataPreservationTest {
             body = listOf(
                 PrintNode(expression = ConstantNode("Hello"))
             ),
-            metadata = functionMetadata
+            returnType = CanonicalTypes.Void,
+            paramTypes = mapOf("name" to CanonicalTypes.String)
         )
         
         val moduleAst = ModuleNode(body = listOf(functionAst))
@@ -94,19 +87,15 @@ class MetadataPreservationTest {
 
     @Test
     fun `test JavaScript generation with parts-based metadata`() {
-        // Create an AST with metadata containing type information
-        val functionMetadata = mapOf(
-            "returnType" to "void",
-            "paramTypes" to mapOf("name" to "string")
-        )
-        
+        // Create an AST with explicit type information
         val functionAst = FunctionDefNode(
             name = "greet",
             args = listOf(NameNode(id = "name", ctx = Param)),
             body = listOf(
                 PrintNode(expression = ConstantNode("Hello"))
             ),
-            metadata = functionMetadata
+            returnType = CanonicalTypes.Void,
+            paramTypes = mapOf("name" to CanonicalTypes.String)
         )
         
         val moduleAst = ModuleNode(body = listOf(functionAst))
@@ -146,7 +135,8 @@ class MetadataPreservationTest {
         println("\n1. Parsing TypeScript to AST...")
         val tsAst = TypeScriptParser.parseWithMetadata(originalTsCode, emptyList()) as ModuleNode
         val functionDef = tsAst.body[0] as FunctionDefNode
-        println("Extracted metadata: ${functionDef.metadata}")
+        println("Extracted returnType: ${functionDef.returnType}")
+        println("Extracted paramTypes: ${functionDef.paramTypes}")
         
         // Step 2: Generate JavaScript with metadata parts separately
         println("\n2. Generating JavaScript with parts-based metadata...")
@@ -166,7 +156,8 @@ class MetadataPreservationTest {
         println("\n3. Parsing JavaScript back to AST with metadata part...")
         val jsAst = JavaScriptParser.parseWithMetadata(jsCodeWithMetadata.code, jsCodeWithMetadata.metadata) as ModuleNode
         val jsFunctionDef = jsAst.body[0] as FunctionDefNode
-        println("JavaScript AST metadata: ${jsFunctionDef.metadata}")
+        println("JavaScript AST returnType: ${jsFunctionDef.returnType}")
+        println("JavaScript AST paramTypes: ${jsFunctionDef.paramTypes}")
         
         // Step 4: Generate TypeScript from JavaScript AST (should restore type annotations)
         println("\n4. Generating TypeScript from JavaScript AST...")

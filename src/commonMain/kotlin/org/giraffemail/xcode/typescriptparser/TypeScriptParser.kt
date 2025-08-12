@@ -67,10 +67,12 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
         val params = ctx.parameterList()?.parameter()?.map { paramCtx ->
             val paramName = paramCtx.IDENTIFIER().text
             val paramType = paramCtx.typeAnnotation()?.typeExpression()?.text
-            val metadata = if (paramType != null) {
-                mapOf("type" to paramType)
-            } else null
-            NameNode(id = paramName, ctx = Param, metadata = metadata)
+            val canonicalType = if (paramType != null) {
+                CanonicalTypes.fromString(paramType)
+            } else {
+                CanonicalTypes.Unknown
+            }
+            NameNode(id = paramName, ctx = Param, type = canonicalType)
         } ?: emptyList()
 
         // Handle function body
@@ -78,27 +80,24 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
 
         // Extract return type annotation if present
         val returnType = ctx.typeAnnotation()?.typeExpression()?.text
+        val canonicalReturnType = if (returnType != null) {
+            CanonicalTypes.fromString(returnType)
+        } else {
+            CanonicalTypes.Void
+        }
         
-        val functionMetadata = if (returnType != null || params.any { it.metadata != null }) {
-            val metadata = mutableMapOf<String, Any>()
-            if (returnType != null) {
-                metadata["returnType"] = returnType
-            }
-            val paramTypes = params.mapNotNull { param ->
-                param.metadata?.get("type")?.let { param.id to it }
-            }.toMap()
-            if (paramTypes.isNotEmpty()) {
-                metadata["paramTypes"] = paramTypes
-            }
-            metadata
-        } else null
+        // Extract parameter types
+        val paramTypes = params.associate { param ->
+            param.id to param.type
+        }.filterValues { it != CanonicalTypes.Unknown }
 
         return FunctionDefNode(
             name = functionName,
             args = params,
             body = body,
             decoratorList = emptyList(),
-            metadata = functionMetadata
+            returnType = canonicalReturnType,
+            paramTypes = paramTypes
         )
     }
 
@@ -165,21 +164,25 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
                 // Parse the tuple type string into individual types
                 val typeContent = variableType.substring(1, variableType.length - 1).trim()
                 val individualTypes = typeContent.split(",").map { it.trim() }
-                TupleNode(elements = valueExpr.elements, metadata = mapOf("tupleTypes" to individualTypes))
+                val canonicalTypes = individualTypes.map { CanonicalTypes.fromString(it) }
+                TupleNode(elements = valueExpr.elements, tupleTypes = canonicalTypes)
             }
             variableType != null && variableType.endsWith("[]") && valueExpr is ListNode -> {
-                // This is an array with type information - add type to ListNode metadata
+                // This is an array with type information
                 val elementType = variableType.substring(0, variableType.length - 2)
-                ListNode(elements = valueExpr.elements, metadata = mapOf("arrayType" to elementType))
+                val canonicalElementType = CanonicalTypes.fromString(elementType)
+                ListNode(elements = valueExpr.elements, arrayType = canonicalElementType)
             }
             else -> valueExpr
         }
         
-        val assignmentMetadata = if (variableType != null) {
-            mapOf("variableType" to variableType)
-        } else null
+        val canonicalVariableType = if (variableType != null) {
+            CanonicalTypes.fromString(variableType)
+        } else {
+            CanonicalTypes.Unknown
+        }
 
-        return AssignNode(target = targetNode, value = finalValue, metadata = assignmentMetadata)
+        return AssignNode(target = targetNode, value = finalValue, variableType = canonicalVariableType)
     }
     
     // Helper method to extract type expression including array and tuple types
