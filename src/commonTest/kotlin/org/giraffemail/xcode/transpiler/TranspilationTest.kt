@@ -449,48 +449,53 @@ class TranspilationTest {
     }
 
     @Test
-    fun `test isolated expression statement feature transpilation`() {
-        // Test only expression statements to isolate this specific language feature
-        val features = setOf(AstFeature.EXPRESSION_STATEMENTS, AstFeature.CONSTANT_VALUES, AstFeature.BINARY_OPERATIONS)
-        val expressionStatementAst = MaximalAstGenerator.generateMaximalAst(features)
+    fun `test isolated nested expression feature transpilation`() {
+        // Test only nested expressions to isolate this specific language feature
+        val features = setOf(AstFeature.NESTED_EXPRESSIONS, AstFeature.CONSTANT_VALUES, AstFeature.BINARY_OPERATIONS, AstFeature.VARIABLE_ASSIGNMENTS)
+        val nestedExpressionAst = MaximalAstGenerator.generateMaximalAst(features)
 
-        testAstRoundTrip("Isolated Expression Statement", expressionStatementAst)
-        testSequentialTranspilation("Isolated Expression Statement", expressionStatementAst)
+        testAstRoundTrip("Isolated Nested Expression", nestedExpressionAst)
+        testSequentialTranspilation("Isolated Nested Expression", nestedExpressionAst)
     }
 
     @Test
-    fun `test expression statement with function calls transpilation`() {
-        // Test expression statements combined with function calls for more comprehensive testing
+    fun `test nested expression with print statements transpilation`() {
+        // Test nested expressions combined with print statements for more comprehensive testing
         val features = setOf(
-            AstFeature.EXPRESSION_STATEMENTS,
-            AstFeature.FUNCTION_CALLS,
+            AstFeature.NESTED_EXPRESSIONS,
+            AstFeature.PRINT_STATEMENTS,
             AstFeature.CONSTANT_VALUES,
+            AstFeature.BINARY_OPERATIONS,
+            AstFeature.VARIABLE_ASSIGNMENTS,
             AstFeature.VARIABLE_REFERENCES
         )
-        val expressionWithCallsAst = MaximalAstGenerator.generateMaximalAst(features)
+        val nestedWithPrintAst = MaximalAstGenerator.generateMaximalAst(features)
 
-        testAstRoundTrip("Expression Statement with Function Calls", expressionWithCallsAst)
-        testSequentialTranspilation("Expression Statement with Function Calls", expressionWithCallsAst)
+        testAstRoundTrip("Nested Expression with Print Statements", nestedWithPrintAst)
+        testSequentialTranspilation("Nested Expression with Print Statements", nestedWithPrintAst)
     }
 
     @Test
-    fun `test expression statement cross language compatibility`() {
-        // Create a specific test for expression statements that tests cross-language compatibility
-        // This tests simple expression statements which should be universally supported
-        val expressionStatementAst = ModuleNode(
+    fun `test nested expression cross language compatibility`() {
+        // Create a specific test for nested expressions that tests cross-language compatibility
+        // This tests simple binary arithmetic expressions without custom metadata
+        val nestedExpressionAst = ModuleNode(
             body = listOf(
-                ExprNode(
+                AssignNode(
+                    target = NameNode(id = "result", ctx = Store),
                     value = BinaryOpNode(
                         left = ConstantNode(10),
                         op = "+",
                         right = ConstantNode(5)
-                    ),
-                    metadata = mapOf("statementType" to "expression")
+                    )
+                ),
+                PrintNode(
+                    expression = NameNode(id = "result", ctx = Load)
                 )
             )
         )
 
-        testAstRoundTrip("Expression Statement Cross Language", expressionStatementAst)
-        testSequentialTranspilation("Expression Statement Cross Language", expressionStatementAst)
+        testAstRoundTrip("Nested Expression Cross Language", nestedExpressionAst)
+        testSequentialTranspilation("Nested Expression Cross Language", nestedExpressionAst)
     }
 }

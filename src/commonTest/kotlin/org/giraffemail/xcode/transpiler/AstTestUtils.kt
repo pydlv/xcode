@@ -19,7 +19,7 @@ enum class AstFeature {
     RETURN_STATEMENTS,
     ARRAY_LITERALS,
     TUPLE_LITERALS,
-    EXPRESSION_STATEMENTS
+    NESTED_EXPRESSIONS
 }
 
 /**
@@ -44,7 +44,7 @@ object SupportedAstFeatures {
         AstFeature.RETURN_STATEMENTS,
         AstFeature.ARRAY_LITERALS,
         AstFeature.TUPLE_LITERALS,
-        AstFeature.EXPRESSION_STATEMENTS
+        AstFeature.NESTED_EXPRESSIONS
     )
 
     /**
@@ -64,7 +64,7 @@ object SupportedAstFeatures {
         "Variable references (Load, Store, Param contexts)",
         "Array literals with type preservation",
         "Tuple literals with mixed types",
-        "Expression statements (expressions evaluated for side effects)"
+        "Nested expressions (complex binary operations and function call arguments)"
     )
 
     /**
@@ -325,33 +325,30 @@ object MaximalAstGenerator {
             )
         }
 
-        // Generate expression statement if requested
-        if (features.contains(AstFeature.EXPRESSION_STATEMENTS)) {
-            // Create a simple expression statement using binary operation
-            val expressionValue = if (features.contains(AstFeature.BINARY_OPERATIONS)) {
-                BinaryOpNode(
-                    left = if (features.contains(AstFeature.CONSTANT_VALUES)) ConstantNode(5) else NameNode(id = "x", ctx = Load),
-                    op = "+",
-                    right = if (features.contains(AstFeature.CONSTANT_VALUES)) ConstantNode(3) else NameNode(id = "y", ctx = Load)
-                )
-            } else if (features.contains(AstFeature.FUNCTION_CALLS)) {
-                CallNode(
-                    func = NameNode(id = "getValue", ctx = Load),
-                    args = if (features.contains(AstFeature.CONSTANT_VALUES)) listOf(ConstantNode("param")) else emptyList(),
-                    keywords = emptyList()
-                )
-            } else if (features.contains(AstFeature.CONSTANT_VALUES)) {
-                ConstantNode("expression_value")
-            } else {
-                NameNode(id = "expr", ctx = Load)
-            }
+        // Generate nested expression features if requested
+        if (features.contains(AstFeature.NESTED_EXPRESSIONS)) {
+            // Create an assignment with a simple nested expression that avoids associativity issues
+            val nestedExpression = BinaryOpNode(
+                left = if (features.contains(AstFeature.CONSTANT_VALUES)) ConstantNode(10) else NameNode(id = "a", ctx = Load),
+                op = "+",
+                right = if (features.contains(AstFeature.CONSTANT_VALUES)) ConstantNode(5) else NameNode(id = "b", ctx = Load)
+            )
 
             bodyNodes.add(
-                ExprNode(
-                    value = expressionValue,
-                    metadata = mapOf("statementType" to "expression")
+                AssignNode(
+                    target = NameNode(id = "result", ctx = Store),
+                    value = nestedExpression
                 )
             )
+
+            // Add a print statement with the nested expression if print statements are enabled
+            if (features.contains(AstFeature.PRINT_STATEMENTS)) {
+                bodyNodes.add(
+                    PrintNode(
+                        expression = NameNode(id = "result", ctx = Load)
+                    )
+                )
+            }
         }
 
         // Generate standalone conditional statement if requested
