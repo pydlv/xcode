@@ -18,7 +18,8 @@ enum class AstFeature {
     COMPARISON_OPERATIONS,
     RETURN_STATEMENTS,
     ARRAY_LITERALS,
-    TUPLE_LITERALS
+    TUPLE_LITERALS,
+    NESTED_EXPRESSIONS
 }
 
 /**
@@ -42,7 +43,8 @@ object SupportedAstFeatures {
         AstFeature.COMPARISON_OPERATIONS,
         AstFeature.RETURN_STATEMENTS,
         AstFeature.ARRAY_LITERALS,
-        AstFeature.TUPLE_LITERALS
+        AstFeature.TUPLE_LITERALS,
+        AstFeature.NESTED_EXPRESSIONS
     )
 
     /**
@@ -61,7 +63,8 @@ object SupportedAstFeatures {
         "Constant values (strings, numbers)",
         "Variable references (Load, Store, Param contexts)",
         "Array literals with type preservation",
-        "Tuple literals with mixed types"
+        "Tuple literals with mixed types",
+        "Nested expressions (complex binary operations and function call arguments)"
     )
 
     /**
@@ -320,6 +323,32 @@ object MaximalAstGenerator {
                     )
                 )
             )
+        }
+
+        // Generate nested expression features if requested
+        if (features.contains(AstFeature.NESTED_EXPRESSIONS)) {
+            // Create an assignment with a simple nested expression that avoids associativity issues
+            val nestedExpression = BinaryOpNode(
+                left = if (features.contains(AstFeature.CONSTANT_VALUES)) ConstantNode(10) else NameNode(id = "a", ctx = Load),
+                op = "+",
+                right = if (features.contains(AstFeature.CONSTANT_VALUES)) ConstantNode(5) else NameNode(id = "b", ctx = Load)
+            )
+
+            bodyNodes.add(
+                AssignNode(
+                    target = NameNode(id = "result", ctx = Store),
+                    value = nestedExpression
+                )
+            )
+
+            // Add a print statement with the nested expression if print statements are enabled
+            if (features.contains(AstFeature.PRINT_STATEMENTS)) {
+                bodyNodes.add(
+                    PrintNode(
+                        expression = NameNode(id = "result", ctx = Load)
+                    )
+                )
+            }
         }
 
         // Generate standalone conditional statement if requested
