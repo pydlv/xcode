@@ -227,6 +227,11 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
         return "($elements)"
     }
 
+    open fun visitDictNode(node: DictNode): String {
+        // Default implementation - subclasses should override for language-specific syntax
+        throw NotImplementedError("Dictionary generation not supported by this generator.")
+    }
+
     abstract fun getStatementSeparator(): String
     abstract fun getStatementTerminator(): String
     abstract fun formatStringLiteral(value: String): String
