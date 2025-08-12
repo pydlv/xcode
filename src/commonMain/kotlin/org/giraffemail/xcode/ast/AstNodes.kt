@@ -53,6 +53,7 @@ data class ClassDefNode(
     val body: List<StatementNode>, // Methods and other class members
     val decoratorList: List<ExpressionNode> = emptyList(),
     val classType: CanonicalTypes = CanonicalTypes.Any,
+    val customClassType: String? = null, // For custom class type names like "DataProcessor"
     val methods: List<String> = emptyList() // Method names for metadata
 ) : StatementNode
 
@@ -60,7 +61,8 @@ data class ClassDefNode(
 data class AssignNode(
     val target: NameNode, // Target of assignment (left side)
     val value: ExpressionNode,  // Value being assigned (right side)
-    val variableType: CanonicalTypes = CanonicalTypes.Unknown
+    val variableType: CanonicalTypes = CanonicalTypes.Unknown,
+    val customVariableType: String? = null // For complex types like "[string, number]"
 ) : StatementNode
 
 // Call statement (when a function call is its own statement)

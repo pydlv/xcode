@@ -2,6 +2,90 @@ package org.giraffemail.xcode.transpiler
 
 import org.giraffemail.xcode.ast.*
 
+// --- Wrapper constructors for maximal metadata population in tests ---
+
+/**
+ * Creates an AssignNode with maximal metadata population for testing
+ */
+fun createMaximalAssignNode(
+    targetId: String,
+    value: ExpressionNode,
+    variableType: CanonicalTypes = CanonicalTypes.Unknown,
+    customType: String? = null
+): AssignNode = AssignNode(
+    target = NameNode(id = targetId, ctx = Store),
+    value = value,
+    variableType = variableType,
+    customVariableType = customType
+)
+
+/**
+ * Creates a ClassDefNode with maximal metadata population for testing
+ */
+fun createMaximalClassDefNode(
+    name: String,
+    body: List<StatementNode>,
+    customClassType: String? = null,
+    baseClasses: List<ExpressionNode> = emptyList()
+): ClassDefNode = ClassDefNode(
+    name = name,
+    baseClasses = baseClasses,
+    body = body,
+    decoratorList = emptyList(),
+    classType = CanonicalTypes.Any,
+    customClassType = customClassType ?: name,
+    methods = body.filterIsInstance<FunctionDefNode>().map { it.name }
+)
+
+/**
+ * Creates a FunctionDefNode with maximal metadata population for testing
+ */
+fun createMaximalFunctionDefNode(
+    name: String,
+    args: List<NameNode> = emptyList(),
+    body: List<StatementNode>,
+    returnType: CanonicalTypes = CanonicalTypes.Void
+): FunctionDefNode = FunctionDefNode(
+    name = name,
+    args = args,
+    body = body,
+    decoratorList = emptyList(),
+    returnType = returnType,
+    paramTypes = args.associate { it.id to it.type },
+    individualParamMetadata = args.associate { it.id to mapOf("name" to it.id, "type" to it.type.name) }
+)
+
+/**
+ * Creates a TupleNode with maximal metadata population for testing
+ */
+fun createMaximalTupleNode(
+    elements: List<ExpressionNode>,
+    tupleTypes: List<CanonicalTypes> = emptyList()
+): TupleNode = TupleNode(
+    elements = elements,
+    tupleTypes = if (tupleTypes.isNotEmpty()) tupleTypes else 
+        elements.map { 
+            when (it) {
+                is ConstantNode -> when (it.value) {
+                    is String -> CanonicalTypes.String
+                    is Number -> CanonicalTypes.Number
+                    is Boolean -> CanonicalTypes.Boolean
+                    else -> CanonicalTypes.Unknown
+                }
+                else -> CanonicalTypes.Unknown
+            }
+        }
+)
+
+/**
+ * Creates a NameNode with maximal metadata population for testing
+ */
+fun createMaximalNameNode(
+    id: String,
+    ctx: NameContext,
+    type: CanonicalTypes = CanonicalTypes.Unknown
+): NameNode = NameNode(id = id, ctx = ctx, type = type)
+
 /**
  * Enumeration of supported AST features for selective generation
  */
@@ -269,13 +353,10 @@ object MaximalAstGenerator {
             }
 
             bodyNodes.add(
-                ClassDefNode(
+                createMaximalClassDefNode(
                     name = "DataProcessor",
-                    baseClasses = emptyList(), // No inheritance for simplicity
                     body = classBody,
-                    decoratorList = emptyList(),
-                    classType = CanonicalTypes.Any,
-                    methods = classBody.filterIsInstance<FunctionDefNode>().map { it.name }
+                    customClassType = "DataProcessor"
                 )
             )
         }
@@ -430,26 +511,28 @@ object MaximalAstGenerator {
                     // Insert before the return statement, or at the end if no return
                     newBody.add(
                         insertIndex,
-                        AssignNode(
-                            target = NameNode(id = "tupleData", ctx = Store),
-                            value = TupleNode(
+                        createMaximalAssignNode(
+                            targetId = "tupleData",
+                            value = createMaximalTupleNode(
                                 elements = tupleElements,
                                 tupleTypes = listOf(CanonicalTypes.String, CanonicalTypes.Number)
                             ),
-                            variableType = CanonicalTypes.Any
+                            variableType = CanonicalTypes.Any,
+                            customType = "[string, number]"
                         )
                     )
                     bodyNodes[bodyNodes.indexOf(function)] = function.copy(body = newBody)
                 }
             } else if (features.contains(AstFeature.VARIABLE_ASSIGNMENTS)) {
                 bodyNodes.add(
-                    AssignNode(
-                        target = NameNode(id = "tupleData", ctx = Store),
-                        value = TupleNode(
+                    createMaximalAssignNode(
+                        targetId = "tupleData",
+                        value = createMaximalTupleNode(
                             elements = tupleElements,
                             tupleTypes = listOf(CanonicalTypes.String, CanonicalTypes.Number)
                         ),
-                        variableType = CanonicalTypes.Any
+                        variableType = CanonicalTypes.Any,
+                        customType = "[string, number]"
                     )
                 )
             }

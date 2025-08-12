@@ -71,10 +71,11 @@ class PartsBasedMetadataTest {
                 AssignNode(
                     target = NameNode(id = "message", ctx = Store),
                     value = ConstantNode("Hello"),
-                    metadata = mapOf("variableType" to "string")
+                    variableType = CanonicalTypes.String
                 )
             ),
-            metadata = functionMetadata
+            returnType = CanonicalTypes.Void,
+            paramTypes = mapOf("name" to CanonicalTypes.String)
         )
         
         val moduleAst = ModuleNode(body = listOf(functionAst))
@@ -131,9 +132,8 @@ class PartsBasedMetadataTest {
         
         // Verify metadata was injected from part
         assertEquals("greet", functionDef.name)
-        assertEquals("void", functionDef.metadata?.get("returnType"))
-        val paramTypes = functionDef.metadata?.get("paramTypes") as? Map<*, *>
-        assertEquals("String", paramTypes?.get("name"))
+        assertEquals(CanonicalTypes.Void, functionDef.returnType)
+        assertEquals(CanonicalTypes.String, functionDef.paramTypes["name"])
     }
 
     @Test
@@ -147,8 +147,8 @@ class PartsBasedMetadataTest {
         val functionAst = FunctionDefNode(
             name = "add",
             args = listOf(
-                NameNode(id = "x", ctx = Param, metadata = mapOf("type" to "number")),
-                NameNode(id = "y", ctx = Param, metadata = mapOf("type" to "number"))
+                NameNode(id = "x", ctx = Param, type = CanonicalTypes.Number),
+                NameNode(id = "y", ctx = Param, type = CanonicalTypes.Number)
             ),
             body = listOf(
                 AssignNode(
@@ -158,10 +158,11 @@ class PartsBasedMetadataTest {
                         op = "+",
                         right = NameNode(id = "y", ctx = Load)
                     ),
-                    metadata = mapOf("variableType" to "number")
+                    variableType = CanonicalTypes.Number
                 )
             ),
-            metadata = functionMetadata
+            returnType = CanonicalTypes.Number,
+            paramTypes = mapOf("x" to CanonicalTypes.Number, "y" to CanonicalTypes.Number)
         )
         
         val moduleAst = ModuleNode(body = listOf(functionAst))
@@ -198,7 +199,8 @@ class PartsBasedMetadataTest {
                 name = "greet", // Changed from "log" to "greet" to avoid parsing issues
                 args = listOf(NameNode(id = "message", ctx = Param)),
                 body = listOf(PrintNode(expression = NameNode(id = "message", ctx = Load))),
-                metadata = functionMetadata
+                returnType = CanonicalTypes.Void,
+                paramTypes = mapOf("message" to CanonicalTypes.String)
             )
         ))
         
@@ -217,9 +219,8 @@ class PartsBasedMetadataTest {
         
         // Verify metadata was preserved
         assertEquals("greet", jsFunctionDef.name)
-        assertEquals("void", jsFunctionDef.metadata?.get("returnType"))
-        val paramTypes = jsFunctionDef.metadata?.get("paramTypes") as? Map<*, *>
-        assertEquals("string", paramTypes?.get("message"))
+        assertEquals(CanonicalTypes.Void, jsFunctionDef.returnType)
+        assertEquals(CanonicalTypes.String, jsFunctionDef.paramTypes["message"])
         
         // Generate Python with parts-based metadata
         val pythonGenerator = PythonGenerator()
@@ -256,11 +257,11 @@ class PartsBasedMetadataTest {
         
         // Verify metadata was NOT extracted from comments (since we removed that functionality)
         assertEquals("greet", functionDef.name)
-        assertEquals(null, functionDef.metadata?.get("returnType"))
+        assertEquals(CanonicalTypes.Void, functionDef.returnType)
         
         // Verify assignment has no metadata from comments
         val assignment = functionDef.body[0] as AssignNode
-        assertEquals(null, assignment.metadata?.get("variableType"))
+        assertEquals(CanonicalTypes.Unknown, assignment.variableType)
         
         println("✓ Comment-based metadata is no longer supported (expected behavior)")
     }

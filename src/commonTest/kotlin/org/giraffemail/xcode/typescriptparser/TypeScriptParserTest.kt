@@ -111,14 +111,13 @@ class TypeScriptParserTest {
             body = listOf(
                 FunctionDefNode(
                     name = "greet",
-                    args = listOf(NameNode(id = "name", ctx = Param, metadata = mapOf("type" to "string"))),
+                    args = listOf(NameNode(id = "name", ctx = Param, type = CanonicalTypes.String)),
                     body = listOf(
                         PrintNode(expression = ConstantNode(value = "Hello"))
                     ),
                     decoratorList = emptyList(),
-                    metadata = mapOf(
-                        "paramTypes" to mapOf("name" to "string")
-                    )
+                    returnType = CanonicalTypes.Void,
+                    paramTypes = mapOf("name" to CanonicalTypes.String)
                 )
             )
         )
@@ -140,7 +139,7 @@ class TypeScriptParserTest {
                 AssignNode(
                     target = NameNode(id = "x", ctx = Store),
                     value = ConstantNode(value = 42),
-                    metadata = mapOf("variableType" to "number")
+                    variableType = CanonicalTypes.Number
                 )
             )
         )

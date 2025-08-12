@@ -84,15 +84,18 @@ class JavaGenerator : AbstractAstGenerator() {
         val valueExpr = generateExpression(node.value)
         
         // Check if we have type information from explicit field
-        val variableType = if (node.variableType != CanonicalTypes.Unknown) {
-            node.variableType.name.lowercase()
-        } else null
+        val variableType = when {
+            node.customVariableType != null -> node.customVariableType
+            node.variableType != CanonicalTypes.Unknown -> node.variableType.name.lowercase()
+            else -> null
+        }
         
         return if (variableType != null) {
             // Generate typed declaration with proper spacing
             val javaType = when {
-                // Check if it's a tuple type (would be CanonicalTypes.Any for tuples)
-                node.variableType == CanonicalTypes.Any -> "Object[]"
+                // Check if it's a tuple type by examining the value node or custom type
+                node.value is TupleNode || (variableType.startsWith("[") && variableType.contains(",")) -> "Object[]"
+                variableType.startsWith("[") && variableType.endsWith("]") -> "Object[]"
                 else -> mapTypeToJava(variableType)
             }
             "$javaType $targetName = $valueExpr${getStatementTerminator()}"
