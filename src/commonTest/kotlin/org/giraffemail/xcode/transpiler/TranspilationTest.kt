@@ -447,4 +447,18 @@ class TranspilationTest {
         testAstRoundTrip("Array and Tuple Literals", arrayTupleAst)
         testSequentialTranspilation("Array and Tuple Literals", arrayTupleAst)
     }
+
+    @Test
+    fun `test dictionary literals transpilation`() {
+        // Test dictionary literals to verify cross-language support
+        val features = setOf(
+            AstFeature.DICTIONARY_LITERALS,
+            AstFeature.VARIABLE_ASSIGNMENTS,
+            AstFeature.CONSTANT_VALUES
+        )
+        val dictionaryAst = MaximalAstGenerator.generateMaximalAst(features)
+
+        testAstRoundTrip("Dictionary Literals", dictionaryAst)
+        testSequentialTranspilation("Dictionary Literals", dictionaryAst)
+    }
 }
