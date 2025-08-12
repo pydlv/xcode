@@ -110,6 +110,12 @@ data class TupleNode(
     override val metadata: Map<String, Any>? = null  // Can store tuple type info like ["string", "number"]
 ) : ExpressionNode
 
+data class DictNode(
+    val keys: List<ExpressionNode>,
+    val values: List<ExpressionNode>,
+    override val metadata: Map<String, Any>? = null
+) : ExpressionNode
+
 // Node for unhandled or unknown parts of the AST, can be AstNode, StatementNode, or ExpressionNode
 data class UnknownNode(val description: String, override val metadata: Map<String, Any>? = null) : AstNode, StatementNode, ExpressionNode
 
