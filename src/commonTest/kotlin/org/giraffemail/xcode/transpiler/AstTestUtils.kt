@@ -18,7 +18,8 @@ enum class AstFeature {
     COMPARISON_OPERATIONS,
     RETURN_STATEMENTS,
     ARRAY_LITERALS,
-    TUPLE_LITERALS
+    TUPLE_LITERALS,
+    DICTIONARY_LITERALS
 }
 
 /**
@@ -42,7 +43,8 @@ object SupportedAstFeatures {
         AstFeature.COMPARISON_OPERATIONS,
         AstFeature.RETURN_STATEMENTS,
         AstFeature.ARRAY_LITERALS,
-        AstFeature.TUPLE_LITERALS
+        AstFeature.TUPLE_LITERALS,
+        AstFeature.DICTIONARY_LITERALS
     )
 
     /**
@@ -61,7 +63,8 @@ object SupportedAstFeatures {
         "Constant values (strings, numbers)",
         "Variable references (Load, Store, Param contexts)",
         "Array literals with type preservation",
-        "Tuple literals with mixed types"
+        "Tuple literals with mixed types",
+        "Dictionary literals with mixed-type keys and values"
     )
 
     /**
@@ -554,6 +557,35 @@ object MaximalAstGenerator {
                     metadata = mapOf(
                         "returnType" to "number",
                         "paramTypes" to mapOf("a" to "number", "b" to "number")
+                    )
+                )
+            )
+        )
+    }
+
+    /**
+     * Generates a dictionary literal with mixed-type keys and values
+     */
+    fun generateDictionaryLiteral(): ModuleNode {
+        return ModuleNode(
+            body = listOf(
+                AssignNode(
+                    target = NameNode(id = "my_dict", ctx = Store, metadata = mapOf("type" to "dict")),
+                    value = DictNode(
+                        keys = listOf(
+                            ConstantNode(value = "name", type = "string"),
+                            ConstantNode(value = 123, type = "number"),
+                            ConstantNode(value = true, type = "boolean")
+                        ),
+                        values = listOf(
+                            ConstantNode(value = "John Doe", type = "string"),
+                            ConstantNode(value = 456, type = "number"),
+                            ConstantNode(value = false, type = "boolean")
+                        ),
+                        metadata = mapOf(
+                            "keyTypes" to listOf("string", "number", "boolean"),
+                            "valueTypes" to listOf("string", "number", "boolean")
+                        )
                     )
                 )
             )
