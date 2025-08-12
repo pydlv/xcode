@@ -1,3 +1,4 @@
+- When building project, use the linux-specific build task to speed up development. Avoid `./gradlew build` which would build for all platforms.
 - If you want to quickly run tests, then use the Gradle `nativeLinuxTest` task.
 - Before checking in code, run Qodana code quality analysis using the `.github/run-qodana-scan.sh` script to address any code quality issues.
 - Update relevant project documentation after completing a PR. 
