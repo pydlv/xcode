@@ -9,9 +9,13 @@ This document outlines the cross-language transpilation features supported by th
 | 4-Language Matrix | Core Transpilation | Support for all language pairs between Java, JavaScript, Python, and TypeScript (Round-trip transpilation through all language combinations (12 total pairs)) | [TranspilationTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/transpiler/TranspilationTest.kt#L54-L135) |
 | AST Structure Preservation | Core Transpilation | Maintains AST integrity through transpilation chains (Verifies that original AST equals final AST after round-trip transpilation) | [TranspilationTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/transpiler/TranspilationTest.kt#L67-L91) |
 | Multi-Step Transpilation Chains | Core Transpilation | Support for transpiling through multiple languages sequentially (Tests transpilation chains that visit every language once) | [TranspilationTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/transpiler/TranspilationTest.kt#L104-L140) |
-| Separate Metadata Storage | Metadata Preservation System | Metadata stored separately from generated code (Kotlin object-based metadata storage, no serialization required) | [PartsBasedMetadataTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/metadata/PartsBasedMetadataTest.kt#L18-L44) |
+| CanonicalTypes System | Core Type System | Unified type enumeration for standardized cross-language type handling (String, Number, Boolean, Void, Any, Unknown with fromString conversion) | [CanonicalTypesTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/ast/CanonicalTypesTest.kt#L11-L19) |
+| TypeDefinition Complex Types | Core Type System | Enhanced type system supporting arrays, tuples, and custom types (TypeDefinition sealed class with Simple, Tuple, Array, Custom variants) | [CanonicalTypesTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/ast/CanonicalTypesTest.kt#L72-L97) |
+| List and Array Support | Core Data Structures | Native support for list/array data structures with type information (ListNode with explicit type information for homogeneous collections) | [CanonicalTypesTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/ast/CanonicalTypesTest.kt#L59-L71) |
+| Tuple Data Structures | Core Data Structures | Support for tuple types with heterogeneous element types (TupleNode with TypeDefinition.Tuple for multi-type collections) | [CanonicalTypesTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/ast/CanonicalTypesTest.kt#L72-L97) |
+| Native Metadata Storage | Metadata Preservation System | Direct Kotlin object-based metadata storage without serialization (FunctionMetadata, VariableMetadata, ClassMetadata objects stored natively) | [PartsBasedMetadataTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/metadata/PartsBasedMetadataTest.kt#L18-L44) |
 | Cross-Language Type Preservation | Metadata Preservation System | Maintains type information when transpiling between typed and untyped languages (Preserves TypeScript type annotations through JavaScript transpilation) | [MetadataPreservationTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/transpiler/MetadataPreservationTest.kt#L141-L206) |
-| Object-Based Metadata Management | Metadata Preservation System | Direct object storage without string serialization (LanguageMetadata objects with returnType, paramTypes, variableType fields) | [MetadataPreservationTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/transpiler/MetadataPreservationTest.kt#L175-L206) |
+| Enhanced AST Nodes | Metadata Preservation System | AST nodes with explicit type information fields (AssignNode, FunctionDefNode, ClassDefNode with typeInfo, returnType, paramTypes) | [CanonicalTypesTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/ast/CanonicalTypesTest.kt#L21-L29) |
 | JavaScript Generation | Language-Specific Generation | JavaScript code generation with metadata preservation (Generates JavaScript code while preserving type metadata separately) | [PartsBasedMetadataTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/metadata/PartsBasedMetadataTest.kt#L61-L102) |
 | Python Generation | Language-Specific Generation | Python code generation with metadata preservation (Generates Python code while maintaining type information from TypeScript) | [PartsBasedMetadataTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/metadata/PartsBasedMetadataTest.kt#L200-L226) |
 | Metadata-Aware Parsing | Language-Specific Generation | Parsing with external metadata injection (Java parser that accepts external metadata to restore type information) | [PartsBasedMetadataTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/metadata/PartsBasedMetadataTest.kt#L104-L123) |
@@ -45,12 +49,14 @@ This document outlines the cross-language transpilation features supported by th
 | Feature Category | Implemented | Planned | Total |
 |-----------------|-------------|---------|-------|
 | Core Transpilation | 3 | 4 | 7 |
-| Metadata System | 4 | 4 | 8 |
+| Core Type System | 2 | 0 | 2 |
+| Core Data Structures | 2 | 0 | 2 |
+| Metadata System | 5 | 4 | 9 |
 | Language Generation | 3 | 0 | 3 |
 | CLI Integration | 2 | 0 | 2 |
 | Error Handling | 0 | 4 | 4 |
 | Integration | 0 | 4 | 4 |
-| **Total** | **12** | **16** | **28** |
+| **Total** | **17** | **16** | **33** |
 
 ## 🎯 Supported Language Combinations
 

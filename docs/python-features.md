@@ -11,6 +11,8 @@ This document outlines the Python language features currently supported by the X
 | Function Invocation | Core Language Constructs | Support for calling functions (Function calls with multiple integer arguments) | [PythonParserTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/pythonparser/PythonParserTest.kt#L111-L134) |
 | String Literals | Literals and Constants | Support for string constants (Single-quoted string literals) | [PythonParserTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/pythonparser/PythonParserTest.kt#L49-L50) |
 | Numeric Constants | Literals and Constants | Support for integer literals (Integer literal parsing and handling) | [PythonParserTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/pythonparser/PythonParserTest.kt#L119-L121) |
+| List Support | Data Types and Structures | Native support for list data structures with type preservation (ListNode with CanonicalTypes for homogeneous collections) | [CanonicalTypesTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/ast/CanonicalTypesTest.kt#L59-L71) |
+| Tuple Support | Data Types and Structures | Native support for tuple types with mixed element types (TupleNode with TypeDefinition.Tuple for heterogeneous collections) | [CanonicalTypesTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/ast/CanonicalTypesTest.kt#L72-L97) |
 | Empty Code Handling | Core Language Constructs | Support for parsing empty Python files (Empty module parsing with minimal AST generation) | [PythonParserTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/pythonparser/PythonParserTest.kt#L28-L39) |
 | Python Indentation | Language-Specific Features | Proper handling of Python's indentation-based syntax (Python-specific indentation processing) | [PythonIndentationHandlerTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/pythonparser/PythonIndentationHandlerTest.kt) |
 | Python Code Generation | Code Generation | Ability to generate Python code from AST (Converting AST back to Python source code) | [PythonGeneratorTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/pythonparser/PythonGeneratorTest.kt) |
@@ -50,11 +52,11 @@ This document outlines the Python language features currently supported by the X
 | Feature Category | Implemented | Planned | Total |
 |-----------------|-------------|---------|-------|
 | Core Constructs | 7 | 3 | 10 |
-| Data Types | 2 | 5 | 7 |
+| Data Types | 4 | 5 | 9 |
 | Control Flow | 0 | 4 | 4 |
 | Advanced | 2 | 4 | 6 |
 | Python-Specific | 1 | 4 | 5 |
-| **Total** | **12** | **20** | **32** |
+| **Total** | **14** | **20** | **34** |
 
 ## 🔗 Related Documentation
 
