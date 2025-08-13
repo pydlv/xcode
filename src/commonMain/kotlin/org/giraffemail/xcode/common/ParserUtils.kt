@@ -138,6 +138,9 @@ object ParserUtils {
         var assignmentMetadataIndex = 0
         var classMetadataIndex = 0
         
+        // Variable type tracking for NameNode resolution
+        val variableTypes = mutableMapOf<String, TypeInfo>()
+        
         fun injectIntoNode(node: AstNode): AstNode {
             return when (node) {
                 is ModuleNode -> {
@@ -149,6 +152,11 @@ object ParserUtils {
                 is FunctionDefNode -> {
                     if (functionMetadataIndex < functionMetadata.size) {
                         val metadata = functionMetadata[functionMetadataIndex++]
+                        
+                        // Track parameter types in variable table
+                        metadata.paramTypes.forEach { (paramName, paramType) ->
+                            variableTypes[paramName] = CanonicalTypes.fromString(paramType)
+                        }
                         
                         // Restore individual parameter metadata with types
                         val updatedArgs = node.args.map { param ->
@@ -215,21 +223,69 @@ object ParserUtils {
                             processedValue
                         }
                         
+                        val typeInfo = if (metadata.variableType != null) {
+                            // Use unified TypeInfo.fromString for all type formats
+                            TypeInfo.fromString(metadata.variableType)
+                        } else TypeDefinition.Unknown
+                        
+                        // Track the variable type for future references
+                        if (node.target is NameNode) {
+                            variableTypes[node.target.id] = typeInfo
+                        }
+                        
                         node.copy(
                             value = finalValue,
-                            typeInfo = if (metadata.variableType != null) {
-                                // Use TypeDefinition.fromString for complex types like [string, number] or string[]
-                                // Use CanonicalTypes.fromString for simple types like string, number, etc.
-                                if (metadata.variableType.startsWith("[") || metadata.variableType.endsWith("[]")) {
-                                    TypeDefinition.fromString(metadata.variableType)
-                                } else {
-                                    CanonicalTypes.fromString(metadata.variableType)
-                                }
-                            } else CanonicalTypes.Unknown
+                            typeInfo = typeInfo
                         )
                     } else {
                         node.copy(value = processedValue)
                     }
+                }
+                is NameNode -> {
+                    // For variable references (Load context), try to resolve type from variable table
+                    if (node.ctx == Load && variableTypes.containsKey(node.id)) {
+                        node.copy(typeInfo = variableTypes[node.id]!!)
+                    } else {
+                        node
+                    }
+                }
+                is PrintNode -> {
+                    // Process the expression recursively
+                    val processedExpression = injectIntoNode(node.expression) as ExpressionNode
+                    node.copy(expression = processedExpression)
+                }
+                is CallNode -> {
+                    // Process function and arguments recursively
+                    val processedFunc = injectIntoNode(node.func) as ExpressionNode
+                    val processedArgs = node.args.map { injectIntoNode(it) as ExpressionNode }
+                    node.copy(func = processedFunc, args = processedArgs)
+                }
+                is BinaryOpNode -> {
+                    // Process operands recursively
+                    val processedLeft = injectIntoNode(node.left) as ExpressionNode
+                    val processedRight = injectIntoNode(node.right) as ExpressionNode
+                    node.copy(left = processedLeft, right = processedRight)
+                }
+                is CompareNode -> {
+                    // Process operands recursively
+                    val processedLeft = injectIntoNode(node.left) as ExpressionNode
+                    val processedRight = injectIntoNode(node.right) as ExpressionNode
+                    node.copy(left = processedLeft, right = processedRight)
+                }
+                is ListNode -> {
+                    // Process elements recursively
+                    val processedElements = node.elements.map { injectIntoNode(it) as ExpressionNode }
+                    node.copy(elements = processedElements)
+                }
+                is TupleNode -> {
+                    // Process elements recursively
+                    val processedElements = node.elements.map { injectIntoNode(it) as ExpressionNode }
+                    node.copy(elements = processedElements)
+                }
+                is ReturnNode -> {
+                    // Process return value recursively if present
+                    val processedValue = node.value?.let { injectIntoNode(it) as ExpressionNode }
+                    node.copy(value = processedValue)
                 }
                 else -> node
             }

@@ -1,7 +1,36 @@
 package org.giraffemail.xcode.ast
 
 // --- Unified Type System ---
-sealed interface TypeInfo
+sealed interface TypeInfo {
+    companion object {
+        /**
+         * Unified type parsing that automatically determines whether to return
+         * CanonicalTypes for simple types or TypeDefinition for complex types.
+         * This removes the need for hardcoded pattern matching in callers.
+         */
+        fun fromString(typeString: String): TypeInfo {
+            return when {
+                // Complex types that require TypeDefinition
+                typeString.startsWith("[") && typeString.endsWith("]") && typeString.contains(",") -> {
+                    TypeDefinition.fromString(typeString)
+                }
+                typeString.endsWith("[]") -> {
+                    TypeDefinition.fromString(typeString)
+                }
+                else -> {
+                    // Try CanonicalTypes first for simple types
+                    val canonicalType = CanonicalTypes.fromString(typeString)
+                    if (canonicalType != CanonicalTypes.Unknown) {
+                        canonicalType
+                    } else {
+                        // Custom/complex type - use TypeDefinition
+                        TypeDefinition.fromString(typeString)
+                    }
+                }
+            }
+        }
+    }
+}
 
 // --- Canonical Types for standardized metadata ---
 enum class CanonicalTypes : TypeInfo {
