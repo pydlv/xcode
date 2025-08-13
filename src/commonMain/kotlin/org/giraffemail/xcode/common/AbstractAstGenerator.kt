@@ -300,7 +300,7 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
     protected fun extractFunctionMetadata(node: FunctionDefNode): Triple<String?, Map<String, String>, Map<String, Map<String, String>>> {
         val returnType = when (val returnTypeInfo = node.returnType) {
             is CanonicalTypes -> {
-                if (returnTypeInfo != CanonicalTypes.Void && returnTypeInfo != CanonicalTypes.Unknown) {
+                if (returnTypeInfo != CanonicalTypes.Unknown) {
                     returnTypeInfo.name.lowercase()
                 } else null
             }
