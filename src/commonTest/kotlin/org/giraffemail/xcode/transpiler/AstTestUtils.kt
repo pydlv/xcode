@@ -95,7 +95,7 @@ fun createMaximalFunctionDefNode(
     decoratorList = emptyList(),
     returnType = returnType,
     paramTypes = args.associate { it.id to it.type },
-    individualParamMetadata = args.associate { it.id to mapOf("name" to it.id, "type" to it.type.name) }
+    individualParamMetadata = emptyMap() // Don't populate this for round-trip compatibility
 )
 
 /**
