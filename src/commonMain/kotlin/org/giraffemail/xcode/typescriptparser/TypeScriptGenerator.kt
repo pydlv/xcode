@@ -29,7 +29,7 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         val params = node.args.joinToString(", ") { param ->
             val paramType = when (val typeInfo = param.typeInfo) {
                 is CanonicalTypes -> if (typeInfo != CanonicalTypes.Unknown) typeInfo.name.lowercase() else null
-                is TypeDefinition -> typeInfo.toString()
+                is TypeDefinition -> typeInfoToTypeScriptSyntax(typeInfo)
             }
             if (paramType != null) {
                 "${param.id}: $paramType"
@@ -41,7 +41,7 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         // Generate return type annotation from native metadata
         val returnTypeAnnotation = when (val returnType = node.returnType) {
             is CanonicalTypes -> if (returnType != CanonicalTypes.Unknown) ": ${returnType.name.lowercase()}" else ""
-            is TypeDefinition -> ": $returnType"
+            is TypeDefinition -> ": ${typeInfoToTypeScriptSyntax(returnType)}"
         }
         
         // Indent statements within the function body
@@ -76,7 +76,7 @@ class TypeScriptGenerator : AbstractAstGenerator() {
             is CanonicalTypes -> {
                 if (typeInfo != CanonicalTypes.Unknown) typeInfo.name.lowercase() else null
             }
-            is TypeDefinition -> typeInfo.toString()
+            is TypeDefinition -> typeInfoToTypeScriptSyntax(typeInfo)
         }
         val typeAnnotation = if (variableType != null) ": $variableType" else ""
         
@@ -138,6 +138,26 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         // Note: Type annotations would be in variable declaration, not the literal itself
         val elements = node.elements.joinToString(", ") { generateExpression(it) }
         return "[$elements]"
+    }
+    
+    /**
+     * Converts TypeDefinition objects to proper TypeScript type syntax
+     */
+    private fun typeInfoToTypeScriptSyntax(typeInfo: TypeDefinition): String {
+        return when (typeInfo) {
+            is TypeDefinition.Tuple -> {
+                val elementTypes = typeInfo.elementTypes.joinToString(", ") { elementType ->
+                    when (elementType) {
+                        is CanonicalTypes -> elementType.name.lowercase()
+                        is TypeDefinition -> typeInfoToTypeScriptSyntax(elementType)
+                    }
+                }
+                "[$elementTypes]"
+            }
+            is TypeDefinition.Custom -> typeInfo.typeName
+            // Add more cases as needed for other TypeDefinition types
+            else -> typeInfo.toString() // fallback for unknown types
+        }
     }
 
     // visitNameNode, visitBinaryOpNode, visitUnknownNode, visitExprNode, visitModuleNode

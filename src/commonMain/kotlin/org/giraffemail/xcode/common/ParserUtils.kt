@@ -75,11 +75,97 @@ object ParserUtils {
         // Variable type tracking for NameNode resolution
         val variableTypes = mutableMapOf<String, TypeInfo>()
         
-        // Build a map of variable names to their types from metadata
-        val variableTypeMap = mutableMapOf<String, TypeInfo>()
+        // Separate assignment metadata from variable reference metadata
+        val assignmentMetadataList = mutableListOf<VariableMetadata>()
+        val variableReferenceMap = mutableMapOf<String, TypeInfo>()
+        
+        // Build maps from metadata - distinguish between assignments and references
         assignmentMetadata.forEach { metadata ->
             if (metadata.variableName != null) {
-                variableTypeMap[metadata.variableName] = metadata.variableType
+                // This could be either assignment or reference metadata
+                // We'll determine during traversal which ones are actually assignments
+                variableReferenceMap[metadata.variableName] = metadata.variableType
+            }
+        }
+        
+        // First pass: collect assignment nodes to build assignment metadata list
+        fun collectAssignmentNodes(node: AstNode): List<String> {
+            val assignments = mutableListOf<String>()
+            when (node) {
+                is ModuleNode -> {
+                    node.body.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                }
+                is FunctionDefNode -> {
+                    node.body.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                }
+                is ClassDefNode -> {
+                    node.body.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                }
+                is AssignNode -> {
+                    if (node.target is NameNode) {
+                        assignments.add(node.target.id)
+                    }
+                    assignments.addAll(collectAssignmentNodes(node.value))
+                }
+                is IfNode -> {
+                    assignments.addAll(collectAssignmentNodes(node.test))
+                    node.body.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                    node.orelse.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                }
+                is PrintNode -> {
+                    assignments.addAll(collectAssignmentNodes(node.expression))
+                }
+                is ReturnNode -> {
+                    node.value?.let { assignments.addAll(collectAssignmentNodes(it)) }
+                }
+                is CallStatementNode -> {
+                    assignments.addAll(collectAssignmentNodes(node.call))
+                }
+                is BinaryOpNode -> {
+                    assignments.addAll(collectAssignmentNodes(node.left))
+                    assignments.addAll(collectAssignmentNodes(node.right))
+                }
+                is CompareNode -> {
+                    assignments.addAll(collectAssignmentNodes(node.left))
+                    assignments.addAll(collectAssignmentNodes(node.right))
+                }
+                is CallNode -> {
+                    assignments.addAll(collectAssignmentNodes(node.func))
+                    node.args.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                }
+                is ListNode -> {
+                    node.elements.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                }
+                is TupleNode -> {
+                    node.elements.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                }
+                // For these node types, we don't need to traverse further for assignments
+                is ConstantNode, is NameNode, is MemberExpressionNode, is UnknownNode, is ExprNode -> {
+                    // No assignments in these node types
+                }
+            }
+            return assignments
+        }
+        
+        // Collect assignment variable names in traversal order
+        val assignmentVariableNames = collectAssignmentNodes(ast)
+        
+        // Build assignment metadata list in the same order
+        var unusedMetadataIndex = 0
+        assignmentVariableNames.forEach { varName ->
+            val metadata = assignmentMetadata.find { it.variableName == varName }
+            if (metadata != null) {
+                assignmentMetadataList.add(metadata)
+            } else {
+                // If no metadata with matching variable name, use the next unused metadata
+                // This handles cases where VariableMetadata doesn't have a variableName
+                while (unusedMetadataIndex < assignmentMetadata.size) {
+                    val unusedMetadata = assignmentMetadata[unusedMetadataIndex++]
+                    if (unusedMetadata.variableName == null) {
+                        assignmentMetadataList.add(unusedMetadata)
+                        break
+                    }
+                }
             }
         }
         
@@ -155,8 +241,8 @@ object ParserUtils {
                 is AssignNode -> {
                     val processedValue = injectIntoNode(node.value) as ExpressionNode
                     
-                    if (assignmentMetadataIndex < assignmentMetadata.size) {
-                        val metadata = assignmentMetadata[assignmentMetadataIndex++]
+                    if (assignmentMetadataIndex < assignmentMetadataList.size) {
+                        val metadata = assignmentMetadataList[assignmentMetadataIndex++]
                         
                         // Convert ListNode to TupleNode if needed based on native TypeInfo
                         val finalValue = if (processedValue is ListNode && metadata.variableType is TypeDefinition.Tuple) {
@@ -179,9 +265,9 @@ object ParserUtils {
                     }
                 }
                 is NameNode -> {
-                    // For variable references (Load context), try to resolve type from variable table or metadata map
+                    // For variable references (Load context), try to resolve type from variable table or reference map
                     if (node.ctx == Load) {
-                        val typeInfo = variableTypes[node.id] ?: variableTypeMap[node.id]
+                        val typeInfo = variableTypes[node.id] ?: variableReferenceMap[node.id]
                         if (typeInfo != null) {
                             node.copy(typeInfo = typeInfo)
                         } else {
