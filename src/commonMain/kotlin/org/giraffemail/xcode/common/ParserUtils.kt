@@ -73,6 +73,14 @@ object ParserUtils {
         // Variable type tracking for NameNode resolution
         val variableTypes = mutableMapOf<String, TypeInfo>()
         
+        // Build a map of variable names to their types from metadata
+        val variableTypeMap = mutableMapOf<String, TypeInfo>()
+        assignmentMetadata.forEach { metadata ->
+            if (metadata.variableName != null) {
+                variableTypeMap[metadata.variableName] = metadata.variableType
+            }
+        }
+        
         fun injectIntoNode(node: AstNode): AstNode {
             return when (node) {
                 is ModuleNode -> {
@@ -169,9 +177,14 @@ object ParserUtils {
                     }
                 }
                 is NameNode -> {
-                    // For variable references (Load context), try to resolve type from variable table
-                    if (node.ctx == Load && variableTypes.containsKey(node.id)) {
-                        node.copy(typeInfo = variableTypes[node.id]!!)
+                    // For variable references (Load context), try to resolve type from variable table or metadata map
+                    if (node.ctx == Load) {
+                        val typeInfo = variableTypes[node.id] ?: variableTypeMap[node.id]
+                        if (typeInfo != null) {
+                            node.copy(typeInfo = typeInfo)
+                        } else {
+                            node
+                        }
                     } else {
                         node
                     }

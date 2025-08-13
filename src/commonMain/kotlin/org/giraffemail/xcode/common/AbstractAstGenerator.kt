@@ -74,13 +74,61 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
                     // Extract assignment metadata with native TypeInfo
                     val typeInfo = node.typeInfo
                     if (typeInfo != CanonicalTypes.Unknown) {
-                        metadata.add(VariableMetadata(variableType = typeInfo))
+                        val variableName = if (node.target is NameNode) node.target.id else null
+                        metadata.add(VariableMetadata(variableType = typeInfo, variableName = variableName))
                     }
                 }
                 is IfNode -> {
                     // Recursively collect from if node body and else body
                     node.body.forEach { collectFromNode(it) }
                     node.orelse.forEach { collectFromNode(it) }
+                }
+                is PrintNode -> {
+                    // Recursively collect from print expression
+                    collectFromNode(node.expression)
+                }
+                is ReturnNode -> {
+                    // Recursively collect from return value
+                    node.value?.let { collectFromNode(it) }
+                }
+                is CallStatementNode -> {
+                    // Recursively collect from call expression
+                    collectFromNode(node.call)
+                }
+                is BinaryOpNode -> {
+                    // Recursively collect from binary operation operands
+                    collectFromNode(node.left)
+                    collectFromNode(node.right)
+                }
+                is CompareNode -> {
+                    // Recursively collect from comparison operands
+                    collectFromNode(node.left)
+                    collectFromNode(node.right)
+                }
+                is CallNode -> {
+                    // Recursively collect from function call
+                    collectFromNode(node.func)
+                    node.args.forEach { collectFromNode(it) }
+                }
+                is NameNode -> {
+                    // Extract variable reference metadata with native TypeInfo
+                    val typeInfo = node.typeInfo
+                    if (typeInfo != CanonicalTypes.Unknown && node.ctx == Load) {
+                        metadata.add(VariableMetadata(variableType = typeInfo, variableName = node.id))
+                    }
+                }
+                is ListNode -> {
+                    // Recursively collect from list elements
+                    node.elements.forEach { collectFromNode(it) }
+                }
+                is TupleNode -> {
+                    // Recursively collect from tuple elements
+                    node.elements.forEach { collectFromNode(it) }
+                }
+                is MemberExpressionNode -> {
+                    // Recursively collect from member expression parts
+                    collectFromNode(node.obj)
+                    collectFromNode(node.property)
                 }
                 else -> {
                     // For other node types, no metadata to collect

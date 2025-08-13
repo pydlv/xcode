@@ -18,7 +18,8 @@ data class FunctionMetadata(
  * Variable assignment metadata with native TypeInfo
  */
 data class VariableMetadata(
-    val variableType: TypeInfo = CanonicalTypes.Unknown
+    val variableType: TypeInfo = CanonicalTypes.Unknown,
+    val variableName: String? = null  // Name of the variable this metadata refers to
 ) : NativeMetadata()
 
 /**

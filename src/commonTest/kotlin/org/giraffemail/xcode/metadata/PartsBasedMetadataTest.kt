@@ -254,9 +254,9 @@ class NativeMetadataTest {
         assertEquals("greet", functionDef.name)
         assertEquals(CanonicalTypes.Void, functionDef.returnType)
         
-        // Verify assignment has no metadata from comments
+        // Verify assignment has type inferred from value (not from comments)
         val assignment = functionDef.body[0] as AssignNode
-        assertEquals(CanonicalTypes.Unknown, assignment.typeInfo)
+        assertEquals(CanonicalTypes.String, assignment.typeInfo)
         
         println("✓ Comment-based metadata is no longer supported (expected behavior)")
     }

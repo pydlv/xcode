@@ -88,7 +88,7 @@ class TypeScriptGeneratorTest {
             )
         )
 
-        val expectedCode = """function add(a, b) {
+        val expectedCode = """function add(a, b): void {
     let result = a + b;
     console.log(result);
 }"""
