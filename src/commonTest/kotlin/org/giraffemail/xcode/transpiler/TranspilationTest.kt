@@ -179,10 +179,9 @@ class TranspilationTest {
 
     @Test
     fun `test simple print statement transpilation`() {
-        // Define AST with minimal metadata for a simple print statement
-        val printAst = ModuleNode(
-            body = listOf(PrintNode(expression = ConstantNode("hello")))
-        )
+        // Use MaximalAstGenerator for print statement with proper metadata
+        val features = setOf(AstFeature.PRINT_STATEMENTS, AstFeature.CONSTANT_VALUES)
+        val printAst = MaximalAstGenerator.generateMaximalAst(features)
 
         testAstRoundTrip("Simple Print", printAst)
         testSequentialTranspilation("Simple Print", printAst)
@@ -190,18 +189,13 @@ class TranspilationTest {
 
     @Test
     fun `test binary operation transpilation`() {
-        // Define AST for print(1 + 2)
-        val binaryOpAst = ModuleNode(
-            body = listOf(
-                PrintNode(
-                    expression = BinaryOpNode(
-                        left = ConstantNode(1),
-                        op = "+",
-                        right = ConstantNode(2)
-                    )
-                )
-            )
+        // Use MaximalAstGenerator for binary operation with proper metadata
+        val features = setOf(
+            AstFeature.PRINT_STATEMENTS,
+            AstFeature.BINARY_OPERATIONS,
+            AstFeature.CONSTANT_VALUES
         )
+        val binaryOpAst = MaximalAstGenerator.generateMaximalAst(features)
 
         testAstRoundTrip("Binary Operation", binaryOpAst)
         testSequentialTranspilation("Binary Operation", binaryOpAst)
@@ -209,32 +203,15 @@ class TranspilationTest {
 
     @Test
     fun `test function without metadata transpilation`() {
-        // Define AST for a function without metadata
-        val functionAst = ModuleNode(
-            body = listOf(
-                FunctionDefNode(
-                    name = "greet",
-                    args = listOf(NameNode(id = "msg", ctx = Param)),
-                    body = listOf(
-                        PrintNode(
-                            expression = BinaryOpNode(
-                                left = ConstantNode("Hello "),
-                                op = "+",
-                                right = NameNode(id = "msg", ctx = Load)
-                            )
-                        )
-                    ),
-                    decoratorList = emptyList()
-                ),
-                CallStatementNode(
-                    call = CallNode(
-                        func = NameNode(id = "greet", ctx = Load),
-                        args = listOf(ConstantNode("World")),
-                        keywords = emptyList()
-                    )
-                )
-            )
+        // Use MaximalAstGenerator for function definitions with proper metadata
+        val features = setOf(
+            AstFeature.FUNCTION_DEFINITIONS,
+            AstFeature.PRINT_STATEMENTS,
+            AstFeature.BINARY_OPERATIONS,
+            AstFeature.CONSTANT_VALUES,
+            AstFeature.VARIABLE_REFERENCES
         )
+        val functionAst = MaximalAstGenerator.generateMaximalAst(features)
 
         testAstRoundTrip("Function Without Metadata", functionAst)
         testSequentialTranspilation("Function Without Metadata", functionAst)
@@ -262,24 +239,15 @@ class TranspilationTest {
 
     @Test
     fun `test conditional statement transpilation`() {
-        // Define AST for if-else without metadata
-        val conditionalAst = ModuleNode(
-            body = listOf(
-                IfNode(
-                    test = CompareNode(
-                        left = NameNode(id = "x", ctx = Load),
-                        op = ">",
-                        right = ConstantNode(5)
-                    ),
-                    body = listOf(
-                        PrintNode(expression = ConstantNode("greater"))
-                    ),
-                    orelse = listOf(
-                        PrintNode(expression = ConstantNode("lesser"))
-                    )
-                )
-            )
+        // Use MaximalAstGenerator for conditional statements with proper metadata
+        val features = setOf(
+            AstFeature.CONDITIONAL_STATEMENTS,
+            AstFeature.COMPARISON_OPERATIONS,
+            AstFeature.PRINT_STATEMENTS,
+            AstFeature.CONSTANT_VALUES,
+            AstFeature.VARIABLE_REFERENCES
         )
+        val conditionalAst = MaximalAstGenerator.generateMaximalAst(features)
 
         testAstRoundTrip("Conditional Statement", conditionalAst)
         testSequentialTranspilation("Conditional Statement", conditionalAst)
@@ -287,18 +255,14 @@ class TranspilationTest {
 
     @Test
     fun `test variable assignment transpilation`() {
-        // Define AST for variable assignment without metadata
-        val assignmentAst = ModuleNode(
-            body = listOf(
-                AssignNode(
-                    target = NameNode(id = "count", ctx = Store),
-                    value = ConstantNode(42)
-                ),
-                PrintNode(
-                    expression = NameNode(id = "count", ctx = Load)
-                )
-            )
+        // Use MaximalAstGenerator for variable assignments with proper metadata
+        val features = setOf(
+            AstFeature.VARIABLE_ASSIGNMENTS,
+            AstFeature.PRINT_STATEMENTS,
+            AstFeature.CONSTANT_VALUES,
+            AstFeature.VARIABLE_REFERENCES
         )
+        val assignmentAst = MaximalAstGenerator.generateMaximalAst(features)
 
         testAstRoundTrip("Variable Assignment", assignmentAst)
         testSequentialTranspilation("Variable Assignment", assignmentAst)

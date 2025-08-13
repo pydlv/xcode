@@ -43,8 +43,6 @@ sealed class TypeDefinition : TypeInfo {
     }
     
     companion object {
-        fun fromCanonical(type: CanonicalTypes): TypeDefinition = Simple(type)
-        
         fun fromString(typeString: String): TypeDefinition = when {
             typeString.startsWith("[") && typeString.endsWith("]") && typeString.contains(",") -> {
                 // Parse tuple type like "[string, number]"
