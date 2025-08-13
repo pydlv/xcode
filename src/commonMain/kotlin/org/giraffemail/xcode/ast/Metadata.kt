@@ -2,7 +2,6 @@ package org.giraffemail.xcode.ast
 
 /**
  * Legacy metadata storage with strings - kept for backward compatibility
- * TODO: Migrate to NativeMetadata for new code
  */
 data class LanguageMetadata(
     val returnType: String? = null,
@@ -15,7 +14,6 @@ data class LanguageMetadata(
 
 /**
  * Legacy code with metadata storage - kept for backward compatibility
- * TODO: Migrate to CodeWithNativeMetadata for new code
  */
 data class CodeWithMetadata(
     val code: String,
@@ -24,7 +22,6 @@ data class CodeWithMetadata(
 
 /**
  * Legacy utilities for metadata part handling - kept for backward compatibility
- * TODO: Migrate to NativeMetadataUtils for new code
  */
 object MetadataSerializer {
     

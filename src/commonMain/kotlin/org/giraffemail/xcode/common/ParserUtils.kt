@@ -8,6 +8,33 @@ import org.giraffemail.xcode.ast.*
 object ParserUtils {
     
     /**
+     * Legacy string-to-TypeInfo conversion for backward compatibility only.
+     * This should only be used when working with legacy LanguageMetadata.
+     * New code should use native TypeInfo objects directly.
+     */
+    private fun parseTypeInfoFromString(typeString: String): TypeInfo {
+        return when {
+            // Complex types that require TypeDefinition
+            typeString.startsWith("[") && typeString.endsWith("]") && typeString.contains(",") -> {
+                TypeDefinition.fromString(typeString)
+            }
+            typeString.endsWith("[]") -> {
+                TypeDefinition.fromString(typeString)
+            }
+            else -> {
+                // Try CanonicalTypes first for simple types
+                val canonicalType = CanonicalTypes.fromString(typeString)
+                if (canonicalType != CanonicalTypes.Unknown) {
+                    canonicalType
+                } else {
+                    // Custom/complex type - use TypeDefinition
+                    TypeDefinition.fromString(typeString)
+                }
+            }
+        }
+    }
+    
+    /**
      * Extracts comparison operator from context text using pattern matching.
      * Common utility method to avoid code duplication across parsers.
      * 
@@ -224,8 +251,8 @@ object ParserUtils {
                         }
                         
                         val typeInfo = if (metadata.variableType != null) {
-                            // Use unified TypeInfo.fromString for all type formats
-                            TypeInfo.fromString(metadata.variableType)
+                            // Use legacy string parsing for backward compatibility
+                            parseTypeInfoFromString(metadata.variableType)
                         } else TypeDefinition.Unknown
                         
                         // Track the variable type for future references

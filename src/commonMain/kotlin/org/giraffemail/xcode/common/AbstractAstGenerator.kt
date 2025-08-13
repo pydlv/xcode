@@ -20,7 +20,6 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
 
     /**
      * Generate code and metadata as separate parts using legacy string metadata (for backward compatibility)
-     * TODO: Migrate callers to generateWithNativeMetadata
      */
     open fun generateWithMetadata(ast: AstNode): CodeWithMetadata {
         // Collect metadata from the AST
