@@ -83,6 +83,8 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
                         val variableName = if (node.target is NameNode) node.target.id else null
                         metadata.add(VariableMetadata(variableType = typeInfo, variableName = variableName))
                     }
+                    // Recursively collect from assignment value
+                    collectFromNode(node.value)
                 }
                 is IfNode -> {
                     // Recursively collect from if test condition, body and else body
@@ -103,6 +105,11 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
                     collectFromNode(node.call)
                 }
                 is BinaryOpNode -> {
+                    // Extract binary operation result type metadata
+                    val typeInfo = node.typeInfo
+                    if (typeInfo != CanonicalTypes.Unknown) {
+                        metadata.add(ExpressionMetadata(expressionType = typeInfo))
+                    }
                     // Recursively collect from binary operation operands
                     collectFromNode(node.left)
                     collectFromNode(node.right)

@@ -65,10 +65,12 @@ object ParserUtils {
         val functionMetadata = NativeMetadataUtils.filterFunctionMetadata(metadataQueue)
         val assignmentMetadata = NativeMetadataUtils.filterVariableMetadata(metadataQueue)
         val classMetadata = NativeMetadataUtils.filterClassMetadata(metadataQueue)
+        val expressionMetadata = NativeMetadataUtils.filterExpressionMetadata(metadataQueue)
         
         var functionMetadataIndex = 0
         var assignmentMetadataIndex = 0
         var classMetadataIndex = 0
+        var expressionMetadataIndex = 0
         
         // Variable type tracking for NameNode resolution
         val variableTypes = mutableMapOf<String, TypeInfo>()
@@ -199,10 +201,23 @@ object ParserUtils {
                     node.copy(args = updatedArgs)
                 }
                 is BinaryOpNode -> {
-                    node.copy(
-                        left = injectIntoNode(node.left) as ExpressionNode,
-                        right = injectIntoNode(node.right) as ExpressionNode
-                    )
+                    val processedLeft = injectIntoNode(node.left) as ExpressionNode
+                    val processedRight = injectIntoNode(node.right) as ExpressionNode
+                    
+                    // Try to find matching expression metadata
+                    if (expressionMetadataIndex < expressionMetadata.size) {
+                        val metadata = expressionMetadata[expressionMetadataIndex++]
+                        node.copy(
+                            left = processedLeft,
+                            right = processedRight,
+                            typeInfo = metadata.expressionType
+                        )
+                    } else {
+                        node.copy(
+                            left = processedLeft,
+                            right = processedRight
+                        )
+                    }
                 }
                 is CompareNode -> {
                     node.copy(

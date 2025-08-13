@@ -64,6 +64,7 @@ class NativeMetadataDemo {
                 }
                 is FunctionMetadata -> println("  - Function metadata: ${metadata.returnType}")
                 is ClassMetadata -> println("  - Class metadata: ${metadata.classType}")
+                is ExpressionMetadata -> println("  - Expression metadata: ${metadata.expressionType}")
             }
         }
         

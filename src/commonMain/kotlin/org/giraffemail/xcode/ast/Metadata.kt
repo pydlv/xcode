@@ -31,6 +31,14 @@ data class ClassMetadata(
 ) : NativeMetadata()
 
 /**
+ * Expression metadata with native TypeInfo (for binary operations, etc.)
+ */
+data class ExpressionMetadata(
+    val expressionType: TypeInfo = CanonicalTypes.Unknown,
+    val expressionId: String? = null  // Identifier to match expression during injection
+) : NativeMetadata()
+
+/**
  * Code with native metadata - no string serialization involved
  */
 data class CodeWithNativeMetadata(
@@ -72,5 +80,12 @@ object NativeMetadataUtils {
      */
     fun filterClassMetadata(metadata: List<NativeMetadata>): List<ClassMetadata> {
         return metadata.filterIsInstance<ClassMetadata>()
+    }
+    
+    /**
+     * Filter expression metadata from a list of native metadata
+     */
+    fun filterExpressionMetadata(metadata: List<NativeMetadata>): List<ExpressionMetadata> {
+        return metadata.filterIsInstance<ExpressionMetadata>()
     }
 }
