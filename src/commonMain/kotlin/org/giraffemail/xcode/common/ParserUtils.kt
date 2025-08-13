@@ -217,7 +217,15 @@ object ParserUtils {
                         
                         node.copy(
                             value = finalValue,
-                            typeInfo = if (metadata.variableType != null) CanonicalTypes.fromString(metadata.variableType) else CanonicalTypes.Unknown
+                            typeInfo = if (metadata.variableType != null) {
+                                // Use TypeDefinition.fromString for complex types like [string, number] or string[]
+                                // Use CanonicalTypes.fromString for simple types like string, number, etc.
+                                if (metadata.variableType.startsWith("[") || metadata.variableType.endsWith("[]")) {
+                                    TypeDefinition.fromString(metadata.variableType)
+                                } else {
+                                    CanonicalTypes.fromString(metadata.variableType)
+                                }
+                            } else CanonicalTypes.Unknown
                         )
                     } else {
                         node.copy(value = processedValue)

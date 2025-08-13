@@ -208,7 +208,14 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         val canonicalType = if (variableType != null) {
             CanonicalTypes.fromString(variableType)
         } else {
-            CanonicalTypes.Unknown
+            // Infer typeInfo from the value expression when no type annotation is present
+            when (value) {
+                is ConstantNode -> value.typeInfo
+                is ListNode -> value.typeInfo
+                is TupleNode -> value.typeInfo
+                is BinaryOpNode -> value.typeInfo
+                else -> CanonicalTypes.Unknown
+            }
         }
         
         return AssignNode(target = target, value = value, typeInfo = canonicalType)
@@ -349,16 +356,16 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
                 text = text.replace("\\\\\\\\\\\\\\\"", "\\\"")  // find \\\\\\\", replace with "
                 text = text.replace("\\\\\\\\\\\\\\\'", "\'")    // find \\\\\\', replace with '
 
-                return ConstantNode(text) // Explicit return
+                return ConstantNode(text, CanonicalTypes.String) // Explicit return
             }
             ctx.NUMBER() != null -> { // Changed from DECIMAL_LITERAL to NUMBER
                 val textVal = ctx.NUMBER()!!.text // Changed from DECIMAL_LITERAL to NUMBER
                 return try {
                     // Java typically treats whole numbers as int
-                    ConstantNode(textVal.toInt()) // Explicit return
+                    ConstantNode(textVal.toInt(), CanonicalTypes.Number) // Explicit return
                 } catch (_: NumberFormatException) { // Changed 'e' to '_'
                     try {
-                        ConstantNode(textVal.toDouble()) // Explicit return
+                        ConstantNode(textVal.toDouble(), CanonicalTypes.Number) // Explicit return
                     } catch (_: NumberFormatException) { // Changed 'e2' to '_'
                         throw IllegalArgumentException("Could not parse number literal: '$textVal'") // Updated error message
                     }

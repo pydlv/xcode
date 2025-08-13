@@ -26,11 +26,21 @@ enum class CanonicalTypes : TypeInfo {
 
 // --- Enhanced Type Definition System for Complex Types ---
 sealed class TypeDefinition : TypeInfo {
-    data class Simple(val type: CanonicalTypes) : TypeDefinition()
-    data class Tuple(val elementTypes: List<CanonicalTypes>) : TypeDefinition()
-    data class Array(val elementType: CanonicalTypes, val isHomogeneous: Boolean = true) : TypeDefinition()
-    data class Custom(val typeName: String) : TypeDefinition()
-    data object Unknown : TypeDefinition()
+    data class Simple(val type: CanonicalTypes) : TypeDefinition() {
+        override fun toString(): String = type.name.lowercase()
+    }
+    data class Tuple(val elementTypes: List<CanonicalTypes>) : TypeDefinition() {
+        override fun toString(): String = "[${elementTypes.joinToString(", ") { it.name.lowercase() }}]"
+    }
+    data class Array(val elementType: CanonicalTypes, val isHomogeneous: Boolean = true) : TypeDefinition() {
+        override fun toString(): String = "${elementType.name.lowercase()}[]"
+    }
+    data class Custom(val typeName: String) : TypeDefinition() {
+        override fun toString(): String = typeName
+    }
+    data object Unknown : TypeDefinition() {
+        override fun toString(): String = "unknown"
+    }
     
     companion object {
         fun fromCanonical(type: CanonicalTypes): TypeDefinition = Simple(type)
@@ -60,14 +70,6 @@ sealed class TypeDefinition : TypeInfo {
         fun tuple(vararg types: CanonicalTypes): TypeDefinition = Tuple(types.toList())
         fun array(elementType: CanonicalTypes, homogeneous: Boolean = true): TypeDefinition = Array(elementType, homogeneous)
         fun custom(typeName: String): TypeDefinition = Custom(typeName)
-    }
-    
-    override fun toString(): String = when (this) {
-        is Simple -> type.name.lowercase()
-        is Tuple -> "[${elementTypes.joinToString(", ") { it.name.lowercase() }}]"
-        is Array -> "${elementType.name.lowercase()}[]"
-        is Custom -> typeName
-        is Unknown -> "unknown"
     }
 }
 

@@ -184,7 +184,14 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
         val canonicalVariableType = if (variableType != null) {
             CanonicalTypes.fromString(variableType)
         } else {
-            CanonicalTypes.Unknown
+            // Infer typeInfo from the value expression when no type annotation is present
+            when (finalValue) {
+                is ConstantNode -> finalValue.typeInfo
+                is ListNode -> finalValue.typeInfo
+                is TupleNode -> finalValue.typeInfo
+                is BinaryOpNode -> finalValue.typeInfo
+                else -> CanonicalTypes.Unknown
+            }
         }
 
         return AssignNode(target = targetNode, value = finalValue, typeInfo = canonicalVariableType)
@@ -276,7 +283,7 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
         // Remove the quotes from the string literal
         val quotedString = ctx.STRING_LITERAL().text
         val unquotedString = quotedString.substring(1, quotedString.length - 1)
-        return ConstantNode(value = unquotedString)
+        return ConstantNode(value = unquotedString, typeInfo = CanonicalTypes.String)
     }
 
     override fun visitNumberLiteral(ctx: AntlrTypeScriptParser.NumberLiteralContext): AstNode {
@@ -291,7 +298,7 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
             doubleValue
         }
         
-        return ConstantNode(normalizedValue)
+        return ConstantNode(normalizedValue, CanonicalTypes.Number)
     }
 
     override fun visitIdentifier(ctx: AntlrTypeScriptParser.IdentifierContext): AstNode {
@@ -303,7 +310,16 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
             visit(exprCtx) as? ExpressionNode
         } ?: emptyList()
         
-        return ListNode(elements = elements)
+        // Infer element type from the parsed elements' typeInfo
+        val elementType = when {
+            elements.isEmpty() -> CanonicalTypes.Unknown
+            elements.all { it is ConstantNode && it.typeInfo == CanonicalTypes.String } -> CanonicalTypes.String
+            elements.all { it is ConstantNode && it.typeInfo == CanonicalTypes.Number } -> CanonicalTypes.Number
+            elements.all { it is ConstantNode && it.typeInfo == CanonicalTypes.Boolean } -> CanonicalTypes.Boolean
+            else -> CanonicalTypes.Unknown
+        }
+        
+        return ListNode(elements = elements, typeInfo = elementType)
     }
 
     override fun defaultResult(): AstNode {
