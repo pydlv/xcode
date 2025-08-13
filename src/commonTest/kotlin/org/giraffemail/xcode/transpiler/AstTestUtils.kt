@@ -554,24 +554,26 @@ object MaximalAstGenerator {
         // Generate nested expression features if requested
         if (features.contains(AstFeature.NESTED_EXPRESSIONS)) {
             // Create an assignment with a simple nested expression that avoids associativity issues
-            val nestedExpression = BinaryOpNode(
-                left = if (features.contains(AstFeature.CONSTANT_VALUES)) ConstantNode(10) else NameNode(id = "a", ctx = Load),
+            val nestedExpression = createMaximalBinaryOpNode(
+                left = if (features.contains(AstFeature.CONSTANT_VALUES)) createMaximalConstantNode(10, CanonicalTypes.Number) else createMaximalNameNode("a", Load),
                 op = "+",
-                right = if (features.contains(AstFeature.CONSTANT_VALUES)) ConstantNode(5) else NameNode(id = "b", ctx = Load)
+                right = if (features.contains(AstFeature.CONSTANT_VALUES)) createMaximalConstantNode(5, CanonicalTypes.Number) else createMaximalNameNode("b", Load),
+                resultType = CanonicalTypes.Number
             )
 
             bodyNodes.add(
-                AssignNode(
-                    target = NameNode(id = "result", ctx = Store),
-                    value = nestedExpression
+                createMaximalAssignNode(
+                    targetId = "result",
+                    value = nestedExpression,
+                    typeInfo = CanonicalTypes.Number
                 )
             )
 
             // Add a print statement with the nested expression if print statements are enabled
             if (features.contains(AstFeature.PRINT_STATEMENTS)) {
                 bodyNodes.add(
-                    PrintNode(
-                        expression = NameNode(id = "result", ctx = Load)
+                    createMaximalPrintNode(
+                        expression = createMaximalNameNode("result", Load, CanonicalTypes.Number)
                     )
                 )
             }

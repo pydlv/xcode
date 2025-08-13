@@ -450,9 +450,10 @@ class TranspilationTest {
                 AssignNode(
                     target = NameNode(id = "result", ctx = Store),
                     value = BinaryOpNode(
-                        left = ConstantNode(10),
+                        left = ConstantNode(10, typeInfo = CanonicalTypes.Number),
                         op = "+",
-                        right = ConstantNode(5)
+                        right = ConstantNode(5, typeInfo = CanonicalTypes.Number),
+                        typeInfo = CanonicalTypes.Number
                     )
                 ),
                 PrintNode(
