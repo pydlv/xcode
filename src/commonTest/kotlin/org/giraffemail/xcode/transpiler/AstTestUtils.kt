@@ -87,6 +87,116 @@ fun createMaximalNameNode(
 ): NameNode = NameNode(id = id, ctx = ctx, type = type)
 
 /**
+ * Creates a BinaryOpNode with maximal metadata population for testing
+ */
+fun createMaximalBinaryOpNode(
+    left: ExpressionNode,
+    op: String,
+    right: ExpressionNode,
+    resultType: CanonicalTypes = CanonicalTypes.Unknown
+): BinaryOpNode = BinaryOpNode(
+    left = left,
+    op = op,
+    right = right,
+    resultType = resultType
+)
+
+/**
+ * Creates a ConstantNode with maximal metadata population for testing
+ */
+fun createMaximalConstantNode(
+    value: Any?,
+    constantType: CanonicalTypes = CanonicalTypes.Unknown
+): ConstantNode = ConstantNode(
+    value = value,
+    constantType = constantType
+)
+
+/**
+ * Creates a ListNode with maximal metadata population for testing
+ */
+fun createMaximalListNode(
+    elements: List<ExpressionNode>,
+    arrayType: CanonicalTypes = CanonicalTypes.Unknown,
+    isHomogeneous: Boolean = true
+): ListNode = ListNode(
+    elements = elements,
+    arrayType = arrayType,
+    isHomogeneous = isHomogeneous
+)
+
+/**
+ * Creates a CompareNode with maximal metadata population for testing
+ */
+fun createMaximalCompareNode(
+    left: ExpressionNode,
+    op: String,
+    right: ExpressionNode
+): CompareNode = CompareNode(
+    left = left,
+    op = op,
+    right = right
+)
+
+/**
+ * Creates a CallNode with maximal metadata population for testing
+ */
+fun createMaximalCallNode(
+    func: ExpressionNode,
+    args: List<ExpressionNode>,
+    keywords: List<Any> = emptyList()
+): CallNode = CallNode(
+    func = func,
+    args = args,
+    keywords = keywords
+)
+
+/**
+ * Creates a CallStatementNode with maximal metadata population for testing
+ */
+fun createMaximalCallStatementNode(
+    call: CallNode
+): CallStatementNode = CallStatementNode(call = call)
+
+/**
+ * Creates a PrintNode with maximal metadata population for testing
+ */
+fun createMaximalPrintNode(
+    expression: ExpressionNode
+): PrintNode = PrintNode(expression = expression)
+
+/**
+ * Creates a ReturnNode with maximal metadata population for testing
+ */
+fun createMaximalReturnNode(
+    value: ExpressionNode? = null
+): ReturnNode = ReturnNode(value = value)
+
+/**
+ * Creates an IfNode with maximal metadata population for testing
+ */
+fun createMaximalIfNode(
+    test: ExpressionNode,
+    body: List<StatementNode>,
+    orelse: List<StatementNode> = emptyList()
+): IfNode = IfNode(
+    test = test,
+    body = body,
+    orelse = orelse
+)
+
+/**
+ * Creates a MemberExpressionNode with maximal metadata population for testing
+ */
+fun createMaximalMemberExpressionNode(
+    obj: ExpressionNode,
+    property: ExpressionNode
+): MemberExpressionNode = MemberExpressionNode(
+    obj = obj,
+    property = property
+)
+
+/**
  * Enumeration of supported AST features for selective generation
  */
 enum class AstFeature {
@@ -179,22 +289,25 @@ object MaximalAstGenerator {
             // Add variable assignment within function if requested
             if (features.contains(AstFeature.VARIABLE_ASSIGNMENTS)) {
                 val assignValue = if (features.contains(AstFeature.BINARY_OPERATIONS)) {
-                    BinaryOpNode(
+                    createMaximalBinaryOpNode(
                         left = if (features.contains(AstFeature.VARIABLE_REFERENCES))
-                            NameNode(id = "input", ctx = Load) else ConstantNode("input"),
+                            createMaximalNameNode(id = "input", ctx = Load, type = CanonicalTypes.String) 
+                            else createMaximalConstantNode("input", CanonicalTypes.String),
                         op = "+",
                         right = if (features.contains(AstFeature.VARIABLE_REFERENCES))
-                            NameNode(id = "count", ctx = Load) else ConstantNode(1)
+                            createMaximalNameNode(id = "count", ctx = Load, type = CanonicalTypes.Number) 
+                            else createMaximalConstantNode(1, CanonicalTypes.Number),
+                        resultType = CanonicalTypes.String
                     )
                 } else if (features.contains(AstFeature.CONSTANT_VALUES)) {
-                    ConstantNode("hello")
+                    createMaximalConstantNode("hello", CanonicalTypes.String)
                 } else {
-                    NameNode(id = "input", ctx = Load)
+                    createMaximalNameNode(id = "input", ctx = Load, type = CanonicalTypes.String)
                 }
 
                 functionBody.add(
-                    AssignNode(
-                        target = NameNode(id = "result", ctx = Store),
+                    createMaximalAssignNode(
+                        targetId = "result",
                         value = assignValue,
                         variableType = CanonicalTypes.String
                     )
@@ -204,9 +317,10 @@ object MaximalAstGenerator {
             // Add print statement if requested
             if (features.contains(AstFeature.PRINT_STATEMENTS)) {
                 functionBody.add(
-                    PrintNode(
+                    createMaximalPrintNode(
                         expression = if (features.contains(AstFeature.VARIABLE_REFERENCES))
-                            NameNode(id = "result", ctx = Load) else ConstantNode("output")
+                            createMaximalNameNode(id = "result", ctx = Load, type = CanonicalTypes.String) 
+                            else createMaximalConstantNode("output", CanonicalTypes.String)
                     )
                 )
             }
@@ -216,32 +330,35 @@ object MaximalAstGenerator {
                 val returnValue =
                     if (features.contains(AstFeature.VARIABLE_REFERENCES) && features.contains(AstFeature.VARIABLE_ASSIGNMENTS)) {
                         // Return the result variable if we have assignments and variable references
-                        NameNode(id = "result", ctx = Load)
+                        createMaximalNameNode(id = "result", ctx = Load, type = CanonicalTypes.String)
                     } else if (features.contains(AstFeature.BINARY_OPERATIONS)) {
                         // Return a binary operation
-                        BinaryOpNode(
+                        createMaximalBinaryOpNode(
                             left = if (features.contains(AstFeature.VARIABLE_REFERENCES))
-                                NameNode(id = "input", ctx = Load) else ConstantNode("a"),
+                                createMaximalNameNode(id = "input", ctx = Load, type = CanonicalTypes.String) 
+                                else createMaximalConstantNode("a", CanonicalTypes.String),
                             op = "+",
                             right = if (features.contains(AstFeature.VARIABLE_REFERENCES))
-                                NameNode(id = "count", ctx = Load) else ConstantNode(1)
+                                createMaximalNameNode(id = "count", ctx = Load, type = CanonicalTypes.Number) 
+                                else createMaximalConstantNode(1, CanonicalTypes.Number),
+                            resultType = CanonicalTypes.String
                         )
                     } else if (features.contains(AstFeature.CONSTANT_VALUES)) {
                         // Return a constant
-                        ConstantNode("returned_value")
+                        createMaximalConstantNode("returned_value", CanonicalTypes.String)
                     } else {
                         // Return null (void return)
                         null
                     }
 
-                functionBody.add(ReturnNode(value = returnValue))
+                functionBody.add(createMaximalReturnNode(value = returnValue))
             }
 
             // Create function arguments based on features
             val functionArgs = if (features.contains(AstFeature.VARIABLE_REFERENCES)) {
                 listOf(
-                    NameNode(id = "input", ctx = Param, type = CanonicalTypes.String),
-                    NameNode(id = "count", ctx = Param, type = CanonicalTypes.Number)
+                    createMaximalNameNode(id = "input", ctx = Param, type = CanonicalTypes.String),
+                    createMaximalNameNode(id = "count", ctx = Param, type = CanonicalTypes.Number)
                 )
             } else {
                 emptyList()
@@ -263,13 +380,11 @@ object MaximalAstGenerator {
             }
 
             bodyNodes.add(
-                FunctionDefNode(
+                createMaximalFunctionDefNode(
                     name = "processData",
                     args = functionArgs,
                     body = functionBody,
-                    decoratorList = emptyList(),
-                    returnType = returnType,
-                    paramTypes = mapOf("input" to CanonicalTypes.String, "count" to CanonicalTypes.Number)
+                    returnType = returnType
                 )
             )
         }
@@ -285,10 +400,11 @@ object MaximalAstGenerator {
                 // Add method body based on other features
                 if (features.contains(AstFeature.VARIABLE_ASSIGNMENTS)) {
                     methodBody.add(
-                        AssignNode(
-                            target = NameNode(id = "instanceValue", ctx = Store),
+                        createMaximalAssignNode(
+                            targetId = "instanceValue",
                             value = if (features.contains(AstFeature.VARIABLE_REFERENCES))
-                                NameNode(id = "newValue", ctx = Load) else ConstantNode("initialized"),
+                                createMaximalNameNode(id = "newValue", ctx = Load, type = CanonicalTypes.String) 
+                                else createMaximalConstantNode("initialized", CanonicalTypes.String),
                             variableType = CanonicalTypes.String
                         )
                     )
@@ -296,25 +412,24 @@ object MaximalAstGenerator {
 
                 if (features.contains(AstFeature.RETURN_STATEMENTS)) {
                     methodBody.add(
-                        ReturnNode(
+                        createMaximalReturnNode(
                             value = if (features.contains(AstFeature.VARIABLE_REFERENCES))
-                                NameNode(id = "instanceValue", ctx = Load) else ConstantNode("method_result")
+                                createMaximalNameNode(id = "instanceValue", ctx = Load, type = CanonicalTypes.String) 
+                                else createMaximalConstantNode("method_result", CanonicalTypes.String)
                         )
                     )
                 }
 
                 classBody.add(
-                    FunctionDefNode(
+                    createMaximalFunctionDefNode(
                         name = "getValue",
                         args = if (features.contains(AstFeature.VARIABLE_REFERENCES)) {
-                            listOf(NameNode(id = "newValue", ctx = Param, type = CanonicalTypes.String))
+                            listOf(createMaximalNameNode(id = "newValue", ctx = Param, type = CanonicalTypes.String))
                         } else {
                             emptyList()
                         },
                         body = methodBody,
-                        decoratorList = emptyList(),
-                        returnType = CanonicalTypes.String,
-                        paramTypes = mapOf("newValue" to CanonicalTypes.String)
+                        returnType = CanonicalTypes.String
                     )
                 )
             }
@@ -322,16 +437,16 @@ object MaximalAstGenerator {
             // Add a simple method even if function definitions are not requested
             if (!features.contains(AstFeature.FUNCTION_DEFINITIONS) && features.contains(AstFeature.PRINT_STATEMENTS)) {
                 classBody.add(
-                    FunctionDefNode(
+                    createMaximalFunctionDefNode(
                         name = "display",
                         args = emptyList(),
                         body = listOf(
-                            PrintNode(
+                            createMaximalPrintNode(
                                 expression = if (features.contains(AstFeature.CONSTANT_VALUES))
-                                    ConstantNode("Class instance") else ConstantNode("Display method")
+                                    createMaximalConstantNode("Class instance", CanonicalTypes.String) 
+                                    else createMaximalConstantNode("Display method", CanonicalTypes.String)
                             )
                         ),
-                        decoratorList = emptyList(),
                         returnType = CanonicalTypes.Void
                     )
                 )
@@ -340,13 +455,12 @@ object MaximalAstGenerator {
             // Always ensure class has at least one method to avoid empty class bodies
             if (classBody.isEmpty()) {
                 classBody.add(
-                    FunctionDefNode(
+                    createMaximalFunctionDefNode(
                         name = "defaultMethod",
                         args = emptyList(),
                         body = listOf(
-                            PrintNode(expression = ConstantNode("Default class method"))
+                            createMaximalPrintNode(expression = createMaximalConstantNode("Default class method", CanonicalTypes.String))
                         ),
-                        decoratorList = emptyList(),
                         returnType = CanonicalTypes.Void
                     )
                 )
@@ -364,14 +478,14 @@ object MaximalAstGenerator {
         // Generate standalone variable assignment if requested and not already in function
         if (features.contains(AstFeature.VARIABLE_ASSIGNMENTS) && !features.contains(AstFeature.FUNCTION_DEFINITIONS)) {
             val assignValue = if (features.contains(AstFeature.CONSTANT_VALUES)) {
-                ConstantNode("standalone")
+                createMaximalConstantNode("standalone", CanonicalTypes.String)
             } else {
-                NameNode(id = "defaultValue", ctx = Load)
+                createMaximalNameNode(id = "defaultValue", ctx = Load, type = CanonicalTypes.String)
             }
 
             bodyNodes.add(
-                AssignNode(
-                    target = NameNode(id = "standalone", ctx = Store),
+                createMaximalAssignNode(
+                    targetId = "standalone",
                     value = assignValue,
                     variableType = CanonicalTypes.String
                 )
@@ -381,15 +495,18 @@ object MaximalAstGenerator {
         // Generate function call statement if requested
         if (features.contains(AstFeature.FUNCTION_CALLS)) {
             val callArgs = if (features.contains(AstFeature.CONSTANT_VALUES)) {
-                listOf(ConstantNode("hello"), ConstantNode(42))
+                listOf(
+                    createMaximalConstantNode("hello", CanonicalTypes.String), 
+                    createMaximalConstantNode(42, CanonicalTypes.Number)
+                )
             } else {
                 emptyList()
             }
 
             bodyNodes.add(
-                CallStatementNode(
-                    call = CallNode(
-                        func = NameNode(id = "processData", ctx = Load),
+                createMaximalCallStatementNode(
+                    call = createMaximalCallNode(
+                        func = createMaximalNameNode(id = "processData", ctx = Load, type = CanonicalTypes.Unknown),
                         args = callArgs,
                         keywords = emptyList()
                     )
@@ -401,33 +518,38 @@ object MaximalAstGenerator {
         if (features.contains(AstFeature.CONDITIONAL_STATEMENTS) && !features.contains(AstFeature.FUNCTION_DEFINITIONS)) {
             // Create test condition - use comparison if available
             val testCondition = if (features.contains(AstFeature.COMPARISON_OPERATIONS)) {
-                CompareNode(
+                createMaximalCompareNode(
                     left = if (features.contains(AstFeature.VARIABLE_REFERENCES))
-                        NameNode(id = "x", ctx = Load) else ConstantNode(10),
+                        createMaximalNameNode(id = "x", ctx = Load, type = CanonicalTypes.Number) 
+                        else createMaximalConstantNode(10, CanonicalTypes.Number),
                     op = ">",
                     right = if (features.contains(AstFeature.CONSTANT_VALUES))
-                        ConstantNode(5) else ConstantNode(0)
+                        createMaximalConstantNode(5, CanonicalTypes.Number) 
+                        else createMaximalConstantNode(0, CanonicalTypes.Number)
                 )
             } else {
                 // Simple boolean variable or constant
                 if (features.contains(AstFeature.VARIABLE_REFERENCES))
-                    NameNode(id = "condition", ctx = Load) else ConstantNode(true)
+                    createMaximalNameNode(id = "condition", ctx = Load, type = CanonicalTypes.Boolean) 
+                    else createMaximalConstantNode(true, CanonicalTypes.Boolean)
             }
 
             // Simple if-else with print statements
             bodyNodes.add(
-                IfNode(
+                createMaximalIfNode(
                     test = testCondition,
                     body = listOf(
-                        PrintNode(
+                        createMaximalPrintNode(
                             expression = if (features.contains(AstFeature.CONSTANT_VALUES))
-                                ConstantNode("condition is true") else NameNode(id = "trueMessage", ctx = Load)
+                                createMaximalConstantNode("condition is true", CanonicalTypes.String) 
+                                else createMaximalNameNode(id = "trueMessage", ctx = Load, type = CanonicalTypes.String)
                         )
                     ),
                     orelse = listOf(
-                        PrintNode(
+                        createMaximalPrintNode(
                             expression = if (features.contains(AstFeature.CONSTANT_VALUES))
-                                ConstantNode("condition is false") else NameNode(id = "falseMessage", ctx = Load)
+                                createMaximalConstantNode("condition is false", CanonicalTypes.String) 
+                                else createMaximalNameNode(id = "falseMessage", ctx = Load, type = CanonicalTypes.String)
                         )
                     )
                 )
@@ -440,9 +562,10 @@ object MaximalAstGenerator {
             !features.contains(AstFeature.CONDITIONAL_STATEMENTS)
         ) {
             bodyNodes.add(
-                PrintNode(
+                createMaximalPrintNode(
                     expression = if (features.contains(AstFeature.CONSTANT_VALUES))
-                        ConstantNode("standalone print") else NameNode(id = "printValue", ctx = Load)
+                        createMaximalConstantNode("standalone print", CanonicalTypes.String) 
+                        else createMaximalNameNode(id = "printValue", ctx = Load, type = CanonicalTypes.String)
                 )
             )
         }
@@ -450,12 +573,16 @@ object MaximalAstGenerator {
         // Generate array literal assignment if requested
         if (features.contains(AstFeature.ARRAY_LITERALS)) {
             val arrayElements = if (features.contains(AstFeature.CONSTANT_VALUES)) {
-                listOf(ConstantNode("item1"), ConstantNode("item2"), ConstantNode("item3"))
+                listOf(
+                    createMaximalConstantNode("item1", CanonicalTypes.String), 
+                    createMaximalConstantNode("item2", CanonicalTypes.String), 
+                    createMaximalConstantNode("item3", CanonicalTypes.String)
+                )
             } else {
                 listOf(
-                    NameNode(id = "elem1", ctx = Load),
-                    NameNode(id = "elem2", ctx = Load),
-                    NameNode(id = "elem3", ctx = Load)
+                    createMaximalNameNode(id = "elem1", ctx = Load, type = CanonicalTypes.String),
+                    createMaximalNameNode(id = "elem2", ctx = Load, type = CanonicalTypes.String),
+                    createMaximalNameNode(id = "elem3", ctx = Load, type = CanonicalTypes.String)
                 )
             }
 
@@ -470,9 +597,13 @@ object MaximalAstGenerator {
                     // Insert before the return statement, or at the end if no return
                     newBody.add(
                         insertIndex,
-                        AssignNode(
-                            target = NameNode(id = "arrayData", ctx = Store),
-                            value = ListNode(elements = arrayElements, arrayType = CanonicalTypes.String),
+                        createMaximalAssignNode(
+                            targetId = "arrayData",
+                            value = createMaximalListNode(
+                                elements = arrayElements, 
+                                arrayType = CanonicalTypes.String,
+                                isHomogeneous = true
+                            ),
                             variableType = CanonicalTypes.String
                         )
                     )
@@ -480,9 +611,13 @@ object MaximalAstGenerator {
                 }
             } else if (features.contains(AstFeature.VARIABLE_ASSIGNMENTS)) {
                 bodyNodes.add(
-                    AssignNode(
-                        target = NameNode(id = "arrayData", ctx = Store),
-                        value = ListNode(elements = arrayElements, arrayType = CanonicalTypes.String),
+                    createMaximalAssignNode(
+                        targetId = "arrayData",
+                        value = createMaximalListNode(
+                            elements = arrayElements, 
+                            arrayType = CanonicalTypes.String,
+                            isHomogeneous = true
+                        ),
                         variableType = CanonicalTypes.String
                     )
                 )
@@ -492,11 +627,14 @@ object MaximalAstGenerator {
         // Generate tuple literal assignment if requested
         if (features.contains(AstFeature.TUPLE_LITERALS)) {
             val tupleElements = if (features.contains(AstFeature.CONSTANT_VALUES)) {
-                listOf(ConstantNode("name"), ConstantNode(42))  // Mixed types: string and number
+                listOf(
+                    createMaximalConstantNode("name", CanonicalTypes.String), 
+                    createMaximalConstantNode(42, CanonicalTypes.Number)
+                )  // Mixed types: string and number
             } else {
                 listOf(
-                    NameNode(id = "first", ctx = Load),
-                    NameNode(id = "second", ctx = Load)
+                    createMaximalNameNode(id = "first", ctx = Load, type = CanonicalTypes.String),
+                    createMaximalNameNode(id = "second", ctx = Load, type = CanonicalTypes.Number)
                 )
             }
 
@@ -547,17 +685,16 @@ object MaximalAstGenerator {
     fun generateFunctionWithMetadata(): ModuleNode {
         return ModuleNode(
             body = listOf(
-                FunctionDefNode(
+                createMaximalFunctionDefNode(
                     name = "test",
                     args = listOf(),
                     body = listOf(
-                        AssignNode(
-                            target = NameNode(id = "result", ctx = Store),
-                            value = ConstantNode("hello"),
+                        createMaximalAssignNode(
+                            targetId = "result",
+                            value = createMaximalConstantNode("hello", CanonicalTypes.String),
                             variableType = CanonicalTypes.String
                         )
                     ),
-                    decoratorList = emptyList(),
                     returnType = CanonicalTypes.Void
                 )
             )
@@ -570,13 +707,13 @@ object MaximalAstGenerator {
     fun generateAssignmentWithMetadata(): ModuleNode {
         return ModuleNode(
             body = listOf(
-                AssignNode(
-                    target = NameNode(id = "result", ctx = Store),
-                    value = ConstantNode("hello"),
+                createMaximalAssignNode(
+                    targetId = "result",
+                    value = createMaximalConstantNode("hello", CanonicalTypes.String),
                     variableType = CanonicalTypes.String
                 ),
-                PrintNode(
-                    expression = NameNode(id = "result", ctx = Load)
+                createMaximalPrintNode(
+                    expression = createMaximalNameNode(id = "result", ctx = Load, type = CanonicalTypes.String)
                 )
             )
         )
@@ -588,17 +725,15 @@ object MaximalAstGenerator {
     fun generateFunctionWithReturnStatement(): ModuleNode {
         return ModuleNode(
             body = listOf(
-                FunctionDefNode(
+                createMaximalFunctionDefNode(
                     name = "test_return",
                     args = listOf(
-                        NameNode(id = "input", ctx = Param, type = CanonicalTypes.String)
+                        createMaximalNameNode(id = "input", ctx = Param, type = CanonicalTypes.String)
                     ),
                     body = listOf(
-                        ReturnNode(value = null)
+                        createMaximalReturnNode(value = null)
                     ),
-                    decoratorList = emptyList(),
-                    returnType = CanonicalTypes.Void,
-                    paramTypes = mapOf("input" to CanonicalTypes.String)
+                    returnType = CanonicalTypes.Void
                 )
             )
         )
@@ -610,25 +745,23 @@ object MaximalAstGenerator {
     fun generateFunctionWithReturnValue(): ModuleNode {
         return ModuleNode(
             body = listOf(
-                FunctionDefNode(
+                createMaximalFunctionDefNode(
                     name = "add",
                     args = listOf(
-                        NameNode(id = "a", ctx = Param, type = CanonicalTypes.Number),
-                        NameNode(id = "b", ctx = Param, type = CanonicalTypes.Number)
+                        createMaximalNameNode(id = "a", ctx = Param, type = CanonicalTypes.Number),
+                        createMaximalNameNode(id = "b", ctx = Param, type = CanonicalTypes.Number)
                     ),
                     body = listOf(
-                        ReturnNode(
-                            value = BinaryOpNode(
-                                left = NameNode(id = "a", ctx = Load),
+                        createMaximalReturnNode(
+                            value = createMaximalBinaryOpNode(
+                                left = createMaximalNameNode(id = "a", ctx = Load, type = CanonicalTypes.Number),
                                 op = "+",
-                                right = NameNode(id = "b", ctx = Load),
+                                right = createMaximalNameNode(id = "b", ctx = Load, type = CanonicalTypes.Number),
                                 resultType = CanonicalTypes.Number
                             )
                         )
                     ),
-                    decoratorList = emptyList(),
-                    returnType = CanonicalTypes.Number,
-                    paramTypes = mapOf("a" to CanonicalTypes.Number, "b" to CanonicalTypes.Number)
+                    returnType = CanonicalTypes.Number
                 )
             )
         )

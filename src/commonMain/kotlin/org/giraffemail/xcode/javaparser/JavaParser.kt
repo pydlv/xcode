@@ -149,7 +149,7 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         val canonicalType = if (paramType != "object") {
             CanonicalTypes.fromString(paramType)
         } else {
-            CanonicalTypes.Any
+            CanonicalTypes.Unknown // Changed from Any to Unknown for round-trip consistency
         }
         
         return NameNode(id = paramName, ctx = Param, type = canonicalType)
@@ -172,7 +172,7 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         val canonicalType = if (paramType != "object") {
             CanonicalTypes.fromString(paramType)
         } else {
-            CanonicalTypes.Any
+            CanonicalTypes.Unknown // Changed from Any to Unknown for round-trip consistency
         }
         
         return NameNode(id = paramName, ctx = Param, type = canonicalType)
