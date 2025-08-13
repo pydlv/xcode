@@ -20,6 +20,28 @@ fun createMaximalAssignNode(
 )
 
 /**
+ * Creates an AssignNode with TypeDefinition for enhanced type safety
+ */
+fun createMaximalAssignNodeWithType(
+    targetId: String,
+    value: ExpressionNode,
+    typeDefinition: TypeDefinition
+): AssignNode = when (typeDefinition) {
+    is TypeDefinition.Simple -> AssignNode(
+        target = NameNode(id = targetId, ctx = Store),
+        value = value,
+        variableType = typeDefinition.type,
+        customVariableType = null
+    )
+    else -> AssignNode(
+        target = NameNode(id = targetId, ctx = Store),
+        value = value,
+        variableType = CanonicalTypes.Unknown,
+        customVariableType = typeDefinition.toString()
+    )
+}
+
+/**
  * Creates a ClassDefNode with maximal metadata population for testing
  */
 fun createMaximalClassDefNode(
@@ -36,6 +58,27 @@ fun createMaximalClassDefNode(
     customClassType = customClassType ?: name,
     methods = body.filterIsInstance<FunctionDefNode>().map { it.name }
 )
+
+/**
+ * Creates a ClassDefNode with TypeDefinition for enhanced type safety
+ */
+fun createMaximalClassDefNodeWithType(
+    name: String,
+    body: List<StatementNode>,
+    typeDefinition: TypeDefinition = TypeDefinition.custom(name),
+    baseClasses: List<ExpressionNode> = emptyList()
+): ClassDefNode = when (typeDefinition) {
+    is TypeDefinition.Custom -> ClassDefNode(
+        name = name,
+        baseClasses = baseClasses,
+        body = body,
+        decoratorList = emptyList(),
+        classType = CanonicalTypes.Any,
+        customClassType = typeDefinition.typeName,
+        methods = body.filterIsInstance<FunctionDefNode>().map { it.name }
+    )
+    else -> createMaximalClassDefNode(name, body, typeDefinition.toString(), baseClasses)
+}
 
 /**
  * Creates a FunctionDefNode with maximal metadata population for testing
@@ -467,10 +510,10 @@ object MaximalAstGenerator {
             }
 
             bodyNodes.add(
-                createMaximalClassDefNode(
+                createMaximalClassDefNodeWithType(
                     name = "DataProcessor",
                     body = classBody,
-                    customClassType = "DataProcessor"
+                    typeDefinition = TypeDefinition.custom("DataProcessor")
                 )
             )
         }
@@ -649,28 +692,26 @@ object MaximalAstGenerator {
                     // Insert before the return statement, or at the end if no return
                     newBody.add(
                         insertIndex,
-                        createMaximalAssignNode(
+                        createMaximalAssignNodeWithType(
                             targetId = "tupleData",
                             value = createMaximalTupleNode(
                                 elements = tupleElements,
                                 tupleTypes = listOf(CanonicalTypes.String, CanonicalTypes.Number)
                             ),
-                            variableType = CanonicalTypes.Any,
-                            customType = "[string, number]"
+                            typeDefinition = TypeDefinition.tuple(CanonicalTypes.String, CanonicalTypes.Number)
                         )
                     )
                     bodyNodes[bodyNodes.indexOf(function)] = function.copy(body = newBody)
                 }
             } else if (features.contains(AstFeature.VARIABLE_ASSIGNMENTS)) {
                 bodyNodes.add(
-                    createMaximalAssignNode(
+                    createMaximalAssignNodeWithType(
                         targetId = "tupleData",
                         value = createMaximalTupleNode(
                             elements = tupleElements,
                             tupleTypes = listOf(CanonicalTypes.String, CanonicalTypes.Number)
                         ),
-                        variableType = CanonicalTypes.Any,
-                        customType = "[string, number]"
+                        typeDefinition = TypeDefinition.tuple(CanonicalTypes.String, CanonicalTypes.Number)
                     )
                 )
             }

@@ -21,6 +21,53 @@ enum class CanonicalTypes {
     }
 }
 
+// --- Enhanced Type Definition System for Complex Types ---
+sealed class TypeDefinition {
+    data class Simple(val type: CanonicalTypes) : TypeDefinition()
+    data class Tuple(val elementTypes: List<CanonicalTypes>) : TypeDefinition()
+    data class Array(val elementType: CanonicalTypes, val isHomogeneous: Boolean = true) : TypeDefinition()
+    data class Custom(val typeName: String) : TypeDefinition()
+    data object Unknown : TypeDefinition()
+    
+    companion object {
+        fun fromCanonical(type: CanonicalTypes): TypeDefinition = Simple(type)
+        
+        fun fromString(typeString: String): TypeDefinition = when {
+            typeString.startsWith("[") && typeString.endsWith("]") && typeString.contains(",") -> {
+                // Parse tuple type like "[string, number]"
+                val content = typeString.substring(1, typeString.length - 1)
+                val types = content.split(",").map { it.trim() }.map { CanonicalTypes.fromString(it) }
+                Tuple(types)
+            }
+            typeString.endsWith("[]") -> {
+                // Parse array type like "string[]"
+                val elementType = typeString.substring(0, typeString.length - 2)
+                Array(CanonicalTypes.fromString(elementType))
+            }
+            else -> {
+                val canonicalType = CanonicalTypes.fromString(typeString)
+                if (canonicalType == CanonicalTypes.Unknown) {
+                    Custom(typeString) // Custom class name like "DataProcessor"
+                } else {
+                    Simple(canonicalType)
+                }
+            }
+        }
+        
+        fun tuple(vararg types: CanonicalTypes): TypeDefinition = Tuple(types.toList())
+        fun array(elementType: CanonicalTypes, homogeneous: Boolean = true): TypeDefinition = Array(elementType, homogeneous)
+        fun custom(typeName: String): TypeDefinition = Custom(typeName)
+    }
+    
+    override fun toString(): String = when (this) {
+        is Simple -> type.name.lowercase()
+        is Tuple -> "[${elementTypes.joinToString(", ") { it.name.lowercase() }}]"
+        is Array -> "${elementType.name.lowercase()}[]"
+        is Custom -> typeName
+        is Unknown -> "unknown"
+    }
+}
+
 // --- AST Data Classes ---
 sealed interface AstNode
 sealed interface StatementNode : AstNode
@@ -63,7 +110,17 @@ data class AssignNode(
     val value: ExpressionNode,  // Value being assigned (right side)
     val variableType: CanonicalTypes = CanonicalTypes.Unknown,
     val customVariableType: String? = null // For complex types like "[string, number]"
-) : StatementNode
+) : StatementNode {
+    
+    /**
+     * Get the type definition for this assignment, preferring custom type over canonical type
+     */
+    val typeDefinition: TypeDefinition get() = when {
+        customVariableType != null -> TypeDefinition.fromString(customVariableType!!)
+        variableType != CanonicalTypes.Unknown -> TypeDefinition.fromCanonical(variableType)
+        else -> TypeDefinition.Unknown
+    }
+}
 
 // Call statement (when a function call is its own statement)
 data class CallStatementNode(
