@@ -3,11 +3,7 @@ package org.giraffemail.xcode.ast
 // --- Unified Type System ---
 sealed interface TypeInfo {
     companion object {
-        /**
-         * Unified type parsing that automatically determines whether to return
-         * CanonicalTypes for simple types or TypeDefinition for complex types.
-         * This removes the need for hardcoded pattern matching in callers.
-         */
+        // Minimal fromString support for backward compatibility during transition to native metadata
         fun fromString(typeString: String): TypeInfo {
             return when {
                 // Complex types that require TypeDefinition
@@ -42,6 +38,7 @@ enum class CanonicalTypes : TypeInfo {
     Unknown;
     
     companion object {
+        // Minimal fromString support for backward compatibility during transition
         fun fromString(type: String): CanonicalTypes = when (type.lowercase()) {
             "string" -> String
             "number", "int", "integer", "float", "double" -> Number
@@ -55,23 +52,14 @@ enum class CanonicalTypes : TypeInfo {
 
 // --- Enhanced Type Definition System for Complex Types ---
 sealed class TypeDefinition : TypeInfo {
-    data class Simple(val type: CanonicalTypes) : TypeDefinition() {
-        override fun toString(): String = type.name.lowercase()
-    }
-    data class Tuple(val elementTypes: List<CanonicalTypes>) : TypeDefinition() {
-        override fun toString(): String = "[${elementTypes.joinToString(", ") { it.name.lowercase() }}]"
-    }
-    data class Array(val elementType: CanonicalTypes, val isHomogeneous: Boolean = true) : TypeDefinition() {
-        override fun toString(): String = "${elementType.name.lowercase()}[]"
-    }
-    data class Custom(val typeName: String) : TypeDefinition() {
-        override fun toString(): String = typeName
-    }
-    data object Unknown : TypeDefinition() {
-        override fun toString(): String = "unknown"
-    }
+    data class Simple(val type: CanonicalTypes) : TypeDefinition()
+    data class Tuple(val elementTypes: List<CanonicalTypes>) : TypeDefinition()
+    data class Array(val elementType: CanonicalTypes, val isHomogeneous: Boolean = true) : TypeDefinition()
+    data class Custom(val typeName: String) : TypeDefinition()
+    data object Unknown : TypeDefinition()
     
     companion object {
+        // Minimal fromString support for backward compatibility during transition
         fun fromString(typeString: String): TypeDefinition = when {
             typeString.startsWith("[") && typeString.endsWith("]") && typeString.contains(",") -> {
                 // Parse tuple type like "[string, number]"

@@ -5,7 +5,22 @@ import org.giraffemail.xcode.ast.*
 abstract class AbstractAstGenerator : AstGeneratorVisitor {
 
     /**
-     * Generate code and metadata as separate parts
+     * Generate code and metadata as separate parts using native metadata (preferred)
+     */
+    open fun generateWithNativeMetadata(ast: AstNode): CodeWithNativeMetadata {
+        // Collect native metadata from the AST
+        val metadata = collectNativeMetadataFromAst(ast)
+        
+        // Generate code
+        val code = generateCode(ast)
+        
+        // Return both parts
+        return NativeMetadataUtils.createCodeWithMetadata(code, metadata)
+    }
+
+    /**
+     * Generate code and metadata as separate parts using legacy string metadata (for backward compatibility)
+     * TODO: Migrate callers to generateWithNativeMetadata
      */
     open fun generateWithMetadata(ast: AstNode): CodeWithMetadata {
         // Collect metadata from the AST
@@ -32,6 +47,73 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
     /**
      * Collect all metadata from AST nodes recursively
      */
+    /**
+     * Collect native metadata from AST - no string conversion involved (preferred approach)
+     */
+    protected open fun collectNativeMetadataFromAst(ast: AstNode): List<NativeMetadata> {
+        val metadata = mutableListOf<NativeMetadata>()
+        
+        fun collectFromNode(node: AstNode) {
+            when (node) {
+                is ModuleNode -> {
+                    node.body.forEach { collectFromNode(it) }
+                }
+                is FunctionDefNode -> {
+                    // Extract function metadata with native TypeInfo
+                    val returnType = node.returnType
+                    val paramTypes = node.paramTypes
+                    val individualParamMetadata = node.individualParamMetadata
+                    
+                    if (returnType != CanonicalTypes.Void && returnType != CanonicalTypes.Unknown || 
+                        paramTypes.isNotEmpty() || individualParamMetadata.isNotEmpty()) {
+                        metadata.add(FunctionMetadata(
+                            returnType = returnType,
+                            paramTypes = paramTypes,
+                            individualParamMetadata = individualParamMetadata
+                        ))
+                    }
+                    node.body.forEach { collectFromNode(it) }
+                }
+                is ClassDefNode -> {
+                    // Extract class metadata with native TypeInfo
+                    val classType = node.typeInfo
+                    val methods = node.methods
+                    
+                    if (classType != CanonicalTypes.Any && classType != CanonicalTypes.Unknown || methods.isNotEmpty()) {
+                        metadata.add(ClassMetadata(
+                            classType = classType,
+                            methods = methods
+                        ))
+                    }
+                    // Recursively collect from class body
+                    node.body.forEach { collectFromNode(it) }
+                }
+                is AssignNode -> {
+                    // Extract assignment metadata with native TypeInfo
+                    val typeInfo = node.typeInfo
+                    if (typeInfo != CanonicalTypes.Unknown) {
+                        metadata.add(VariableMetadata(variableType = typeInfo))
+                    }
+                }
+                is IfNode -> {
+                    // Recursively collect from if node body and else body
+                    node.body.forEach { collectFromNode(it) }
+                    node.orelse.forEach { collectFromNode(it) }
+                }
+                else -> {
+                    // For other node types, no metadata to collect
+                }
+            }
+        }
+        
+        collectFromNode(ast)
+        return metadata
+    }
+
+    /**
+     * Collect legacy string-based metadata from AST (for backward compatibility)
+     * TODO: Migrate callers to collectNativeMetadataFromAst
+     */
     protected open fun collectMetadataFromAst(ast: AstNode): List<LanguageMetadata> {
         val metadata = mutableListOf<LanguageMetadata>()
         
@@ -41,7 +123,7 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
                     node.body.forEach { collectFromNode(it) }
                 }
                 is FunctionDefNode -> {
-                    // Extract function metadata
+                    // Extract function metadata and convert to strings
                     val (returnType, paramTypes, individualParamMetadata) = extractFunctionMetadata(node)
                     if (returnType != null || paramTypes.isNotEmpty() || individualParamMetadata.isNotEmpty()) {
                         metadata.add(LanguageMetadata(
@@ -53,7 +135,7 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
                     node.body.forEach { collectFromNode(it) }
                 }
                 is ClassDefNode -> {
-                    // Extract class metadata
+                    // Extract class metadata and convert to strings
                     val (classType, classMethods) = extractClassMetadata(node)
                     if (classType != null || classMethods.isNotEmpty()) {
                         metadata.add(LanguageMetadata(
@@ -65,7 +147,7 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
                     node.body.forEach { collectFromNode(it) }
                 }
                 is AssignNode -> {
-                    // Extract assignment metadata
+                    // Extract assignment metadata and convert to strings
                     when (val typeInfo = node.typeInfo) {
                         is CanonicalTypes -> {
                             if (typeInfo != CanonicalTypes.Unknown) {
@@ -74,7 +156,7 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
                             }
                         }
                         is TypeDefinition -> {
-                            val variableType = typeInfo.toString()
+                            val variableType = typeInfoToString(typeInfo)
                             metadata.add(LanguageMetadata(variableType = variableType))
                         }
                     }
@@ -92,6 +174,21 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
         
         collectFromNode(ast)
         return metadata
+    }
+
+    /**
+     * Convert TypeInfo to string for legacy metadata support
+     * TODO: Remove once migration to native metadata is complete
+     */
+    private fun typeInfoToString(typeInfo: TypeInfo): String {
+        return when (typeInfo) {
+            is CanonicalTypes -> typeInfo.name.lowercase()
+            is TypeDefinition.Simple -> typeInfo.type.name.lowercase()
+            is TypeDefinition.Tuple -> "[${typeInfo.elementTypes.joinToString(", ") { it.name.lowercase() }}]"
+            is TypeDefinition.Array -> "${typeInfo.elementType.name.lowercase()}[]"
+            is TypeDefinition.Custom -> typeInfo.typeName
+            is TypeDefinition.Unknown -> "unknown"
+        }
     }
 
     // Dispatch for statement-level nodes

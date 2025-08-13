@@ -10,6 +10,7 @@ import org.antlr.v4.kotlinruntime.tree.ParseTreeVisitor
 import org.giraffemail.xcode.ast.AstNode
 import org.giraffemail.xcode.ast.AstParseException
 import org.giraffemail.xcode.ast.LanguageMetadata
+import org.giraffemail.xcode.ast.NativeMetadata
 import org.giraffemail.xcode.common.ParserUtils
 
 abstract class AbstractAntlrParser<
@@ -71,6 +72,34 @@ abstract class AbstractAntlrParser<
         val astWithMetadata = ParserUtils.injectMetadataIntoAst(ast, metadataQueue)
         
         // Apply any additional post-processing (but not metadata injection)
+        return postprocessAst(astWithMetadata)
+    }
+
+    /**
+     * Parse method that supports native metadata without string conversion.
+     * This is the new preferred approach that avoids lossy string serialization.
+     */
+    open fun parseWithNativeMetadata(code: String, metadataPart: List<NativeMetadata>): AstNode {
+        // Specific trigger for testing error handling paths
+        if (code == "trigger_error_${getLanguageName().lowercase()}") {
+            throw AstParseException("Simulated parsing error for 'trigger_error_${getLanguageName().lowercase()}' input in ${getLanguageName()}.")
+        }
+        
+        // No need to extract metadata from strings - we have native metadata
+        val processedCode = postMetadataPreprocessCode(code)
+        
+        // Standard parsing pipeline
+        val lexer = createLexer(CharStreams.fromString(processedCode))
+        val tokens = CommonTokenStream(lexer)
+        val parser = createAntlrParser(tokens)
+        val parseTree = invokeEntryPoint(parser)
+        val visitor = createAstBuilder()
+        val ast = parseTree.accept(visitor)
+        
+        // Inject native metadata into the AST without string conversion
+        val astWithMetadata = ParserUtils.injectNativeMetadataIntoAst(ast, metadataPart)
+        
+        // Apply any additional post-processing
         return postprocessAst(astWithMetadata)
     }
 }
