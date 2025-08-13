@@ -563,7 +563,7 @@ object MaximalAstGenerator {
 
             bodyNodes.add(
                 createMaximalAssignNode(
-                    targetId = "result",
+                    targetId = "nestedResult",
                     value = nestedExpression,
                     typeInfo = CanonicalTypes.Number
                 )
@@ -573,7 +573,7 @@ object MaximalAstGenerator {
             if (features.contains(AstFeature.PRINT_STATEMENTS)) {
                 bodyNodes.add(
                     createMaximalPrintNode(
-                        expression = createMaximalNameNode("result", Load, CanonicalTypes.Number)
+                        expression = createMaximalNameNode("nestedResult", Load, CanonicalTypes.Number)
                     )
                 )
             }
