@@ -91,9 +91,9 @@ class PythonParserTest {
             body = listOf(
                 PrintNode( // ANTLR parser creates PrintNode directly
                     expression = BinaryOpNode( // This will require grammar change
-                        left = ConstantNode(value = 1),
+                        left = ConstantNode(value = 1, typeInfo = CanonicalTypes.Number),
                         op = "+",
-                        right = ConstantNode(value = 2)
+                        right = ConstantNode(value = 2, typeInfo = CanonicalTypes.Number)
                     )
                 )
             )
@@ -116,8 +116,8 @@ class PythonParserTest {
                     call = CallNode(
                         func = NameNode(id = "fib", ctx = Load),
                         args = listOf(
-                            ConstantNode(value = 0),
-                            ConstantNode(value = 1)
+                            ConstantNode(value = 0, typeInfo = CanonicalTypes.Number),
+                            ConstantNode(value = 1, typeInfo = CanonicalTypes.Number)
                         ),
                         keywords = emptyList()
                     )

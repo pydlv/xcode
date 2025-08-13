@@ -51,8 +51,8 @@ fib(0, 1);"""
                     call = CallNode(
                         func = NameNode(id = "fib", ctx = Load),
                         args = listOf(
-                            ConstantNode(0),
-                            ConstantNode(1)
+                            ConstantNode(0, CanonicalTypes.Number),
+                            ConstantNode(1, CanonicalTypes.Number)
                         ),
                         keywords = emptyList()
                     )

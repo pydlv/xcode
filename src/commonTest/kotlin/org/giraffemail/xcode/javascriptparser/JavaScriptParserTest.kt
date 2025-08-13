@@ -61,9 +61,9 @@ class JavaScriptParserTest {
             body = listOf(
                 PrintNode( // ANTLR parser creates PrintNode directly
                     expression = BinaryOpNode( // This will require grammar change for JS
-                        left = ConstantNode(value = 1), // Normalized to integer
+                        left = ConstantNode(value = 1, typeInfo = CanonicalTypes.Number), // Normalized to integer
                         op = "+",
-                        right = ConstantNode(value = 2) // Normalized to integer
+                        right = ConstantNode(value = 2, typeInfo = CanonicalTypes.Number) // Normalized to integer
                     )
                 )
             )
@@ -86,8 +86,8 @@ class JavaScriptParserTest {
                     call = CallNode(
                         func = NameNode(id = "fib", ctx = Load),
                         args = listOf(
-                            ConstantNode(value = 0), // Normalized to integer
-                            ConstantNode(value = 1)  // Normalized to integer
+                            ConstantNode(value = 0, typeInfo = CanonicalTypes.Number), // Normalized to integer
+                            ConstantNode(value = 1, typeInfo = CanonicalTypes.Number)  // Normalized to integer
                         ),
                         keywords = emptyList()
                     )
