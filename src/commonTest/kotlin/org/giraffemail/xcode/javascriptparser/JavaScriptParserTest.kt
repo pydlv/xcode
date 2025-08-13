@@ -16,7 +16,7 @@ class JavaScriptParserTest {
         val expectedAst = ModuleNode(
             body = listOf(
                 PrintNode( // ANTLR parser creates PrintNode directly
-                    expression = ConstantNode(value = "Hello, World!")
+                    expression = ConstantNode(value = "Hello, World!", typeInfo = CanonicalTypes.String)
                 )
             )
         )
@@ -39,7 +39,7 @@ class JavaScriptParserTest {
         val expectedAst = ModuleNode(
             body = listOf(
                 PrintNode( // ANTLR parser creates PrintNode directly
-                    expression = ConstantNode(value = customString)
+                    expression = ConstantNode(value = customString, typeInfo = CanonicalTypes.String)
                 )
             )
         )

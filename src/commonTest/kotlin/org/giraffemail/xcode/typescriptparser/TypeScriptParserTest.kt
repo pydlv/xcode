@@ -15,7 +15,7 @@ class TypeScriptParserTest {
         val expectedAst = ModuleNode(
             body = listOf(
                 PrintNode(
-                    expression = ConstantNode(value = "cookies")
+                    expression = ConstantNode(value = "cookies", typeInfo = CanonicalTypes.String)
                 )
             )
         )
@@ -38,7 +38,7 @@ class TypeScriptParserTest {
         val expectedAst = ModuleNode(
             body = listOf(
                 PrintNode( // ANTLR parser creates PrintNode directly
-                    expression = ConstantNode(value = customString)
+                    expression = ConstantNode(value = customString, typeInfo = CanonicalTypes.String)
                 )
             )
         )
@@ -113,7 +113,7 @@ class TypeScriptParserTest {
                     name = "greet",
                     args = listOf(NameNode(id = "name", ctx = Param, typeInfo = CanonicalTypes.String)),
                     body = listOf(
-                        PrintNode(expression = ConstantNode(value = "Hello"))
+                        PrintNode(expression = ConstantNode(value = "Hello", typeInfo = CanonicalTypes.String))
                     ),
                     decoratorList = emptyList(),
                     returnType = CanonicalTypes.Void,
