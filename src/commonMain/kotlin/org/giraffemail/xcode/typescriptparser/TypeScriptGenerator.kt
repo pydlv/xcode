@@ -41,7 +41,7 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         // Generate return type annotation from native metadata
         val returnTypeAnnotation = when (val returnType = node.returnType) {
             is CanonicalTypes -> if (returnType != CanonicalTypes.Unknown) ": ${returnType.name.lowercase()}" else ""
-            is TypeDefinition -> ": ${returnType.toString()}"
+            is TypeDefinition -> ": $returnType"
         }
         
         // Indent statements within the function body

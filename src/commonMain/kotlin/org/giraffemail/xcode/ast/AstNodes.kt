@@ -34,29 +34,6 @@ sealed class TypeDefinition : TypeInfo {
     data object Unknown : TypeDefinition()
     
     companion object {
-        // Minimal fromString support for backward compatibility during transition
-        fun fromString(typeString: String): TypeDefinition = when {
-            typeString.startsWith("[") && typeString.endsWith("]") && typeString.contains(",") -> {
-                // Parse tuple type like "[string, number]"
-                val content = typeString.substring(1, typeString.length - 1)
-                val types = content.split(",").map { it.trim() }.map { CanonicalTypes.fromString(it) }
-                Tuple(types)
-            }
-            typeString.endsWith("[]") -> {
-                // Parse array type like "string[]"
-                val elementType = typeString.substring(0, typeString.length - 2)
-                Array(CanonicalTypes.fromString(elementType))
-            }
-            else -> {
-                val canonicalType = CanonicalTypes.fromString(typeString)
-                if (canonicalType == CanonicalTypes.Unknown) {
-                    Custom(typeString) // Custom class name like "DataProcessor"
-                } else {
-                    Simple(canonicalType)
-                }
-            }
-        }
-        
         fun tuple(vararg types: CanonicalTypes): TypeDefinition = Tuple(types.toList())
         fun array(elementType: CanonicalTypes, homogeneous: Boolean = true): TypeDefinition = Array(elementType, homogeneous)
         fun custom(typeName: String): TypeDefinition = Custom(typeName)
