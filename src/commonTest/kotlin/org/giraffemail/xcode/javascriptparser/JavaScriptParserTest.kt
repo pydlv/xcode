@@ -22,7 +22,7 @@ class JavaScriptParserTest {
         )
 
         try {
-            val ast = JavaScriptParser.parseWithMetadata(jsCode, emptyList()) // This will initially fail as JavaScriptParser doesn't exist
+            val ast = JavaScriptParser.parseWithNativeMetadata(jsCode, emptyList()) // This will initially fail as JavaScriptParser doesn't exist
             assertNotNull(ast, "AST should not be null")
             assertEquals(expectedAst, ast, "AST did not match expected structure. \nActual: $ast\nExpected: $expectedAst")
         } catch (e: AstParseException) {
@@ -45,7 +45,7 @@ class JavaScriptParserTest {
         )
 
         try {
-            val ast = JavaScriptParser.parseWithMetadata(jsCode, emptyList())
+            val ast = JavaScriptParser.parseWithNativeMetadata(jsCode, emptyList())
             assertNotNull(ast, "AST should not be null")
             assertEquals(expectedAst, ast, "AST did not match expected structure for arbitrary string. \nActual: $ast\nExpected: $expectedAst")
         } catch (e: AstParseException) {
@@ -70,7 +70,7 @@ class JavaScriptParserTest {
         )
 
         try {
-            val ast = JavaScriptParser.parseWithMetadata(jsCode, emptyList())
+            val ast = JavaScriptParser.parseWithNativeMetadata(jsCode, emptyList())
             assertEquals(expectedAst, ast, "AST for console.log with addition did not match expected.")
         } catch (e: AstParseException) {
             fail("Parsing failed for console.log with addition: ${e.message}", e)
@@ -96,7 +96,7 @@ class JavaScriptParserTest {
         )
 
         try {
-            val ast = JavaScriptParser.parseWithMetadata(jsCode, emptyList())
+            val ast = JavaScriptParser.parseWithNativeMetadata(jsCode, emptyList())
             assertEquals(expectedAst, ast, "AST for fib(0, 1) did not match expected.")
         } catch (e: AstParseException) {
             fail("Parsing failed for fib(0, 1): ${e.message}", e)

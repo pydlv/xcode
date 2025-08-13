@@ -22,23 +22,23 @@ class TranspilationTest {
 
     private val pythonConfig = LanguageConfig(
         "Python",
-        PythonParser::parseWithMetadata,
-        { ast -> PythonGenerator().generateWithMetadata(ast) }
+        PythonParser::parseWithNativeMetadata,
+        { ast -> PythonGenerator().generateWithNativeMetadata(ast) }
     )
     private val javaScriptConfig = LanguageConfig(
         "JavaScript",
-        JavaScriptParser::parseWithMetadata,
-        { ast -> JavaScriptGenerator().generateWithMetadata(ast) }
+        JavaScriptParser::parseWithNativeMetadata,
+        { ast -> JavaScriptGenerator().generateWithNativeMetadata(ast) }
     )
     private val javaConfig = LanguageConfig(
         "Java",
-        JavaParser::parseWithMetadata,
-        { ast -> JavaGenerator().generateWithMetadata(ast) }
+        JavaParser::parseWithNativeMetadata,
+        { ast -> JavaGenerator().generateWithNativeMetadata(ast) }
     )
     private val typeScriptConfig = LanguageConfig(
         "TypeScript",
-        TypeScriptParser::parseWithMetadata,
-        { ast -> TypeScriptGenerator().generateWithMetadata(ast) }
+        TypeScriptParser::parseWithNativeMetadata,
+        { ast -> TypeScriptGenerator().generateWithNativeMetadata(ast) }
     )
 
     private val allLanguages = listOf(pythonConfig, javaScriptConfig, javaConfig, typeScriptConfig)
@@ -60,13 +60,13 @@ class TranspilationTest {
                     println("\\nTesting ${fromLang.name} -> ${toLang.name} -> ${fromLang.name}")
 
                     // Step 1: Generate code with metadata from original AST using source language
-                    val sourceCodeWithMetadata = fromLang.generateWithMetadataFn(originalAst)
-                    println("Generated ${fromLang.name} code: ${sourceCodeWithMetadata.code}")
-                    println("Generated ${fromLang.name} metadata: ${sourceCodeWithMetadata.metadata}")
+                    val sourceCodeWithNativeMetadata = fromLang.generateWithNativeMetadataFn(originalAst)
+                    println("Generated ${fromLang.name} code: ${sourceCodeWithNativeMetadata.code}")
+                    println("Generated ${fromLang.name} metadata: ${sourceCodeWithNativeMetadata.metadata}")
 
                     // Step 2: Parse back to AST to verify generation didn't lose information
                     val parsedFromSource =
-                        fromLang.parseWithMetadataFn(sourceCodeWithMetadata.code, sourceCodeWithMetadata.metadata)
+                        fromLang.parseWithNativeMetadataFn(sourceCodeWithNativeMetadata.code, sourceCodeWithNativeMetadata.metadata)
 
                     // All languages should preserve metadata through parts-based system
                     assertEquals(
@@ -75,24 +75,24 @@ class TranspilationTest {
                     )
 
                     // Step 3: Generate intermediate code with metadata using target language
-                    val intermediateCodeWithMetadata = toLang.generateWithMetadataFn(parsedFromSource)
-                    println("Generated ${toLang.name} code: ${intermediateCodeWithMetadata.code}")
-                    println("Generated ${toLang.name} metadata: ${intermediateCodeWithMetadata.metadata}")
+                    val intermediateCodeWithNativeMetadata = toLang.generateWithNativeMetadataFn(parsedFromSource)
+                    println("Generated ${toLang.name} code: ${intermediateCodeWithNativeMetadata.code}")
+                    println("Generated ${toLang.name} metadata: ${intermediateCodeWithNativeMetadata.metadata}")
 
                     // Step 4: Parse intermediate code back to AST with metadata
-                    val parsedFromTarget = toLang.parseWithMetadataFn(
-                        intermediateCodeWithMetadata.code,
-                        intermediateCodeWithMetadata.metadata
+                    val parsedFromTarget = toLang.parseWithNativeMetadataFn(
+                        intermediateCodeWithNativeMetadata.code,
+                        intermediateCodeWithNativeMetadata.metadata
                     )
 
                     // Step 5: Generate final code with metadata back to source language
-                    val finalCodeWithMetadata = fromLang.generateWithMetadataFn(parsedFromTarget)
-                    println("Final ${fromLang.name} code: ${finalCodeWithMetadata.code}")
-                    println("Final ${fromLang.name} metadata: ${finalCodeWithMetadata.metadata}")
+                    val finalCodeWithNativeMetadata = fromLang.generateWithNativeMetadataFn(parsedFromTarget)
+                    println("Final ${fromLang.name} code: ${finalCodeWithNativeMetadata.code}")
+                    println("Final ${fromLang.name} metadata: ${finalCodeWithNativeMetadata.metadata}")
 
                     // Step 6: Parse final code and verify AST preservation
                     val finalAst =
-                        fromLang.parseWithMetadataFn(finalCodeWithMetadata.code, finalCodeWithMetadata.metadata)
+                        fromLang.parseWithNativeMetadataFn(finalCodeWithNativeMetadata.code, finalCodeWithNativeMetadata.metadata)
 
                     // Compare AST preservation through transpilation
                     // All languages should preserve metadata through parts-based system
@@ -143,12 +143,12 @@ class TranspilationTest {
                     println("Step ${i + 1}: ${currentLang.name} -> ${nextLang.name}")
 
                     // Generate code with metadata in current language
-                    val codeWithMetadata = currentLang.generateWithMetadataFn(currentAst)
+                    val codeWithMetadata = currentLang.generateWithNativeMetadataFn(currentAst)
                     println("Generated ${currentLang.name} code: ${codeWithMetadata.code}")
                     println("Generated ${currentLang.name} metadata: ${codeWithMetadata.metadata}")
 
                     // Parse to verify AST preservation
-                    val parsedAst = currentLang.parseWithMetadataFn(codeWithMetadata.code, codeWithMetadata.metadata)
+                    val parsedAst = currentLang.parseWithNativeMetadataFn(codeWithMetadata.code, codeWithMetadata.metadata)
 
                     // All languages should preserve metadata through parts-based system
                     assertEquals(
@@ -157,8 +157,8 @@ class TranspilationTest {
                     )
 
                     // Generate in next language and parse
-                    val nextCodeWithMetadata = nextLang.generateWithMetadataFn(parsedAst)
-                    currentAst = nextLang.parseWithMetadataFn(nextCodeWithMetadata.code, nextCodeWithMetadata.metadata)
+                    val nextCodeWithNativeMetadata = nextLang.generateWithNativeMetadataFn(parsedAst)
+                    currentAst = nextLang.parseWithNativeMetadataFn(nextCodeWithNativeMetadata.code, nextCodeWithNativeMetadata.metadata)
                 }
 
                 // Verify we got back to the original AST including metadata

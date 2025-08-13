@@ -51,7 +51,7 @@ class NativeMetadataDemo {
         val generator = MockGenerator()
         
         // Test legacy string-based metadata (lossy conversion)
-        val legacyResult = generator.generateWithMetadata(ast)
+        val legacyResult = generator.generateWithNativeMetadata(ast)
         println("Legacy metadata:")
         legacyResult.metadata.forEach { metadata ->
             println("  - variableType: ${metadata.variableType} (String)")

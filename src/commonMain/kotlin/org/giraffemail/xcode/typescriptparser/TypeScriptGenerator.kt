@@ -25,12 +25,12 @@ class TypeScriptGenerator : AbstractAstGenerator() {
     override fun visitFunctionDefNode(node: FunctionDefNode): String {
         val funcName = node.name
         
-        // Extract metadata using the common function
-        val (returnType, paramTypes, _) = extractFunctionMetadata(node)
-        
-        // Generate parameters with type annotations from metadata
+        // Generate parameters with type annotations from native metadata
         val params = node.args.joinToString(", ") { param ->
-            val paramType = paramTypes[param.id]
+            val paramType = when (val typeInfo = param.typeInfo) {
+                is CanonicalTypes -> if (typeInfo != CanonicalTypes.Unknown) typeInfo.name.lowercase() else null
+                is TypeDefinition -> typeInfo.toString()
+            }
             if (paramType != null) {
                 "${param.id}: $paramType"
             } else {
@@ -38,8 +38,11 @@ class TypeScriptGenerator : AbstractAstGenerator() {
             }
         }
         
-        // Generate return type annotation from metadata
-        val returnTypeAnnotation = if (returnType != null) ": $returnType" else ""
+        // Generate return type annotation from native metadata
+        val returnTypeAnnotation = when (val returnType = node.returnType) {
+            is CanonicalTypes -> if (returnType != CanonicalTypes.Unknown && returnType != CanonicalTypes.Void) ": ${returnType.name.lowercase()}" else ""
+            is TypeDefinition -> ": ${returnType.toString()}"
+        }
         
         // Indent statements within the function body
         val body = node.body.joinToString("\n") { "    " + generateStatement(it) }

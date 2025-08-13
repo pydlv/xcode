@@ -802,6 +802,6 @@ object MaximalAstGenerator {
 
 data class LanguageConfig(
     val name: String,
-    val parseWithMetadataFn: (String, List<LanguageMetadata>) -> AstNode,
-    val generateWithMetadataFn: (AstNode) -> CodeWithMetadata
+    val parseWithNativeMetadataFn: (String, List<LanguageMetadata>) -> AstNode,
+    val generateWithNativeMetadataFn: (AstNode) -> CodeWithNativeMetadata
 )

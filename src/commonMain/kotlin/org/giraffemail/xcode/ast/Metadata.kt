@@ -1,42 +1,6 @@
 package org.giraffemail.xcode.ast
 
 /**
- * Legacy metadata storage with strings - kept for backward compatibility
- */
-data class LanguageMetadata(
-    val returnType: String? = null,
-    val paramTypes: Map<String, String> = emptyMap(),
-    val variableType: String? = null,
-    val individualParamMetadata: Map<String, Map<String, String>> = emptyMap(), // param name -> metadata map
-    val classType: String? = null,
-    val classMethods: List<String> = emptyList()
-)
-
-/**
- * Legacy code with metadata storage - kept for backward compatibility
- */
-data class CodeWithMetadata(
-    val code: String,
-    val metadata: List<LanguageMetadata>
-)
-
-/**
- * Legacy utilities for metadata part handling - kept for backward compatibility
- */
-object MetadataSerializer {
-    
-    /**
-     * Creates a CodeWithMetadata object from code and metadata parts
-     */
-    fun createCodeWithMetadata(code: String, metadata: List<LanguageMetadata>): CodeWithMetadata {
-        return CodeWithMetadata(
-            code = code,
-            metadata = metadata
-        )
-    }
-}
-
-/**
  * Native Kotlin metadata storage - no string serialization
  */
 sealed class NativeMetadata

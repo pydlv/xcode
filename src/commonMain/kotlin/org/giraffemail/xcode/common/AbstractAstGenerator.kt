@@ -5,7 +5,7 @@ import org.giraffemail.xcode.ast.*
 abstract class AbstractAstGenerator : AstGeneratorVisitor {
 
     /**
-     * Generate code and metadata as separate parts using native metadata (preferred)
+     * Generate code and metadata as separate parts using native metadata
      */
     open fun generateWithNativeMetadata(ast: AstNode): CodeWithNativeMetadata {
         // Collect native metadata from the AST
@@ -16,20 +16,6 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
         
         // Return both parts
         return NativeMetadataUtils.createCodeWithMetadata(code, metadata)
-    }
-
-    /**
-     * Generate code and metadata as separate parts using legacy string metadata (for backward compatibility)
-     */
-    open fun generateWithMetadata(ast: AstNode): CodeWithMetadata {
-        // Collect metadata from the AST
-        val metadata = collectMetadataFromAst(ast)
-        
-        // Generate code
-        val code = generateCode(ast)
-        
-        // Return both parts
-        return MetadataSerializer.createCodeWithMetadata(code, metadata)
     }
     
     /**
@@ -44,10 +30,7 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
     }
     
     /**
-     * Collect all metadata from AST nodes recursively
-     */
-    /**
-     * Collect native metadata from AST - no string conversion involved (preferred approach)
+     * Collect native metadata from AST - no string conversion involved
      */
     protected open fun collectNativeMetadataFromAst(ast: AstNode): List<NativeMetadata> {
         val metadata = mutableListOf<NativeMetadata>()
@@ -107,87 +90,6 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
         
         collectFromNode(ast)
         return metadata
-    }
-
-    /**
-     * Collect legacy string-based metadata from AST (for backward compatibility)
-     * TODO: Migrate callers to collectNativeMetadataFromAst
-     */
-    protected open fun collectMetadataFromAst(ast: AstNode): List<LanguageMetadata> {
-        val metadata = mutableListOf<LanguageMetadata>()
-        
-        fun collectFromNode(node: AstNode) {
-            when (node) {
-                is ModuleNode -> {
-                    node.body.forEach { collectFromNode(it) }
-                }
-                is FunctionDefNode -> {
-                    // Extract function metadata and convert to strings
-                    val (returnType, paramTypes, individualParamMetadata) = extractFunctionMetadata(node)
-                    if (returnType != null || paramTypes.isNotEmpty() || individualParamMetadata.isNotEmpty()) {
-                        metadata.add(LanguageMetadata(
-                            returnType = returnType,
-                            paramTypes = paramTypes,
-                            individualParamMetadata = individualParamMetadata
-                        ))
-                    }
-                    node.body.forEach { collectFromNode(it) }
-                }
-                is ClassDefNode -> {
-                    // Extract class metadata and convert to strings
-                    val (classType, classMethods) = extractClassMetadata(node)
-                    if (classType != null || classMethods.isNotEmpty()) {
-                        metadata.add(LanguageMetadata(
-                            classType = classType,
-                            classMethods = classMethods
-                        ))
-                    }
-                    // Recursively collect from class body
-                    node.body.forEach { collectFromNode(it) }
-                }
-                is AssignNode -> {
-                    // Extract assignment metadata and convert to strings
-                    when (val typeInfo = node.typeInfo) {
-                        is CanonicalTypes -> {
-                            if (typeInfo != CanonicalTypes.Unknown) {
-                                val variableType = typeInfo.name.lowercase()
-                                metadata.add(LanguageMetadata(variableType = variableType))
-                            }
-                        }
-                        is TypeDefinition -> {
-                            val variableType = typeInfoToString(typeInfo)
-                            metadata.add(LanguageMetadata(variableType = variableType))
-                        }
-                    }
-                }
-                is IfNode -> {
-                    // Recursively collect from if node body and else body
-                    node.body.forEach { collectFromNode(it) }
-                    node.orelse.forEach { collectFromNode(it) }
-                }
-                else -> {
-                    // For other node types, no metadata to collect
-                }
-            }
-        }
-        
-        collectFromNode(ast)
-        return metadata
-    }
-
-    /**
-     * Convert TypeInfo to string for legacy metadata support
-     * TODO: Remove once migration to native metadata is complete
-     */
-    private fun typeInfoToString(typeInfo: TypeInfo): String {
-        return when (typeInfo) {
-            is CanonicalTypes -> typeInfo.name.lowercase()
-            is TypeDefinition.Simple -> typeInfo.type.name.lowercase()
-            is TypeDefinition.Tuple -> "[${typeInfo.elementTypes.joinToString(", ") { it.name.lowercase() }}]"
-            is TypeDefinition.Array -> "${typeInfo.elementType.name.lowercase()}[]"
-            is TypeDefinition.Custom -> typeInfo.typeName
-            is TypeDefinition.Unknown -> "unknown"
-        }
     }
 
     // Dispatch for statement-level nodes
@@ -291,57 +193,6 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
         val leftStr = generateExpression(left)
         val rightStr = generateExpression(right)
         return "$leftStr $operator $rightStr"
-    }
-    
-    /**
-     * Common utility for extracting function metadata for comment generation.
-     * Used across multiple generators.
-     */
-    protected fun extractFunctionMetadata(node: FunctionDefNode): Triple<String?, Map<String, String>, Map<String, Map<String, String>>> {
-        val returnType = when (val returnTypeInfo = node.returnType) {
-            is CanonicalTypes -> {
-                if (returnTypeInfo != CanonicalTypes.Unknown) {
-                    returnTypeInfo.name.lowercase()
-                } else null
-            }
-            is TypeDefinition -> returnTypeInfo.toString()
-        }
-        
-        val paramTypes = node.paramTypes.mapValues { entry ->
-            when (val typeInfo = entry.value) {
-                is CanonicalTypes -> typeInfo.name.lowercase()
-                is TypeDefinition -> typeInfo.toString()
-            }
-        }
-        
-        // Collect individual parameter metadata (currently only type info)
-        val individualParamMetadata = node.args.associate { param ->
-            param.id to when (val typeInfo = param.typeInfo) {
-                is CanonicalTypes -> {
-                    if (typeInfo != CanonicalTypes.Unknown) {
-                        mapOf("type" to typeInfo.name.lowercase())
-                    } else emptyMap()
-                }
-                is TypeDefinition -> mapOf("type" to typeInfo.toString())
-            }
-        }.filterValues { it.isNotEmpty() }
-        
-        return Triple(returnType, paramTypes, individualParamMetadata)
-    }
-
-    protected fun extractClassMetadata(node: ClassDefNode): Pair<String?, List<String>> {
-        val classType = when (val typeInfo = node.typeInfo) {
-            is CanonicalTypes -> {
-                if (typeInfo != CanonicalTypes.Any && typeInfo != CanonicalTypes.Unknown) {
-                    typeInfo.name.lowercase()
-                } else null
-            }
-            is TypeDefinition -> typeInfo.toString()
-        }
-        
-        val classMethods = node.methods
-        
-        return Pair(classType, classMethods)
     }
     
     // Default implementations for ListNode and TupleNode
