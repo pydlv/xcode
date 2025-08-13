@@ -34,6 +34,7 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
      */
     protected open fun collectNativeMetadataFromAst(ast: AstNode): List<NativeMetadata> {
         val metadata = mutableListOf<NativeMetadata>()
+        val functionParameters = mutableSetOf<String>() // Track function parameters to avoid duplicates
         
         fun collectFromNode(node: AstNode) {
             when (node) {
@@ -45,6 +46,11 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
                     val returnType = node.returnType
                     val paramTypes = node.paramTypes
                     val individualParamMetadata = node.individualParamMetadata
+                    
+                    // Track function parameters to avoid duplicate variable metadata
+                    paramTypes.keys.forEach { paramName ->
+                        functionParameters.add(paramName)
+                    }
                     
                     if (returnType != CanonicalTypes.Void && returnType != CanonicalTypes.Unknown || 
                         paramTypes.isNotEmpty() || individualParamMetadata.isNotEmpty()) {
@@ -79,7 +85,8 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
                     }
                 }
                 is IfNode -> {
-                    // Recursively collect from if node body and else body
+                    // Recursively collect from if test condition, body and else body
+                    collectFromNode(node.test)
                     node.body.forEach { collectFromNode(it) }
                     node.orelse.forEach { collectFromNode(it) }
                 }
@@ -112,8 +119,9 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
                 }
                 is NameNode -> {
                     // Extract variable reference metadata with native TypeInfo
+                    // Skip if this variable is already covered by function parameters
                     val typeInfo = node.typeInfo
-                    if (typeInfo != CanonicalTypes.Unknown && node.ctx == Load) {
+                    if (typeInfo != CanonicalTypes.Unknown && node.ctx == Load && !functionParameters.contains(node.id)) {
                         metadata.add(VariableMetadata(variableType = typeInfo, variableName = node.id))
                     }
                 }
