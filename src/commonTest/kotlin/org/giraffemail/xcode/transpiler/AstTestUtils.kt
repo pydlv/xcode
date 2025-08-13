@@ -5,18 +5,23 @@ import org.giraffemail.xcode.ast.*
 // --- Wrapper constructors for maximal metadata population in tests ---
 
 /**
+ * Creates a ModuleNode with maximal metadata population for testing
+ */
+fun createMaximalModuleNode(
+    body: List<StatementNode>
+): ModuleNode = ModuleNode(body = body)
+
+/**
  * Creates an AssignNode with maximal metadata population for testing
  */
 fun createMaximalAssignNode(
     targetId: String,
     value: ExpressionNode,
-    variableType: CanonicalTypes = CanonicalTypes.Unknown,
-    customType: String? = null
+    typeInfo: TypeInfo = CanonicalTypes.Unknown
 ): AssignNode = AssignNode(
     target = NameNode(id = targetId, ctx = Store),
     value = value,
-    variableType = variableType,
-    customVariableType = customType
+    typeInfo = typeInfo
 )
 
 /**
@@ -26,20 +31,11 @@ fun createMaximalAssignNodeWithType(
     targetId: String,
     value: ExpressionNode,
     typeDefinition: TypeDefinition
-): AssignNode = when (typeDefinition) {
-    is TypeDefinition.Simple -> AssignNode(
-        target = NameNode(id = targetId, ctx = Store),
-        value = value,
-        variableType = typeDefinition.type,
-        customVariableType = null
-    )
-    else -> AssignNode(
-        target = NameNode(id = targetId, ctx = Store),
-        value = value,
-        variableType = CanonicalTypes.Unknown,
-        customVariableType = typeDefinition.toString()
-    )
-}
+): AssignNode = AssignNode(
+    target = NameNode(id = targetId, ctx = Store),
+    value = value,
+    typeInfo = typeDefinition
+)
 
 /**
  * Creates a ClassDefNode with maximal metadata population for testing
@@ -54,8 +50,7 @@ fun createMaximalClassDefNode(
     baseClasses = baseClasses,
     body = body,
     decoratorList = emptyList(),
-    classType = CanonicalTypes.Any,
-    customClassType = customClassType ?: name,
+    typeInfo = if (customClassType != null) TypeDefinition.custom(customClassType) else CanonicalTypes.Any,
     methods = body.filterIsInstance<FunctionDefNode>().map { it.name }
 )
 
@@ -67,18 +62,14 @@ fun createMaximalClassDefNodeWithType(
     body: List<StatementNode>,
     typeDefinition: TypeDefinition = TypeDefinition.custom(name),
     baseClasses: List<ExpressionNode> = emptyList()
-): ClassDefNode = when (typeDefinition) {
-    is TypeDefinition.Custom -> ClassDefNode(
-        name = name,
-        baseClasses = baseClasses,
-        body = body,
-        decoratorList = emptyList(),
-        classType = CanonicalTypes.Any,
-        customClassType = typeDefinition.typeName,
-        methods = body.filterIsInstance<FunctionDefNode>().map { it.name }
-    )
-    else -> createMaximalClassDefNode(name, body, typeDefinition.toString(), baseClasses)
-}
+): ClassDefNode = ClassDefNode(
+    name = name,
+    baseClasses = baseClasses,
+    body = body,
+    decoratorList = emptyList(),
+    typeInfo = typeDefinition,
+    methods = body.filterIsInstance<FunctionDefNode>().map { it.name }
+)
 
 /**
  * Creates a FunctionDefNode with maximal metadata population for testing
@@ -94,7 +85,7 @@ fun createMaximalFunctionDefNode(
     body = body,
     decoratorList = emptyList(),
     returnType = returnType,
-    paramTypes = args.associate { it.id to it.type },
+    paramTypes = args.associate { it.id to it.typeInfo },
     individualParamMetadata = emptyMap() // Don't populate this for round-trip compatibility
 )
 
@@ -106,8 +97,8 @@ fun createMaximalTupleNode(
     tupleTypes: List<CanonicalTypes> = emptyList()
 ): TupleNode = TupleNode(
     elements = elements,
-    tupleTypes = if (tupleTypes.isNotEmpty()) tupleTypes else 
-        elements.map { 
+    typeInfo = if (tupleTypes.isNotEmpty()) TypeDefinition.Tuple(tupleTypes) else 
+        TypeDefinition.Tuple(elements.map { 
             when (it) {
                 is ConstantNode -> when (it.value) {
                     is String -> CanonicalTypes.String
@@ -117,7 +108,7 @@ fun createMaximalTupleNode(
                 }
                 else -> CanonicalTypes.Unknown
             }
-        }
+        })
 )
 
 /**
@@ -127,7 +118,7 @@ fun createMaximalNameNode(
     id: String,
     ctx: NameContext,
     type: CanonicalTypes = CanonicalTypes.Unknown
-): NameNode = NameNode(id = id, ctx = ctx, type = type)
+): NameNode = NameNode(id = id, ctx = ctx, typeInfo = type)
 
 /**
  * Creates a BinaryOpNode with maximal metadata population for testing
@@ -141,7 +132,7 @@ fun createMaximalBinaryOpNode(
     left = left,
     op = op,
     right = right,
-    resultType = resultType
+    typeInfo = resultType
 )
 
 /**
@@ -152,7 +143,7 @@ fun createMaximalConstantNode(
     constantType: CanonicalTypes = CanonicalTypes.Unknown
 ): ConstantNode = ConstantNode(
     value = value,
-    constantType = constantType
+    typeInfo = constantType
 )
 
 /**
@@ -164,7 +155,7 @@ fun createMaximalListNode(
     isHomogeneous: Boolean = true
 ): ListNode = ListNode(
     elements = elements,
-    arrayType = arrayType,
+    typeInfo = arrayType,
     isHomogeneous = isHomogeneous
 )
 
@@ -352,7 +343,7 @@ object MaximalAstGenerator {
                     createMaximalAssignNode(
                         targetId = "result",
                         value = assignValue,
-                        variableType = CanonicalTypes.String
+                        typeInfo = CanonicalTypes.String
                     )
                 )
             }
@@ -448,7 +439,7 @@ object MaximalAstGenerator {
                             value = if (features.contains(AstFeature.VARIABLE_REFERENCES))
                                 createMaximalNameNode(id = "newValue", ctx = Load, type = CanonicalTypes.String) 
                                 else createMaximalConstantNode("initialized", CanonicalTypes.String),
-                            variableType = CanonicalTypes.String
+                            typeInfo = CanonicalTypes.String
                         )
                     )
                 }
@@ -530,7 +521,7 @@ object MaximalAstGenerator {
                 createMaximalAssignNode(
                     targetId = "standalone",
                     value = assignValue,
-                    variableType = CanonicalTypes.String
+                    typeInfo = CanonicalTypes.String
                 )
             )
         }
@@ -647,7 +638,7 @@ object MaximalAstGenerator {
                                 arrayType = CanonicalTypes.String,
                                 isHomogeneous = true
                             ),
-                            variableType = CanonicalTypes.String
+                            typeInfo = CanonicalTypes.String
                         )
                     )
                     bodyNodes[bodyNodes.indexOf(function)] = function.copy(body = newBody)
@@ -661,7 +652,7 @@ object MaximalAstGenerator {
                             arrayType = CanonicalTypes.String,
                             isHomogeneous = true
                         ),
-                        variableType = CanonicalTypes.String
+                        typeInfo = CanonicalTypes.String
                     )
                 )
             }
@@ -733,7 +724,7 @@ object MaximalAstGenerator {
                         createMaximalAssignNode(
                             targetId = "result",
                             value = createMaximalConstantNode("hello", CanonicalTypes.String),
-                            variableType = CanonicalTypes.String
+                            typeInfo = CanonicalTypes.String
                         )
                     ),
                     returnType = CanonicalTypes.Void
@@ -751,7 +742,7 @@ object MaximalAstGenerator {
                 createMaximalAssignNode(
                     targetId = "result",
                     value = createMaximalConstantNode("hello", CanonicalTypes.String),
-                    variableType = CanonicalTypes.String
+                    typeInfo = CanonicalTypes.String
                 ),
                 createMaximalPrintNode(
                     expression = createMaximalNameNode(id = "result", ctx = Load, type = CanonicalTypes.String)
@@ -764,7 +755,7 @@ object MaximalAstGenerator {
      * Generates a function with simple return statement (no value)
      */
     fun generateFunctionWithReturnStatement(): ModuleNode {
-        return ModuleNode(
+        return createMaximalModuleNode(
             body = listOf(
                 createMaximalFunctionDefNode(
                     name = "test_return",

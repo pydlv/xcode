@@ -111,7 +111,7 @@ class TypeScriptParserTest {
             body = listOf(
                 FunctionDefNode(
                     name = "greet",
-                    args = listOf(NameNode(id = "name", ctx = Param, type = CanonicalTypes.String)),
+                    args = listOf(NameNode(id = "name", ctx = Param, typeInfo = CanonicalTypes.String)),
                     body = listOf(
                         PrintNode(expression = ConstantNode(value = "Hello"))
                     ),
@@ -139,7 +139,7 @@ class TypeScriptParserTest {
                 AssignNode(
                     target = NameNode(id = "x", ctx = Store),
                     value = ConstantNode(value = 42),
-                    variableType = CanonicalTypes.Number
+                    typeInfo = CanonicalTypes.Number
                 )
             )
         )

@@ -19,10 +19,10 @@ fun main() {
     val assignment = AssignNode(
         target = NameNode(id = "result", ctx = Store),
         value = ConstantNode("hello"),
-        variableType = CanonicalTypes.String
+        typeInfo = CanonicalTypes.String
     )
     
-    println("✓ Created AssignNode with explicit variableType: ${assignment.variableType}")
+    println("✓ Created AssignNode with explicit typeInfo: ${assignment.typeInfo}")
     
     // OLD APPROACH (would have been):
     // FunctionDefNode(
@@ -38,7 +38,7 @@ fun main() {
     // NEW APPROACH:
     val function = FunctionDefNode(
         name = "greet",
-        args = listOf(NameNode(id = "name", ctx = Param, type = CanonicalTypes.String)),
+        args = listOf(NameNode(id = "name", ctx = Param, typeInfo = CanonicalTypes.String)),
         body = listOf(assignment),
         returnType = CanonicalTypes.Void,
         paramTypes = mapOf("name" to CanonicalTypes.String)
@@ -46,33 +46,33 @@ fun main() {
     
     println("✓ Created FunctionDefNode with explicit returnType: ${function.returnType}")
     println("✓ Parameter type for 'name': ${function.paramTypes["name"]}")
-    println("✓ Parameter explicit type: ${function.args[0].type}")
+    println("✓ Parameter explicit type: ${function.args[0].typeInfo}")
     
-    // NEW: Type-safe array with explicit arrayType
+    // NEW: Type-safe array with explicit typeInfo
     val array = ListNode(
         elements = listOf(ConstantNode("item1"), ConstantNode("item2")),
-        arrayType = CanonicalTypes.String
+        typeInfo = CanonicalTypes.String
     )
     
-    println("✓ Created ListNode with explicit arrayType: ${array.arrayType}")
+    println("✓ Created ListNode with explicit typeInfo: ${array.typeInfo}")
     
-    // NEW: Type-safe tuple with explicit tupleTypes
+    // NEW: Type-safe tuple with explicit typeInfo
     val tuple = TupleNode(
         elements = listOf(ConstantNode("name"), ConstantNode(25)),
-        tupleTypes = listOf(CanonicalTypes.String, CanonicalTypes.Number)
+        typeInfo = TypeDefinition.Tuple(listOf(CanonicalTypes.String, CanonicalTypes.Number))
     )
     
-    println("✓ Created TupleNode with explicit tupleTypes: ${tuple.tupleTypes}")
+    println("✓ Created TupleNode with explicit typeInfo: ${tuple.typeInfo}")
     
     // NEW: Class with explicit metadata
     val classDef = ClassDefNode(
         name = "DataProcessor",
         body = listOf(function),
-        classType = CanonicalTypes.Any,
+        typeInfo = CanonicalTypes.Any,
         methods = listOf("greet")
     )
     
-    println("✓ Created ClassDefNode with explicit classType: ${classDef.classType}")
+    println("✓ Created ClassDefNode with explicit typeInfo: ${classDef.typeInfo}")
     println("✓ Class methods: ${classDef.methods}")
     
     println("\n=== Summary ===")

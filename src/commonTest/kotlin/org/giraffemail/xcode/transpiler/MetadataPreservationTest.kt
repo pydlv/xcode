@@ -53,15 +53,15 @@ class MetadataPreservationTest {
         assertEquals("message", assignment.target.id)
         
         // Verify explicit field contains type information
-        println("Assignment variableType: ${assignment.variableType}")
+        println("Assignment variableType: ${assignment.typeInfo}")
         
-        assertEquals(CanonicalTypes.String, assignment.variableType)
+        assertEquals(CanonicalTypes.String, assignment.typeInfo)
     }
 
     @Test
     fun `test TypeScript generation with type annotations from metadata`() {
         // Create an AST with explicit type information
-        val nameParam = NameNode(id = "name", ctx = Param, type = CanonicalTypes.String)
+        val nameParam = NameNode(id = "name", ctx = Param, typeInfo = CanonicalTypes.String)
         
         val functionAst = FunctionDefNode(
             name = "greet",

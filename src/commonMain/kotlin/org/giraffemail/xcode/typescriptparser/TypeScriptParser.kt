@@ -72,7 +72,7 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
             } else {
                 CanonicalTypes.Unknown
             }
-            NameNode(id = paramName, ctx = Param, type = canonicalType)
+            NameNode(id = paramName, ctx = Param, typeInfo = canonicalType)
         } ?: emptyList()
 
         // Handle function body
@@ -88,8 +88,13 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
         
         // Extract parameter types
         val paramTypes = params.associate { param ->
-            param.id to param.type
-        }.filterValues { it != CanonicalTypes.Unknown }
+            param.id to param.typeInfo
+        }.filterValues { 
+            when (it) {
+                is CanonicalTypes -> it != CanonicalTypes.Unknown
+                is TypeDefinition -> true
+            }
+        }
 
         return FunctionDefNode(
             name = functionName,
@@ -165,13 +170,13 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
                 val typeContent = variableType.substring(1, variableType.length - 1).trim()
                 val individualTypes = typeContent.split(",").map { it.trim() }
                 val canonicalTypes = individualTypes.map { CanonicalTypes.fromString(it) }
-                TupleNode(elements = valueExpr.elements, tupleTypes = canonicalTypes)
+                TupleNode(elements = valueExpr.elements, typeInfo = TypeDefinition.Tuple(canonicalTypes))
             }
             variableType != null && variableType.endsWith("[]") && valueExpr is ListNode -> {
                 // This is an array with type information
                 val elementType = variableType.substring(0, variableType.length - 2)
                 val canonicalElementType = CanonicalTypes.fromString(elementType)
-                ListNode(elements = valueExpr.elements, arrayType = canonicalElementType)
+                ListNode(elements = valueExpr.elements, typeInfo = canonicalElementType)
             }
             else -> valueExpr
         }
@@ -182,7 +187,7 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
             CanonicalTypes.Unknown
         }
 
-        return AssignNode(target = targetNode, value = finalValue, variableType = canonicalVariableType)
+        return AssignNode(target = targetNode, value = finalValue, typeInfo = canonicalVariableType)
     }
     
     // Helper method to extract type expression including array and tuple types

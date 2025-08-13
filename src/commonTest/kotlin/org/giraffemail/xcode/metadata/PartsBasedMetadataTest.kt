@@ -71,7 +71,7 @@ class PartsBasedMetadataTest {
                 AssignNode(
                     target = NameNode(id = "message", ctx = Store),
                     value = ConstantNode("Hello"),
-                    variableType = CanonicalTypes.String
+                    typeInfo = CanonicalTypes.String
                 )
             ),
             returnType = CanonicalTypes.Void,
@@ -147,8 +147,8 @@ class PartsBasedMetadataTest {
         val functionAst = FunctionDefNode(
             name = "add",
             args = listOf(
-                NameNode(id = "x", ctx = Param, type = CanonicalTypes.Number),
-                NameNode(id = "y", ctx = Param, type = CanonicalTypes.Number)
+                NameNode(id = "x", ctx = Param, typeInfo = CanonicalTypes.Number),
+                NameNode(id = "y", ctx = Param, typeInfo = CanonicalTypes.Number)
             ),
             body = listOf(
                 AssignNode(
@@ -158,7 +158,7 @@ class PartsBasedMetadataTest {
                         op = "+",
                         right = NameNode(id = "y", ctx = Load)
                     ),
-                    variableType = CanonicalTypes.Number
+                    typeInfo = CanonicalTypes.Number
                 )
             ),
             returnType = CanonicalTypes.Number,
@@ -261,7 +261,7 @@ class PartsBasedMetadataTest {
         
         // Verify assignment has no metadata from comments
         val assignment = functionDef.body[0] as AssignNode
-        assertEquals(CanonicalTypes.Unknown, assignment.variableType)
+        assertEquals(CanonicalTypes.Unknown, assignment.typeInfo)
         
         println("✓ Comment-based metadata is no longer supported (expected behavior)")
     }

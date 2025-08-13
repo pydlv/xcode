@@ -23,11 +23,11 @@ class CanonicalTypesTest {
         val assignment = AssignNode(
             target = NameNode(id = "result", ctx = Store),
             value = ConstantNode("hello"),
-            variableType = CanonicalTypes.String
+            typeInfo = CanonicalTypes.String
         )
         
         assertEquals("result", assignment.target.id)
-        assertEquals(CanonicalTypes.String, assignment.variableType)
+        assertEquals(CanonicalTypes.String, assignment.typeInfo)
         assertEquals("hello", (assignment.value as ConstantNode).value)
     }
 
@@ -36,13 +36,13 @@ class CanonicalTypesTest {
         val function = FunctionDefNode(
             name = "greet",
             args = listOf(
-                NameNode(id = "name", ctx = Param, type = CanonicalTypes.String)
+                NameNode(id = "name", ctx = Param, typeInfo = CanonicalTypes.String)
             ),
             body = listOf(
                 AssignNode(
                     target = NameNode(id = "message", ctx = Store),
                     value = ConstantNode("Hello"),
-                    variableType = CanonicalTypes.String
+                    typeInfo = CanonicalTypes.String
                 )
             ),
             returnType = CanonicalTypes.Void,
@@ -52,7 +52,7 @@ class CanonicalTypesTest {
         assertEquals("greet", function.name)
         assertEquals(CanonicalTypes.Void, function.returnType)
         assertEquals(CanonicalTypes.String, function.paramTypes["name"])
-        assertEquals(CanonicalTypes.String, function.args[0].type)
+        assertEquals(CanonicalTypes.String, function.args[0].typeInfo)
     }
 
     @Test
@@ -62,11 +62,11 @@ class CanonicalTypesTest {
                 ConstantNode("item1"),
                 ConstantNode("item2")
             ),
-            arrayType = CanonicalTypes.String
+            typeInfo = CanonicalTypes.String
         )
         
         assertEquals(2, list.elements.size)
-        assertEquals(CanonicalTypes.String, list.arrayType)
+        assertEquals(CanonicalTypes.String, list.typeInfo)
         assertEquals("item1", (list.elements[0] as ConstantNode).value)
     }
 
@@ -77,13 +77,14 @@ class CanonicalTypesTest {
                 ConstantNode("name"),
                 ConstantNode(25)
             ),
-            tupleTypes = listOf(CanonicalTypes.String, CanonicalTypes.Number)
+            typeInfo = TypeDefinition.Tuple(listOf(CanonicalTypes.String, CanonicalTypes.Number))
         )
         
         assertEquals(2, tuple.elements.size)
-        assertEquals(2, tuple.tupleTypes.size)
-        assertEquals(CanonicalTypes.String, tuple.tupleTypes[0])
-        assertEquals(CanonicalTypes.Number, tuple.tupleTypes[1])
+        val tupleType = tuple.typeInfo as TypeDefinition.Tuple
+        assertEquals(2, tupleType.elementTypes.size)
+        assertEquals(CanonicalTypes.String, tupleType.elementTypes[0])
+        assertEquals(CanonicalTypes.Number, tupleType.elementTypes[1])
     }
 
     @Test
@@ -98,12 +99,12 @@ class CanonicalTypesTest {
                     returnType = CanonicalTypes.String
                 )
             ),
-            classType = CanonicalTypes.Any,
+            typeInfo = CanonicalTypes.Any,
             methods = listOf("getValue")
         )
         
         assertEquals("TestClass", classDef.name)
-        assertEquals(CanonicalTypes.Any, classDef.classType)
+        assertEquals(CanonicalTypes.Any, classDef.typeInfo)
         assertEquals(listOf("getValue"), classDef.methods)
         assertEquals(1, classDef.body.size)
     }

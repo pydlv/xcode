@@ -152,7 +152,7 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
             CanonicalTypes.Unknown // Changed from Any to Unknown for round-trip consistency
         }
         
-        return NameNode(id = paramName, ctx = Param, type = canonicalType)
+        return NameNode(id = paramName, ctx = Param, typeInfo = canonicalType)
     }
 
     // This would be the overridden method, now returning a placeholder
@@ -175,7 +175,7 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
             CanonicalTypes.Unknown // Changed from Any to Unknown for round-trip consistency
         }
         
-        return NameNode(id = paramName, ctx = Param, type = canonicalType)
+        return NameNode(id = paramName, ctx = Param, typeInfo = canonicalType)
     }
 
     // In visitFunctionDefinition, change to use getParameters:
@@ -211,7 +211,7 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
             CanonicalTypes.Unknown
         }
         
-        return AssignNode(target = target, value = value, variableType = canonicalType)
+        return AssignNode(target = target, value = value, typeInfo = canonicalType)
     }
 
     override fun visitCallStatement(ctx: AntlrJavaParser.CallStatementContext): CallStatementNode {
@@ -386,7 +386,7 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
             CanonicalTypes.Unknown
         }
         
-        return ListNode(elements = elements, arrayType = canonicalArrayType)
+        return ListNode(elements = elements, typeInfo = canonicalArrayType)
     }
 
     // Generic visit method from AbstractParseTreeVisitor.

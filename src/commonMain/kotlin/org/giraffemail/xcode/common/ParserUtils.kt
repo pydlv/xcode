@@ -116,7 +116,7 @@ object ParserUtils {
             // Convert ListNode to TupleNode with appropriate metadata
             TupleNode(
                 elements = listNode.elements,
-                tupleTypes = canonicalTypes
+                typeInfo = TypeDefinition.Tuple(canonicalTypes)
             )
         } else {
             // Keep as ListNode but preserve any existing metadata
@@ -154,7 +154,7 @@ object ParserUtils {
                         val updatedArgs = node.args.map { param ->
                             val paramType = metadata.paramTypes[param.id]
                             if (paramType != null) {
-                                param.copy(type = CanonicalTypes.fromString(paramType))
+                                param.copy(typeInfo = CanonicalTypes.fromString(paramType))
                             } else {
                                 param
                             }
@@ -190,7 +190,7 @@ object ParserUtils {
                         
                         node.copy(
                             body = updatedBody,
-                            classType = if (metadata.classType != null) CanonicalTypes.fromString(metadata.classType) else CanonicalTypes.Any,
+                            typeInfo = if (metadata.classType != null) CanonicalTypes.fromString(metadata.classType) else CanonicalTypes.Any,
                             methods = metadata.classMethods
                         )
                     } else {
@@ -217,7 +217,7 @@ object ParserUtils {
                         
                         node.copy(
                             value = finalValue,
-                            variableType = if (metadata.variableType != null) CanonicalTypes.fromString(metadata.variableType) else CanonicalTypes.Unknown
+                            typeInfo = if (metadata.variableType != null) CanonicalTypes.fromString(metadata.variableType) else CanonicalTypes.Unknown
                         )
                     } else {
                         node.copy(value = processedValue)

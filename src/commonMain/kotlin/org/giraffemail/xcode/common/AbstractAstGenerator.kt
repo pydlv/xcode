@@ -66,9 +66,17 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
                 }
                 is AssignNode -> {
                     // Extract assignment metadata
-                    if (node.variableType != CanonicalTypes.Unknown) {
-                        val variableType = node.variableType.name.lowercase()
-                        metadata.add(LanguageMetadata(variableType = variableType))
+                    when (val typeInfo = node.typeInfo) {
+                        is CanonicalTypes -> {
+                            if (typeInfo != CanonicalTypes.Unknown) {
+                                val variableType = typeInfo.name.lowercase()
+                                metadata.add(LanguageMetadata(variableType = variableType))
+                            }
+                        }
+                        is TypeDefinition -> {
+                            val variableType = typeInfo.toString()
+                            metadata.add(LanguageMetadata(variableType = variableType))
+                        }
                     }
                 }
                 is IfNode -> {
@@ -194,18 +202,31 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
      * Used across multiple generators.
      */
     protected fun extractFunctionMetadata(node: FunctionDefNode): Triple<String?, Map<String, String>, Map<String, Map<String, String>>> {
-        val returnType = if (node.returnType != CanonicalTypes.Void && node.returnType != CanonicalTypes.Unknown) {
-            node.returnType.name.lowercase()
-        } else null
+        val returnType = when (val returnTypeInfo = node.returnType) {
+            is CanonicalTypes -> {
+                if (returnTypeInfo != CanonicalTypes.Void && returnTypeInfo != CanonicalTypes.Unknown) {
+                    returnTypeInfo.name.lowercase()
+                } else null
+            }
+            is TypeDefinition -> returnTypeInfo.toString()
+        }
         
-        val paramTypes = node.paramTypes.mapValues { it.value.name.lowercase() }
+        val paramTypes = node.paramTypes.mapValues { entry ->
+            when (val typeInfo = entry.value) {
+                is CanonicalTypes -> typeInfo.name.lowercase()
+                is TypeDefinition -> typeInfo.toString()
+            }
+        }
         
         // Collect individual parameter metadata (currently only type info)
         val individualParamMetadata = node.args.associate { param ->
-            param.id to if (param.type != CanonicalTypes.Unknown) {
-                mapOf("type" to param.type.name.lowercase())
-            } else {
-                emptyMap()
+            param.id to when (val typeInfo = param.typeInfo) {
+                is CanonicalTypes -> {
+                    if (typeInfo != CanonicalTypes.Unknown) {
+                        mapOf("type" to typeInfo.name.lowercase())
+                    } else emptyMap()
+                }
+                is TypeDefinition -> mapOf("type" to typeInfo.toString())
             }
         }.filterValues { it.isNotEmpty() }
         
@@ -213,9 +234,14 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
     }
 
     protected fun extractClassMetadata(node: ClassDefNode): Pair<String?, List<String>> {
-        val classType = if (node.classType != CanonicalTypes.Any && node.classType != CanonicalTypes.Unknown) {
-            node.classType.name.lowercase()
-        } else null
+        val classType = when (val typeInfo = node.typeInfo) {
+            is CanonicalTypes -> {
+                if (typeInfo != CanonicalTypes.Any && typeInfo != CanonicalTypes.Unknown) {
+                    typeInfo.name.lowercase()
+                } else null
+            }
+            is TypeDefinition -> typeInfo.toString()
+        }
         
         val classMethods = node.methods
         

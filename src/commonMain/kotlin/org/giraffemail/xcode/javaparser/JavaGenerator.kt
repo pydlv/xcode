@@ -83,11 +83,12 @@ class JavaGenerator : AbstractAstGenerator() {
         val targetName = node.target.id // Assuming node.target is of type NameNode
         val valueExpr = generateExpression(node.value)
         
-        // Check if we have type information from explicit field
-        val variableType = when {
-            node.customVariableType != null -> node.customVariableType
-            node.variableType != CanonicalTypes.Unknown -> node.variableType.name.lowercase()
-            else -> null
+        // Check if we have type information from unified typeInfo field
+        val variableType = when (val typeInfo = node.typeInfo) {
+            is CanonicalTypes -> {
+                if (typeInfo != CanonicalTypes.Unknown) typeInfo.name.lowercase() else null
+            }
+            is TypeDefinition -> typeInfo.toString()
         }
         
         return if (variableType != null) {
@@ -140,10 +141,19 @@ class JavaGenerator : AbstractAstGenerator() {
         // Generate Java array initialization
         val elements = node.elements.joinToString(", ") { generateExpression(it) }
         
-        // Get array type from explicit field
-        val arrayType = if (node.arrayType != CanonicalTypes.Unknown) {
-            node.arrayType.name.lowercase()
-        } else null
+        // Get array type from unified typeInfo field
+        val arrayType = when (val typeInfo = node.typeInfo) {
+            is CanonicalTypes -> {
+                if (typeInfo != CanonicalTypes.Unknown) typeInfo.name.lowercase() else null
+            }
+            is TypeDefinition -> {
+                when (typeInfo) {
+                    is TypeDefinition.Array -> typeInfo.elementType.name.lowercase()
+                    is TypeDefinition.Simple -> typeInfo.type.name.lowercase()
+                    else -> null
+                }
+            }
+        }
         
         // Infer element type from the explicit field or elements
         val elementType = when {

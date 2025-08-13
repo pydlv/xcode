@@ -251,27 +251,9 @@ class TranspilationTest {
 
     @Test
     fun `test function with return value transpilation`() {
-        // Create a simpler AST without explicit type annotations for round-trip compatibility
-        val functionWithReturnValueAst = ModuleNode(
-            body = listOf(
-                FunctionDefNode(
-                    name = "add",
-                    args = listOf(
-                        NameNode(id = "a", ctx = Param),
-                        NameNode(id = "b", ctx = Param)
-                    ),
-                    body = listOf(
-                        ReturnNode(
-                            value = BinaryOpNode(
-                                left = NameNode(id = "a", ctx = Load),
-                                op = "+",
-                                right = NameNode(id = "b", ctx = Load)
-                            )
-                        )
-                    ),
-                    returnType = CanonicalTypes.Number
-                )
-            )
+        // Use MaximalAstGenerator instead of custom AST to preserve metadata
+        val functionWithReturnValueAst = MaximalAstGenerator.generateMaximalAst(
+            setOf(AstFeature.FUNCTION_DEFINITIONS, AstFeature.BINARY_OPERATIONS)
         )
 
         testAstRoundTrip("Function With Return Value", functionWithReturnValueAst)

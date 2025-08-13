@@ -272,7 +272,7 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
             CanonicalTypes.Unknown
         }
         
-        return ListNode(elements = elements, arrayType = canonicalType)
+        return ListNode(elements = elements, typeInfo = canonicalType)
     }
 
     override fun defaultResult(): AstNode {

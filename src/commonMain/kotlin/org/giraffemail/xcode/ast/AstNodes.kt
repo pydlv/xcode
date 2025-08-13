@@ -1,7 +1,10 @@
 package org.giraffemail.xcode.ast
 
+// --- Unified Type System ---
+sealed interface TypeInfo
+
 // --- Canonical Types for standardized metadata ---
-enum class CanonicalTypes {
+enum class CanonicalTypes : TypeInfo {
     String,
     Number,
     Boolean,
@@ -22,7 +25,7 @@ enum class CanonicalTypes {
 }
 
 // --- Enhanced Type Definition System for Complex Types ---
-sealed class TypeDefinition {
+sealed class TypeDefinition : TypeInfo {
     data class Simple(val type: CanonicalTypes) : TypeDefinition()
     data class Tuple(val elementTypes: List<CanonicalTypes>) : TypeDefinition()
     data class Array(val elementType: CanonicalTypes, val isHomogeneous: Boolean = true) : TypeDefinition()
@@ -88,8 +91,8 @@ data class FunctionDefNode(
     val args: List<NameNode>,
     val body: List<StatementNode>,
     val decoratorList: List<ExpressionNode> = emptyList(),
-    val returnType: CanonicalTypes = CanonicalTypes.Void,
-    val paramTypes: Map<String, CanonicalTypes> = emptyMap(),
+    val returnType: TypeInfo = CanonicalTypes.Void,
+    val paramTypes: Map<String, TypeInfo> = emptyMap(),
     val individualParamMetadata: Map<String, Map<String, String>> = emptyMap() // param name -> additional metadata
 ) : StatementNode
 
@@ -99,8 +102,7 @@ data class ClassDefNode(
     val baseClasses: List<ExpressionNode> = emptyList(), // For inheritance/extends
     val body: List<StatementNode>, // Methods and other class members
     val decoratorList: List<ExpressionNode> = emptyList(),
-    val classType: CanonicalTypes = CanonicalTypes.Any,
-    val customClassType: String? = null, // For custom class type names like "DataProcessor"
+    val typeInfo: TypeInfo = CanonicalTypes.Any, // Unified type information
     val methods: List<String> = emptyList() // Method names for metadata
 ) : StatementNode
 
@@ -108,19 +110,8 @@ data class ClassDefNode(
 data class AssignNode(
     val target: NameNode, // Target of assignment (left side)
     val value: ExpressionNode,  // Value being assigned (right side)
-    val variableType: CanonicalTypes = CanonicalTypes.Unknown,
-    val customVariableType: String? = null // For complex types like "[string, number]"
-) : StatementNode {
-    
-    /**
-     * Get the type definition for this assignment, preferring custom type over canonical type
-     */
-    val typeDefinition: TypeDefinition get() = when {
-        customVariableType != null -> TypeDefinition.fromString(customVariableType!!)
-        variableType != CanonicalTypes.Unknown -> TypeDefinition.fromCanonical(variableType)
-        else -> TypeDefinition.Unknown
-    }
-}
+    val typeInfo: TypeInfo = CanonicalTypes.Unknown // Unified type information
+) : StatementNode
 
 // Call statement (when a function call is its own statement)
 data class CallStatementNode(
@@ -151,13 +142,13 @@ data class CallNode(
 data class NameNode(
     val id: String, 
     val ctx: NameContext,
-    val type: CanonicalTypes = CanonicalTypes.Unknown // For parameter type annotations
+    val typeInfo: TypeInfo = CanonicalTypes.Unknown // Unified type information for parameter type annotations
 ) : ExpressionNode // Represents an identifier like a variable name.
 
 // ConstantNode can be used for various literals like strings, numbers, booleans.
 data class ConstantNode(
     val value: Any?,
-    val constantType: CanonicalTypes = CanonicalTypes.Unknown // Type of the constant
+    val typeInfo: TypeInfo = CanonicalTypes.Unknown // Unified type information for constants
 ) : ExpressionNode
 
 // New node for member access like 'console.log' or 'object.property'
@@ -171,7 +162,7 @@ data class BinaryOpNode(
     val left: ExpressionNode,
     val op: String, // e.g., "+", "-", "*", "/"
     val right: ExpressionNode,
-    val resultType: CanonicalTypes = CanonicalTypes.Unknown // Type of the operation result
+    val typeInfo: TypeInfo = CanonicalTypes.Unknown // Unified type information for operation result
 ) : ExpressionNode
 
 // New node for comparison operations like 'x > 5', 'a == b'
@@ -184,14 +175,14 @@ data class CompareNode(
 // New node for list/array literals like '[1, 2, 3]' or '["a", "b", "c"]'
 data class ListNode(
     val elements: List<ExpressionNode>,
-    val arrayType: CanonicalTypes = CanonicalTypes.Unknown, // Type of array elements
+    val typeInfo: TypeInfo = CanonicalTypes.Unknown, // Unified type information for array elements
     val isHomogeneous: Boolean = true // Whether all elements are the same type
 ) : ExpressionNode
 
 // New node for tuple literals like '["Bob", 25]' with type information
 data class TupleNode(
     val elements: List<ExpressionNode>,
-    val tupleTypes: List<CanonicalTypes> = emptyList() // Type information for each element
+    val typeInfo: TypeInfo = TypeDefinition.Unknown // Unified type information, typically TypeDefinition.Tuple
 ) : ExpressionNode
 
 // Node for unhandled or unknown parts of the AST, can be AstNode, StatementNode, or ExpressionNode

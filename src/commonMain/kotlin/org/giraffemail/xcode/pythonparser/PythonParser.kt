@@ -379,7 +379,7 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
             CanonicalTypes.Unknown
         }
         
-        return ListNode(elements = elements, arrayType = canonicalType)
+        return ListNode(elements = elements, typeInfo = canonicalType)
     }
     
     override fun visitTupleLiteral(ctx: AntlrPythonParser.TupleLiteralContext): AstNode {
@@ -402,7 +402,7 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
         
         val canonicalTypes = tupleTypes.map { CanonicalTypes.fromString(it) }
         
-        return TupleNode(elements = elements, tupleTypes = canonicalTypes)
+        return TupleNode(elements = elements, typeInfo = TypeDefinition.Tuple(canonicalTypes))
     }
     
     override fun visitParenthesizedExpression(ctx: AntlrPythonParser.ParenthesizedExpressionContext): AstNode {
