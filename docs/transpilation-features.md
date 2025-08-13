@@ -11,6 +11,8 @@ This document outlines the cross-language transpilation features supported by th
 | Multi-Step Transpilation Chains | Core Transpilation | Support for transpiling through multiple languages sequentially (Tests transpilation chains that visit every language once) | [TranspilationTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/transpiler/TranspilationTest.kt#L104-L140) |
 | CanonicalTypes System | Core Type System | Unified type enumeration for standardized cross-language type handling (String, Number, Boolean, Void, Any, Unknown with fromString conversion) | [CanonicalTypesTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/ast/CanonicalTypesTest.kt#L11-L19) |
 | TypeDefinition Complex Types | Core Type System | Enhanced type system supporting arrays, tuples, and custom types (TypeDefinition sealed class with Simple, Tuple, Array, Custom variants) | [CanonicalTypesTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/ast/CanonicalTypesTest.kt#L72-L97) |
+| List and Array Support | Core Data Structures | Native support for list/array data structures with type information (ListNode with explicit type information for homogeneous collections) | [CanonicalTypesTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/ast/CanonicalTypesTest.kt#L59-L71) |
+| Tuple Data Structures | Core Data Structures | Support for tuple types with heterogeneous element types (TupleNode with TypeDefinition.Tuple for multi-type collections) | [CanonicalTypesTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/ast/CanonicalTypesTest.kt#L72-L97) |
 | Native Metadata Storage | Metadata Preservation System | Direct Kotlin object-based metadata storage without serialization (FunctionMetadata, VariableMetadata, ClassMetadata objects stored natively) | [PartsBasedMetadataTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/metadata/PartsBasedMetadataTest.kt#L18-L44) |
 | Cross-Language Type Preservation | Metadata Preservation System | Maintains type information when transpiling between typed and untyped languages (Preserves TypeScript type annotations through JavaScript transpilation) | [MetadataPreservationTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/transpiler/MetadataPreservationTest.kt#L141-L206) |
 | Enhanced AST Nodes | Metadata Preservation System | AST nodes with explicit type information fields (AssignNode, FunctionDefNode, ClassDefNode with typeInfo, returnType, paramTypes) | [CanonicalTypesTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/ast/CanonicalTypesTest.kt#L21-L29) |
@@ -48,12 +50,13 @@ This document outlines the cross-language transpilation features supported by th
 |-----------------|-------------|---------|-------|
 | Core Transpilation | 3 | 4 | 7 |
 | Core Type System | 2 | 0 | 2 |
+| Core Data Structures | 2 | 0 | 2 |
 | Metadata System | 5 | 4 | 9 |
 | Language Generation | 3 | 0 | 3 |
 | CLI Integration | 2 | 0 | 2 |
 | Error Handling | 0 | 4 | 4 |
 | Integration | 0 | 4 | 4 |
-| **Total** | **15** | **16** | **31** |
+| **Total** | **17** | **16** | **33** |
 
 ## 🎯 Supported Language Combinations
 
