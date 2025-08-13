@@ -13,6 +13,7 @@ This document outlines the TypeScript language features currently supported by t
 | Function Invocation | Core Language Constructs | Support for calling functions (Function calls with multiple numeric arguments) | [TypeScriptParserTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/typescriptparser/TypeScriptParserTest.kt#L81-L104) |
 | String Literals | Literals and Constants | Support for string constants (Single-quoted string literals) | [TypeScriptParserTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/typescriptparser/TypeScriptParserTest.kt#L18-L19) |
 | Numeric Constants | Literals and Constants | Support for integer literals (Integer literal parsing and handling) | [TypeScriptParserTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/typescriptparser/TypeScriptParserTest.kt#L89-L91) |
+| Tuple Support | Advanced Type System | Support for tuple types with TypeDefinition system (Tuple type definitions with multiple element types preserved in AST) | [CanonicalTypesTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/ast/CanonicalTypesTest.kt#L72-L97) |
 | Parameter Type Annotations | TypeScript-Specific Features | Support for function parameter types (Type metadata preservation for function parameters) | [TypeScriptParserTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/typescriptparser/TypeScriptParserTest.kt#L114) |
 | Variable Type Annotations | TypeScript-Specific Features | Support for variable type declarations (Type metadata preservation for variable declarations) | [TypeScriptParserTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/typescriptparser/TypeScriptParserTest.kt#L136) |
 | Type Information Preservation | Metadata Preservation | Advanced type metadata handling (Type information extraction, preservation during transpilation, restoration of type annotations) | [MetadataPreservationTest.kt](../src/commonTest/kotlin/org/giraffemail/xcode/transpiler/MetadataPreservationTest.kt#L18-L35) |
@@ -54,12 +55,12 @@ This document outlines the TypeScript language features currently supported by t
 | Feature Category | Implemented | Planned | Total |
 |-----------------|-------------|---------|-------|
 | Core Constructs | 6 | 0 | 6 |
-| Type System | 2 | 6 | 8 |
+| Type System | 3 | 6 | 9 |
 | Modern TS | 0 | 5 | 5 |
 | OOP Features | 0 | 5 | 5 |
 | Advanced | 1 | 4 | 5 |
 | Utility Types | 0 | 4 | 4 |
-| **Total** | **9** | **24** | **33** |
+| **Total** | **10** | **24** | **34** |
 
 ## 🔗 Related Documentation
 

@@ -119,9 +119,17 @@ One of the key features of this transpiler is its sophisticated **metadata prese
 
 ### How Metadata Preservation Works
 
-1. **Extraction**: When parsing source code, the transpiler extracts type annotations, parameter types, and other metadata
-2. **Storage**: Metadata is stored separately from the generated code using a "parts-based" system
-3. **Restoration**: When transpiling back to a typed language, the metadata is used to restore type annotations
+1. **Extraction**: When parsing source code, the transpiler extracts type annotations, parameter types, and other metadata using a unified `CanonicalTypes` system
+2. **Native Storage**: Metadata is stored as native Kotlin objects (`FunctionMetadata`, `VariableMetadata`, `ClassMetadata`) without string serialization
+3. **Restoration**: When transpiling back to a typed language, the native metadata objects are used to restore type annotations
+
+### Advanced Type System
+
+The transpiler includes a sophisticated type system:
+
+- **CanonicalTypes**: Unified enum for basic types (String, Number, Boolean, Void, Any, Unknown)
+- **TypeDefinition**: Enhanced support for complex types including arrays, tuples, and custom types
+- **Native Metadata Objects**: Direct object storage without comment-based or string serialization
 
 ### Example: Round-trip Type Preservation
 
@@ -132,21 +140,22 @@ function greet(name: string): void {
 }
 ```
 
-**Intermediate JavaScript (metadata preserved internally):**
+**Intermediate JavaScript (metadata preserved as native objects):**
 ```javascript
 function greet(name) {
     console.log('Hello');
 }
 ```
+*Metadata stored as:* `FunctionMetadata(returnType=CanonicalTypes.Void, paramTypes={"name": CanonicalTypes.String})`
 
-**Back to TypeScript (types restored):**
+**Back to TypeScript (types restored from native metadata):**
 ```typescript
 function greet(name: string): void {
     console.log("Hello");
 }
 ```
 
-This enables seamless transpilation chains like TypeScript → JavaScript → Python → TypeScript while preserving all type information.
+This enables seamless transpilation chains like TypeScript → JavaScript → Python → TypeScript while preserving all type information through native Kotlin metadata objects.
 
 ## Current Functionality
 
