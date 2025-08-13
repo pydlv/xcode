@@ -14,7 +14,7 @@ def test():
         
         println("Testing code: $code")
         
-        val ast = PythonParser.parseWithNativeMetadata(code, emptyList())
+        val ast = PythonParser.parseWithNativeMetadata(code, emptyList<NativeMetadata>())
         assertNotNull(ast)
         println("AST: $ast")
         
@@ -38,7 +38,7 @@ def test():
         
         println("Full function code: $functionCode")
         
-        val ast = PythonParser.parseWithNativeMetadata(functionCode, emptyList())
+        val ast = PythonParser.parseWithNativeMetadata(functionCode, emptyList<NativeMetadata>())
         assertNotNull(ast)
         println("Parsed AST: $ast")
     }

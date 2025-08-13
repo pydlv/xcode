@@ -25,7 +25,7 @@ class MetadataPreservationTest {
         """.trimIndent()
 
         println("Parsing TypeScript code: $tsCode")
-        val ast = TypeScriptParser.parseWithNativeMetadata(tsCode, emptyList()) as ModuleNode
+        val ast = TypeScriptParser.parseWithNativeMetadata(tsCode, emptyList<NativeMetadata>()) as ModuleNode
         println("Generated AST: $ast")
 
         // Check that the function has metadata with type information
@@ -45,7 +45,7 @@ class MetadataPreservationTest {
         val tsCode = "let message: string = 'Hello';"
 
         println("Parsing TypeScript variable assignment: $tsCode")
-        val ast = TypeScriptParser.parseWithNativeMetadata(tsCode, emptyList()) as ModuleNode
+        val ast = TypeScriptParser.parseWithNativeMetadata(tsCode, emptyList<NativeMetadata>()) as ModuleNode
         println("Generated AST: $ast")
 
         // Check that the assignment has type information
@@ -113,9 +113,9 @@ class MetadataPreservationTest {
         
         // Verify metadata is in the separate part
         assertTrue(codeWithMetadata.metadata.isNotEmpty())
-        val functionMetadataItem = codeWithMetadata.metadata.first()
-        assertEquals("void", functionMetadataItem.returnType)
-        assertEquals("string", functionMetadataItem.paramTypes["name"])
+        val functionMetadataItem = codeWithMetadata.metadata.first() as FunctionMetadata
+        assertEquals(CanonicalTypes.Void, functionMetadataItem.returnType)
+        assertEquals(CanonicalTypes.String, functionMetadataItem.paramTypes["name"])
     }
 
     @Test
@@ -133,7 +133,7 @@ class MetadataPreservationTest {
         
         // Step 1: Parse TypeScript to AST
         println("\n1. Parsing TypeScript to AST...")
-        val tsAst = TypeScriptParser.parseWithNativeMetadata(originalTsCode, emptyList()) as ModuleNode
+        val tsAst = TypeScriptParser.parseWithNativeMetadata(originalTsCode, emptyList<NativeMetadata>()) as ModuleNode
         val functionDef = tsAst.body[0] as FunctionDefNode
         println("Extracted returnType: ${functionDef.returnType}")
         println("Extracted paramTypes: ${functionDef.paramTypes}")
@@ -177,20 +177,20 @@ class MetadataPreservationTest {
     fun `test parts-based metadata object handling`() {
         val metadata = FunctionMetadata(
             returnType = CanonicalTypes.Void,
-            paramTypes = mapOf("name" to "string", "age" to "number")
+            paramTypes = mapOf("name" to CanonicalTypes.String, "age" to CanonicalTypes.Number)
         )
         
         println("Original metadata: $metadata")
         
         // Create CodeWithNativeMetadata using object-based approach
-        val codeWithMetadata = MetadataSerializer.createCodeWithNativeMetadata("test code", listOf(metadata))
+        val codeWithMetadata = NativeMetadataUtils.createCodeWithMetadata("test code", listOf(metadata))
         println("Code with metadata: $codeWithMetadata")
         
         // Verify metadata is stored as objects, not strings
-        val extractedMetadata = codeWithMetadata.metadata.first()
-        assertEquals("void", extractedMetadata.returnType)
-        assertEquals("string", extractedMetadata.paramTypes["name"])
-        assertEquals("number", extractedMetadata.paramTypes["age"])
+        val extractedMetadata = codeWithMetadata.metadata.first() as FunctionMetadata
+        assertEquals(CanonicalTypes.Void, extractedMetadata.returnType)
+        assertEquals(CanonicalTypes.String, extractedMetadata.paramTypes["name"])
+        assertEquals(CanonicalTypes.Number, extractedMetadata.paramTypes["age"])
         
         println("✓ Parts-based metadata handling verified")
     }

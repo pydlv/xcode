@@ -293,7 +293,7 @@ object SupportedAstFeatures {
     )
 
     /**
-     * Supported metadata types from LanguageMetadata
+     * Supported metadata types from NativeMetadata
      */
     val SUPPORTED_METADATA = listOf(
         "returnType" to "Function return type annotations",
@@ -802,6 +802,6 @@ object MaximalAstGenerator {
 
 data class LanguageConfig(
     val name: String,
-    val parseWithNativeMetadataFn: (String, List<LanguageMetadata>) -> AstNode,
+    val parseWithNativeMetadataFn: (String, List<NativeMetadata>) -> AstNode,
     val generateWithNativeMetadataFn: (AstNode) -> CodeWithNativeMetadata
 )

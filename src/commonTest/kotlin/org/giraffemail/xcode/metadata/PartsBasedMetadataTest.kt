@@ -52,7 +52,7 @@ class NativeMetadataTest {
             FunctionMetadata(returnType = CanonicalTypes.Void)
         )
         
-        val codeWithMetadata = NativeMetadataUtils.createCodeWithNativeMetadata(code, metadata)
+        val codeWithMetadata = NativeMetadataUtils.createCodeWithMetadata(code, metadata)
         assertEquals(code, codeWithMetadata.code)
         
         val retrievedMetadata = codeWithMetadata.metadata
@@ -232,7 +232,8 @@ class NativeMetadataTest {
         // Verify metadata persists
         val pythonMetadata = pythonCodeWithNativeMetadata.metadata
         assertEquals(1, pythonMetadata.size)
-        assertEquals("void", pythonMetadata[0].returnType)
+        val functionMeta = pythonMetadata[0] as FunctionMetadata
+        assertEquals(CanonicalTypes.Void, functionMeta.returnType)
     }
 
     @Test
@@ -246,7 +247,7 @@ class NativeMetadataTest {
         """.trimIndent()
         
         // Parse using the regular parser (comment-based extraction removed)
-        val ast = JavaScriptParser.parseWithNativeMetadata(jsCodeWithComments, emptyList()) as ModuleNode
+        val ast = JavaScriptParser.parseWithNativeMetadata(jsCodeWithComments, emptyList<NativeMetadata>()) as ModuleNode
         val functionDef = ast.body[0] as FunctionDefNode
         
         // Verify metadata was NOT extracted from comments (since we removed that functionality)
