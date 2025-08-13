@@ -288,7 +288,16 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
         val valueExpr = visit(ctx.expression()) as? ExpressionNode
             ?: UnknownNode("Invalid expression in assignment")
 
-        return AssignNode(target = targetNode, value = valueExpr)
+        // Infer typeInfo from the value expression
+        val inferredType = when (valueExpr) {
+            is ConstantNode -> valueExpr.typeInfo
+            is ListNode -> valueExpr.typeInfo
+            is TupleNode -> valueExpr.typeInfo
+            is BinaryOpNode -> valueExpr.typeInfo
+            else -> CanonicalTypes.Unknown
+        }
+
+        return AssignNode(target = targetNode, value = valueExpr, typeInfo = inferredType)
     }
 
     // Handle function calls as statements
@@ -343,7 +352,7 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
     override fun visitStringLiteral(ctx: AntlrPythonParser.StringLiteralContext): AstNode {
         val text = ctx.STRING_LITERAL().text // Removed !!
         val content = if (text.length >= 2) text.substring(1, text.length - 1) else ""
-        return ConstantNode(content)
+        return ConstantNode(content, CanonicalTypes.String)
     }
 
     // Handle Identifier: IDENTIFIER
@@ -356,7 +365,7 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
         val numText = ctx.NUMBER().text // Removed !!
         // Attempt to parse as Int, then Double, then fallback to 0
         val value = numText.toIntOrNull() ?: numText.toDoubleOrNull() ?: 0
-        return ConstantNode(value)
+        return ConstantNode(value, CanonicalTypes.Number)
     }
     
     override fun visitListLiteral(ctx: AntlrPythonParser.ListLiteralContext): AstNode {
@@ -364,20 +373,16 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
             visit(exprCtx) as? ExpressionNode
         } ?: emptyList()
         
-        // Try to infer element type from the list contents
+        // Infer element type from the parsed elements' typeInfo
         val elementType = when {
-            elements.isEmpty() -> null
-            elements.all { it is ConstantNode && it.value is String } -> "string"
-            elements.all { it is ConstantNode && (it.value is Int || it.value is Double) } -> "number"
-            elements.all { it is ConstantNode && it.value is Boolean } -> "boolean"
-            else -> null
+            elements.isEmpty() -> CanonicalTypes.Unknown
+            elements.all { it is ConstantNode && it.typeInfo == CanonicalTypes.String } -> CanonicalTypes.String
+            elements.all { it is ConstantNode && it.typeInfo == CanonicalTypes.Number } -> CanonicalTypes.Number
+            elements.all { it is ConstantNode && it.typeInfo == CanonicalTypes.Boolean } -> CanonicalTypes.Boolean
+            else -> CanonicalTypes.Unknown
         }
         
-        val metadata = if (elementType != null) {
-            mapOf("arrayType" to elementType)  // Changed from "elementType" to "arrayType" for consistency
-        } else null
-        
-        return ListNode(elements = elements, metadata = metadata)
+        return ListNode(elements = elements, typeInfo = elementType)
     }
     
     override fun visitTupleLiteral(ctx: AntlrPythonParser.TupleLiteralContext): AstNode {
@@ -385,24 +390,26 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
             visit(exprCtx) as? ExpressionNode
         }
         
-        // For tuples, store the types of individual elements
-        val tupleTypes = elements.map { element ->
+        // For tuples, collect the canonical types from each element
+        val elementTypes = elements.map { element ->
             when (element) {
-                is ConstantNode -> when (element.value) {
-                    is String -> "string"
-                    is Int, is Double -> "number"
-                    is Boolean -> "boolean"
-                    else -> "any"
+                is ConstantNode -> {
+                    when {
+                        element.typeInfo is CanonicalTypes -> element.typeInfo as CanonicalTypes
+                        else -> CanonicalTypes.Unknown
+                    }
                 }
-                else -> "any"
+                is ListNode -> {
+                    when {
+                        element.typeInfo is CanonicalTypes -> element.typeInfo as CanonicalTypes
+                        else -> CanonicalTypes.Unknown
+                    }
+                }
+                else -> CanonicalTypes.Unknown
             }
         }
         
-        val metadata = if (tupleTypes.isNotEmpty()) {
-            mapOf("tupleTypes" to tupleTypes)
-        } else null
-        
-        return TupleNode(elements = elements, metadata = metadata)
+        return TupleNode(elements = elements, typeInfo = TypeDefinition.tuple(*elementTypes.toTypedArray()))
     }
     
     override fun visitParenthesizedExpression(ctx: AntlrPythonParser.ParenthesizedExpressionContext): AstNode {

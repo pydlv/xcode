@@ -25,12 +25,12 @@ class TypeScriptGenerator : AbstractAstGenerator() {
     override fun visitFunctionDefNode(node: FunctionDefNode): String {
         val funcName = node.name
         
-        // Extract metadata using the common function
-        val (returnType, paramTypes, _) = extractFunctionMetadata(node)
-        
-        // Generate parameters with type annotations from metadata
+        // Generate parameters with type annotations from native metadata
         val params = node.args.joinToString(", ") { param ->
-            val paramType = paramTypes[param.id]
+            val paramType = when (val typeInfo = param.typeInfo) {
+                is CanonicalTypes -> if (typeInfo != CanonicalTypes.Unknown) typeInfo.name.lowercase() else null
+                is TypeDefinition -> typeInfoToTypeScriptSyntax(typeInfo)
+            }
             if (paramType != null) {
                 "${param.id}: $paramType"
             } else {
@@ -38,8 +38,11 @@ class TypeScriptGenerator : AbstractAstGenerator() {
             }
         }
         
-        // Generate return type annotation from metadata
-        val returnTypeAnnotation = if (returnType != null) ": $returnType" else ""
+        // Generate return type annotation from native metadata
+        val returnTypeAnnotation = when (val returnType = node.returnType) {
+            is CanonicalTypes -> if (returnType != CanonicalTypes.Unknown) ": ${returnType.name.lowercase()}" else ""
+            is TypeDefinition -> ": ${typeInfoToTypeScriptSyntax(returnType)}"
+        }
         
         // Indent statements within the function body
         val body = node.body.joinToString("\n") { "    " + generateStatement(it) }
@@ -68,8 +71,13 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         val targetName = node.target.id // Assuming node.target is of type NameNode
         val valueExpr = generateExpression(node.value)
         
-        // Generate type annotation from metadata
-        val variableType = node.metadata?.get("variableType") as? String
+        // Generate type annotation from unified typeInfo field
+        val variableType = when (val typeInfo = node.typeInfo) {
+            is CanonicalTypes -> {
+                if (typeInfo != CanonicalTypes.Unknown) typeInfo.name.lowercase() else null
+            }
+            is TypeDefinition -> typeInfoToTypeScriptSyntax(typeInfo)
+        }
         val typeAnnotation = if (variableType != null) ": $variableType" else ""
         
         // Using 'let' for assignments, could be 'var' or 'const' based on further requirements
@@ -130,6 +138,26 @@ class TypeScriptGenerator : AbstractAstGenerator() {
         // Note: Type annotations would be in variable declaration, not the literal itself
         val elements = node.elements.joinToString(", ") { generateExpression(it) }
         return "[$elements]"
+    }
+    
+    /**
+     * Converts TypeDefinition objects to proper TypeScript type syntax
+     */
+    private fun typeInfoToTypeScriptSyntax(typeInfo: TypeDefinition): String {
+        return when (typeInfo) {
+            is TypeDefinition.Tuple -> {
+                val elementTypes = typeInfo.elementTypes.joinToString(", ") { elementType ->
+                    when (elementType) {
+                        is CanonicalTypes -> elementType.name.lowercase()
+                        is TypeDefinition -> typeInfoToTypeScriptSyntax(elementType)
+                    }
+                }
+                "[$elementTypes]"
+            }
+            is TypeDefinition.Custom -> typeInfo.typeName
+            // Add more cases as needed for other TypeDefinition types
+            else -> typeInfo.toString() // fallback for unknown types
+        }
     }
 
     // visitNameNode, visitBinaryOpNode, visitUnknownNode, visitExprNode, visitModuleNode

@@ -67,10 +67,12 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
         val params = ctx.parameterList()?.parameter()?.map { paramCtx ->
             val paramName = paramCtx.IDENTIFIER().text
             val paramType = paramCtx.typeAnnotation()?.typeExpression()?.text
-            val metadata = if (paramType != null) {
-                mapOf("type" to paramType)
-            } else null
-            NameNode(id = paramName, ctx = Param, metadata = metadata)
+            val canonicalType = if (paramType != null) {
+                CanonicalTypes.fromString(paramType)
+            } else {
+                CanonicalTypes.Unknown
+            }
+            NameNode(id = paramName, ctx = Param, typeInfo = canonicalType)
         } ?: emptyList()
 
         // Handle function body
@@ -78,27 +80,29 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
 
         // Extract return type annotation if present
         val returnType = ctx.typeAnnotation()?.typeExpression()?.text
+        val canonicalReturnType = if (returnType != null) {
+            CanonicalTypes.fromString(returnType)
+        } else {
+            CanonicalTypes.Void
+        }
         
-        val functionMetadata = if (returnType != null || params.any { it.metadata != null }) {
-            val metadata = mutableMapOf<String, Any>()
-            if (returnType != null) {
-                metadata["returnType"] = returnType
+        // Extract parameter types
+        val paramTypes = params.associate { param ->
+            param.id to param.typeInfo
+        }.filterValues { 
+            when (it) {
+                is CanonicalTypes -> it != CanonicalTypes.Unknown
+                is TypeDefinition -> true
             }
-            val paramTypes = params.mapNotNull { param ->
-                param.metadata?.get("type")?.let { param.id to it }
-            }.toMap()
-            if (paramTypes.isNotEmpty()) {
-                metadata["paramTypes"] = paramTypes
-            }
-            metadata
-        } else null
+        }
 
         return FunctionDefNode(
             name = functionName,
             args = params,
             body = body,
             decoratorList = emptyList(),
-            metadata = functionMetadata
+            returnType = canonicalReturnType,
+            paramTypes = paramTypes
         )
     }
 
@@ -165,21 +169,32 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
                 // Parse the tuple type string into individual types
                 val typeContent = variableType.substring(1, variableType.length - 1).trim()
                 val individualTypes = typeContent.split(",").map { it.trim() }
-                TupleNode(elements = valueExpr.elements, metadata = mapOf("tupleTypes" to individualTypes))
+                val canonicalTypes = individualTypes.map { CanonicalTypes.fromString(it) }
+                TupleNode(elements = valueExpr.elements, typeInfo = TypeDefinition.Tuple(canonicalTypes))
             }
             variableType != null && variableType.endsWith("[]") && valueExpr is ListNode -> {
-                // This is an array with type information - add type to ListNode metadata
+                // This is an array with type information
                 val elementType = variableType.substring(0, variableType.length - 2)
-                ListNode(elements = valueExpr.elements, metadata = mapOf("arrayType" to elementType))
+                val canonicalElementType = CanonicalTypes.fromString(elementType)
+                ListNode(elements = valueExpr.elements, typeInfo = canonicalElementType)
             }
             else -> valueExpr
         }
         
-        val assignmentMetadata = if (variableType != null) {
-            mapOf("variableType" to variableType)
-        } else null
+        val canonicalVariableType = if (variableType != null) {
+            CanonicalTypes.fromString(variableType)
+        } else {
+            // Infer typeInfo from the value expression when no type annotation is present
+            when (finalValue) {
+                is ConstantNode -> finalValue.typeInfo
+                is ListNode -> finalValue.typeInfo
+                is TupleNode -> finalValue.typeInfo
+                is BinaryOpNode -> finalValue.typeInfo
+                else -> CanonicalTypes.Unknown
+            }
+        }
 
-        return AssignNode(target = targetNode, value = finalValue, metadata = assignmentMetadata)
+        return AssignNode(target = targetNode, value = finalValue, typeInfo = canonicalVariableType)
     }
     
     // Helper method to extract type expression including array and tuple types
@@ -268,7 +283,7 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
         // Remove the quotes from the string literal
         val quotedString = ctx.STRING_LITERAL().text
         val unquotedString = quotedString.substring(1, quotedString.length - 1)
-        return ConstantNode(value = unquotedString)
+        return ConstantNode(value = unquotedString, typeInfo = CanonicalTypes.String)
     }
 
     override fun visitNumberLiteral(ctx: AntlrTypeScriptParser.NumberLiteralContext): AstNode {
@@ -283,7 +298,7 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
             doubleValue
         }
         
-        return ConstantNode(normalizedValue)
+        return ConstantNode(normalizedValue, CanonicalTypes.Number)
     }
 
     override fun visitIdentifier(ctx: AntlrTypeScriptParser.IdentifierContext): AstNode {
@@ -295,7 +310,16 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
             visit(exprCtx) as? ExpressionNode
         } ?: emptyList()
         
-        return ListNode(elements = elements)
+        // Infer element type from the parsed elements' typeInfo
+        val elementType = when {
+            elements.isEmpty() -> CanonicalTypes.Unknown
+            elements.all { it is ConstantNode && it.typeInfo == CanonicalTypes.String } -> CanonicalTypes.String
+            elements.all { it is ConstantNode && it.typeInfo == CanonicalTypes.Number } -> CanonicalTypes.Number
+            elements.all { it is ConstantNode && it.typeInfo == CanonicalTypes.Boolean } -> CanonicalTypes.Boolean
+            else -> CanonicalTypes.Unknown
+        }
+        
+        return ListNode(elements = elements, typeInfo = elementType)
     }
 
     override fun defaultResult(): AstNode {

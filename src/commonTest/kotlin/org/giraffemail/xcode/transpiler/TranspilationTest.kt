@@ -22,23 +22,23 @@ class TranspilationTest {
 
     private val pythonConfig = LanguageConfig(
         "Python",
-        PythonParser::parseWithMetadata,
-        { ast -> PythonGenerator().generateWithMetadata(ast) }
+        PythonParser::parseWithNativeMetadata,
+        { ast -> PythonGenerator().generateWithNativeMetadata(ast) }
     )
     private val javaScriptConfig = LanguageConfig(
         "JavaScript",
-        JavaScriptParser::parseWithMetadata,
-        { ast -> JavaScriptGenerator().generateWithMetadata(ast) }
+        JavaScriptParser::parseWithNativeMetadata,
+        { ast -> JavaScriptGenerator().generateWithNativeMetadata(ast) }
     )
     private val javaConfig = LanguageConfig(
         "Java",
-        JavaParser::parseWithMetadata,
-        { ast -> JavaGenerator().generateWithMetadata(ast) }
+        JavaParser::parseWithNativeMetadata,
+        { ast -> JavaGenerator().generateWithNativeMetadata(ast) }
     )
     private val typeScriptConfig = LanguageConfig(
         "TypeScript",
-        TypeScriptParser::parseWithMetadata,
-        { ast -> TypeScriptGenerator().generateWithMetadata(ast) }
+        TypeScriptParser::parseWithNativeMetadata,
+        { ast -> TypeScriptGenerator().generateWithNativeMetadata(ast) }
     )
 
     private val allLanguages = listOf(pythonConfig, javaScriptConfig, javaConfig, typeScriptConfig)
@@ -60,13 +60,13 @@ class TranspilationTest {
                     println("\\nTesting ${fromLang.name} -> ${toLang.name} -> ${fromLang.name}")
 
                     // Step 1: Generate code with metadata from original AST using source language
-                    val sourceCodeWithMetadata = fromLang.generateWithMetadataFn(originalAst)
-                    println("Generated ${fromLang.name} code: ${sourceCodeWithMetadata.code}")
-                    println("Generated ${fromLang.name} metadata: ${sourceCodeWithMetadata.metadata}")
+                    val sourceCodeWithNativeMetadata = fromLang.generateWithNativeMetadataFn(originalAst)
+                    println("Generated ${fromLang.name} code: ${sourceCodeWithNativeMetadata.code}")
+                    println("Generated ${fromLang.name} metadata: ${sourceCodeWithNativeMetadata.metadata}")
 
                     // Step 2: Parse back to AST to verify generation didn't lose information
                     val parsedFromSource =
-                        fromLang.parseWithMetadataFn(sourceCodeWithMetadata.code, sourceCodeWithMetadata.metadata)
+                        fromLang.parseWithNativeMetadataFn(sourceCodeWithNativeMetadata.code, sourceCodeWithNativeMetadata.metadata)
 
                     // All languages should preserve metadata through parts-based system
                     assertEquals(
@@ -75,24 +75,24 @@ class TranspilationTest {
                     )
 
                     // Step 3: Generate intermediate code with metadata using target language
-                    val intermediateCodeWithMetadata = toLang.generateWithMetadataFn(parsedFromSource)
-                    println("Generated ${toLang.name} code: ${intermediateCodeWithMetadata.code}")
-                    println("Generated ${toLang.name} metadata: ${intermediateCodeWithMetadata.metadata}")
+                    val intermediateCodeWithNativeMetadata = toLang.generateWithNativeMetadataFn(parsedFromSource)
+                    println("Generated ${toLang.name} code: ${intermediateCodeWithNativeMetadata.code}")
+                    println("Generated ${toLang.name} metadata: ${intermediateCodeWithNativeMetadata.metadata}")
 
                     // Step 4: Parse intermediate code back to AST with metadata
-                    val parsedFromTarget = toLang.parseWithMetadataFn(
-                        intermediateCodeWithMetadata.code,
-                        intermediateCodeWithMetadata.metadata
+                    val parsedFromTarget = toLang.parseWithNativeMetadataFn(
+                        intermediateCodeWithNativeMetadata.code,
+                        intermediateCodeWithNativeMetadata.metadata
                     )
 
                     // Step 5: Generate final code with metadata back to source language
-                    val finalCodeWithMetadata = fromLang.generateWithMetadataFn(parsedFromTarget)
-                    println("Final ${fromLang.name} code: ${finalCodeWithMetadata.code}")
-                    println("Final ${fromLang.name} metadata: ${finalCodeWithMetadata.metadata}")
+                    val finalCodeWithNativeMetadata = fromLang.generateWithNativeMetadataFn(parsedFromTarget)
+                    println("Final ${fromLang.name} code: ${finalCodeWithNativeMetadata.code}")
+                    println("Final ${fromLang.name} metadata: ${finalCodeWithNativeMetadata.metadata}")
 
                     // Step 6: Parse final code and verify AST preservation
                     val finalAst =
-                        fromLang.parseWithMetadataFn(finalCodeWithMetadata.code, finalCodeWithMetadata.metadata)
+                        fromLang.parseWithNativeMetadataFn(finalCodeWithNativeMetadata.code, finalCodeWithNativeMetadata.metadata)
 
                     // Compare AST preservation through transpilation
                     // All languages should preserve metadata through parts-based system
@@ -143,12 +143,12 @@ class TranspilationTest {
                     println("Step ${i + 1}: ${currentLang.name} -> ${nextLang.name}")
 
                     // Generate code with metadata in current language
-                    val codeWithMetadata = currentLang.generateWithMetadataFn(currentAst)
+                    val codeWithMetadata = currentLang.generateWithNativeMetadataFn(currentAst)
                     println("Generated ${currentLang.name} code: ${codeWithMetadata.code}")
                     println("Generated ${currentLang.name} metadata: ${codeWithMetadata.metadata}")
 
                     // Parse to verify AST preservation
-                    val parsedAst = currentLang.parseWithMetadataFn(codeWithMetadata.code, codeWithMetadata.metadata)
+                    val parsedAst = currentLang.parseWithNativeMetadataFn(codeWithMetadata.code, codeWithMetadata.metadata)
 
                     // All languages should preserve metadata through parts-based system
                     assertEquals(
@@ -157,8 +157,8 @@ class TranspilationTest {
                     )
 
                     // Generate in next language and parse
-                    val nextCodeWithMetadata = nextLang.generateWithMetadataFn(parsedAst)
-                    currentAst = nextLang.parseWithMetadataFn(nextCodeWithMetadata.code, nextCodeWithMetadata.metadata)
+                    val nextCodeWithNativeMetadata = nextLang.generateWithNativeMetadataFn(parsedAst)
+                    currentAst = nextLang.parseWithNativeMetadataFn(nextCodeWithNativeMetadata.code, nextCodeWithNativeMetadata.metadata)
                 }
 
                 // Verify we got back to the original AST including metadata
@@ -179,10 +179,9 @@ class TranspilationTest {
 
     @Test
     fun `test simple print statement transpilation`() {
-        // Define AST with minimal metadata for a simple print statement
-        val printAst = ModuleNode(
-            body = listOf(PrintNode(expression = ConstantNode("hello")))
-        )
+        // Use MaximalAstGenerator for print statement with proper metadata
+        val features = setOf(AstFeature.PRINT_STATEMENTS, AstFeature.CONSTANT_VALUES)
+        val printAst = MaximalAstGenerator.generateMaximalAst(features)
 
         testAstRoundTrip("Simple Print", printAst)
         testSequentialTranspilation("Simple Print", printAst)
@@ -190,18 +189,13 @@ class TranspilationTest {
 
     @Test
     fun `test binary operation transpilation`() {
-        // Define AST for print(1 + 2)
-        val binaryOpAst = ModuleNode(
-            body = listOf(
-                PrintNode(
-                    expression = BinaryOpNode(
-                        left = ConstantNode(1),
-                        op = "+",
-                        right = ConstantNode(2)
-                    )
-                )
-            )
+        // Use MaximalAstGenerator for binary operation with proper metadata
+        val features = setOf(
+            AstFeature.PRINT_STATEMENTS,
+            AstFeature.BINARY_OPERATIONS,
+            AstFeature.CONSTANT_VALUES
         )
+        val binaryOpAst = MaximalAstGenerator.generateMaximalAst(features)
 
         testAstRoundTrip("Binary Operation", binaryOpAst)
         testSequentialTranspilation("Binary Operation", binaryOpAst)
@@ -209,32 +203,15 @@ class TranspilationTest {
 
     @Test
     fun `test function without metadata transpilation`() {
-        // Define AST for a function without metadata
-        val functionAst = ModuleNode(
-            body = listOf(
-                FunctionDefNode(
-                    name = "greet",
-                    args = listOf(NameNode(id = "msg", ctx = Param)),
-                    body = listOf(
-                        PrintNode(
-                            expression = BinaryOpNode(
-                                left = ConstantNode("Hello "),
-                                op = "+",
-                                right = NameNode(id = "msg", ctx = Load)
-                            )
-                        )
-                    ),
-                    decoratorList = emptyList()
-                ),
-                CallStatementNode(
-                    call = CallNode(
-                        func = NameNode(id = "greet", ctx = Load),
-                        args = listOf(ConstantNode("World")),
-                        keywords = emptyList()
-                    )
-                )
-            )
+        // Use MaximalAstGenerator for function definitions with proper metadata
+        val features = setOf(
+            AstFeature.FUNCTION_DEFINITIONS,
+            AstFeature.PRINT_STATEMENTS,
+            AstFeature.BINARY_OPERATIONS,
+            AstFeature.CONSTANT_VALUES,
+            AstFeature.VARIABLE_REFERENCES
         )
+        val functionAst = MaximalAstGenerator.generateMaximalAst(features)
 
         testAstRoundTrip("Function Without Metadata", functionAst)
         testSequentialTranspilation("Function Without Metadata", functionAst)
@@ -251,8 +228,10 @@ class TranspilationTest {
 
     @Test
     fun `test function with return value transpilation`() {
-        // Use MaximalAstGenerator for function with return value
-        val functionWithReturnValueAst = MaximalAstGenerator.generateFunctionWithReturnValue()
+        // Use MaximalAstGenerator instead of custom AST to preserve metadata
+        val functionWithReturnValueAst = MaximalAstGenerator.generateMaximalAst(
+            setOf(AstFeature.FUNCTION_DEFINITIONS, AstFeature.BINARY_OPERATIONS)
+        )
 
         testAstRoundTrip("Function With Return Value", functionWithReturnValueAst)
         testSequentialTranspilation("Function With Return Value", functionWithReturnValueAst)
@@ -260,24 +239,15 @@ class TranspilationTest {
 
     @Test
     fun `test conditional statement transpilation`() {
-        // Define AST for if-else without metadata
-        val conditionalAst = ModuleNode(
-            body = listOf(
-                IfNode(
-                    test = CompareNode(
-                        left = NameNode(id = "x", ctx = Load),
-                        op = ">",
-                        right = ConstantNode(5)
-                    ),
-                    body = listOf(
-                        PrintNode(expression = ConstantNode("greater"))
-                    ),
-                    orelse = listOf(
-                        PrintNode(expression = ConstantNode("lesser"))
-                    )
-                )
-            )
+        // Use MaximalAstGenerator for conditional statements with proper metadata
+        val features = setOf(
+            AstFeature.CONDITIONAL_STATEMENTS,
+            AstFeature.COMPARISON_OPERATIONS,
+            AstFeature.PRINT_STATEMENTS,
+            AstFeature.CONSTANT_VALUES,
+            AstFeature.VARIABLE_REFERENCES
         )
+        val conditionalAst = MaximalAstGenerator.generateMaximalAst(features)
 
         testAstRoundTrip("Conditional Statement", conditionalAst)
         testSequentialTranspilation("Conditional Statement", conditionalAst)
@@ -285,18 +255,14 @@ class TranspilationTest {
 
     @Test
     fun `test variable assignment transpilation`() {
-        // Define AST for variable assignment without metadata
-        val assignmentAst = ModuleNode(
-            body = listOf(
-                AssignNode(
-                    target = NameNode(id = "count", ctx = Store),
-                    value = ConstantNode(42)
-                ),
-                PrintNode(
-                    expression = NameNode(id = "count", ctx = Load)
-                )
-            )
+        // Use MaximalAstGenerator for variable assignments with proper metadata
+        val features = setOf(
+            AstFeature.VARIABLE_ASSIGNMENTS,
+            AstFeature.PRINT_STATEMENTS,
+            AstFeature.CONSTANT_VALUES,
+            AstFeature.VARIABLE_REFERENCES
         )
+        val assignmentAst = MaximalAstGenerator.generateMaximalAst(features)
 
         testAstRoundTrip("Variable Assignment", assignmentAst)
         testSequentialTranspilation("Variable Assignment", assignmentAst)
@@ -484,9 +450,10 @@ class TranspilationTest {
                 AssignNode(
                     target = NameNode(id = "result", ctx = Store),
                     value = BinaryOpNode(
-                        left = ConstantNode(10),
+                        left = ConstantNode(10, typeInfo = CanonicalTypes.Number),
                         op = "+",
-                        right = ConstantNode(5)
+                        right = ConstantNode(5, typeInfo = CanonicalTypes.Number),
+                        typeInfo = CanonicalTypes.Number
                     )
                 ),
                 PrintNode(

@@ -24,13 +24,13 @@ class TestTranspilationDebug {
         println("Testing AST: $functionWithReturnAst")
 
         val generator = PythonGenerator()
-        val codeWithMetadata = generator.generateWithMetadata(functionWithReturnAst)
+        val codeWithMetadata = generator.generateWithNativeMetadata(functionWithReturnAst)
         
         println("Generated code: '${codeWithMetadata.code}'")
         println("Generated metadata: ${codeWithMetadata.metadata}")
         
         // Now try to parse it back
-        val ast = PythonParser.parseWithMetadata(codeWithMetadata.code, codeWithMetadata.metadata)
+        val ast = PythonParser.parseWithNativeMetadata(codeWithMetadata.code, codeWithMetadata.metadata)
         assertNotNull(ast)
         println("Parsed AST: $ast")
     }

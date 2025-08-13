@@ -12,7 +12,7 @@ class PythonParserTest {
     fun `test parsing specific input that triggers error - placeholder`() {
         val invalidPythonCode = "trigger_error_python" // Specific string to trigger placeholder error for Python
         try {
-            PythonParser.parseWithMetadata(invalidPythonCode, emptyList())
+            PythonParser.parseWithNativeMetadata(invalidPythonCode, emptyList<NativeMetadata>())
             fail("Parsing 'trigger_error_python' should have thrown AstParseException (placeholder test)")
         } catch (e: AstParseException) { // Changed to AstParseException
             // Expected exception from placeholder logic
@@ -30,7 +30,7 @@ class PythonParserTest {
          // Expected AST uses common data classes (already correct from previous refactor)
          val expectedAst = ModuleNode(body = emptyList())
          try {
-             val ast = PythonParser.parseWithMetadata(emptyPythonCode, emptyList())
+             val ast = PythonParser.parseWithNativeMetadata(emptyPythonCode, emptyList<NativeMetadata>())
              assertNotNull(ast, "AST should not be null for empty string")
              assertEquals(expectedAst, ast, "AST for empty string did not match. \\nActual: $ast\\nExpected: $expectedAst")
          } catch (e: AstParseException) { // Changed to AstParseException
@@ -46,13 +46,13 @@ class PythonParserTest {
         val expectedAst = ModuleNode(
             body = listOf(
                 PrintNode( // ANTLR parser creates PrintNode directly
-                    expression = ConstantNode(value = "Hello, World!")
+                    expression = ConstantNode(value = "Hello, World!", typeInfo = CanonicalTypes.String)
                 )
             )
         )
 
         try {
-            val ast = PythonParser.parseWithMetadata(pythonCode, emptyList())
+            val ast = PythonParser.parseWithNativeMetadata(pythonCode, emptyList<NativeMetadata>())
             assertNotNull(ast, "AST should not be null")
             assertEquals(expectedAst, ast, "AST did not match expected structure. \\nActual: $ast\\nExpected: $expectedAst")
         } catch (e: AstParseException) { // Changed to AstParseException
@@ -69,13 +69,13 @@ class PythonParserTest {
         val expectedAst = ModuleNode(
             body = listOf(
                 PrintNode( // ANTLR parser creates PrintNode directly
-                    expression = ConstantNode(value = customString)
+                    expression = ConstantNode(value = customString, typeInfo = CanonicalTypes.String)
                 )
             )
         )
 
         try {
-            val ast = PythonParser.parseWithMetadata(pythonCode, emptyList())
+            val ast = PythonParser.parseWithNativeMetadata(pythonCode, emptyList<NativeMetadata>())
             assertNotNull(ast, "AST should not be null")
             assertEquals(expectedAst, ast, "AST did not match expected structure for arbitrary string. \nActual: $ast\nExpected: $expectedAst")
         } catch (e: AstParseException) {
@@ -91,16 +91,16 @@ class PythonParserTest {
             body = listOf(
                 PrintNode( // ANTLR parser creates PrintNode directly
                     expression = BinaryOpNode( // This will require grammar change
-                        left = ConstantNode(value = 1),
+                        left = ConstantNode(value = 1, typeInfo = CanonicalTypes.Number),
                         op = "+",
-                        right = ConstantNode(value = 2)
+                        right = ConstantNode(value = 2, typeInfo = CanonicalTypes.Number)
                     )
                 )
             )
         )
 
         try {
-            val ast = PythonParser.parseWithMetadata(pythonCode, emptyList())
+            val ast = PythonParser.parseWithNativeMetadata(pythonCode, emptyList<NativeMetadata>())
             assertEquals(expectedAst, ast, "AST for print with addition did not match expected.")
         } catch (e: AstParseException) {
             fail("Parsing failed for print with addition: ${e.message}", e)
@@ -116,8 +116,8 @@ class PythonParserTest {
                     call = CallNode(
                         func = NameNode(id = "fib", ctx = Load),
                         args = listOf(
-                            ConstantNode(value = 0),
-                            ConstantNode(value = 1)
+                            ConstantNode(value = 0, typeInfo = CanonicalTypes.Number),
+                            ConstantNode(value = 1, typeInfo = CanonicalTypes.Number)
                         ),
                         keywords = emptyList()
                     )
@@ -126,7 +126,7 @@ class PythonParserTest {
         )
 
         try {
-            val ast = PythonParser.parseWithMetadata(pythonCode, emptyList())
+            val ast = PythonParser.parseWithNativeMetadata(pythonCode, emptyList<NativeMetadata>())
             assertEquals(expectedAst, ast, "AST for fib(0, 1) did not match expected.")
         } catch (e: AstParseException) {
             fail("Parsing failed for fib(0, 1): ${e.message}", e)

@@ -11,77 +11,78 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Tests for parts-based metadata storage and retrieval
+ * Tests for native metadata storage and retrieval
  */
-class PartsBasedMetadataTest {
+class NativeMetadataTest {
 
     @Test
-    fun `test metadata storage and retrieval`() {
+    fun `test native metadata storage and retrieval`() {
         val metadata = listOf(
-            LanguageMetadata(
-                returnType = "void",
-                paramTypes = mapOf("name" to "string")
+            FunctionMetadata(
+                returnType = CanonicalTypes.Void,
+                paramTypes = mapOf("name" to CanonicalTypes.String)
             ),
-            LanguageMetadata(
-                variableType = "number"
+            VariableMetadata(
+                variableType = CanonicalTypes.Number
             )
         )
         
-        // Store metadata directly as Kotlin objects (no serialization)
-        val codeWithMetadata = CodeWithMetadata(
+        // Store metadata directly as native Kotlin objects (no string serialization)
+        val codeWithMetadata = CodeWithNativeMetadata(
             code = "function test() {}",
             metadata = metadata
         )
         
-        // Retrieve metadata directly
+        // Retrieve native metadata directly
         val retrievedMetadata = codeWithMetadata.metadata
         assertEquals(2, retrievedMetadata.size)
-        assertEquals("void", retrievedMetadata[0].returnType)
-        assertEquals("string", retrievedMetadata[0].paramTypes["name"])
-        assertEquals("number", retrievedMetadata[1].variableType)
+        
+        val functionMetadata = retrievedMetadata[0] as FunctionMetadata
+        assertEquals(CanonicalTypes.Void, functionMetadata.returnType)
+        assertEquals(CanonicalTypes.String, functionMetadata.paramTypes["name"])
+        
+        val variableMetadata = retrievedMetadata[1] as VariableMetadata
+        assertEquals(CanonicalTypes.Number, variableMetadata.variableType)
     }
 
     @Test
-    fun `test CodeWithMetadata creation`() {
+    fun `test CodeWithNativeMetadata creation`() {
         val code = "function test() { }"
         val metadata = listOf(
-            LanguageMetadata(returnType = "void")
+            FunctionMetadata(returnType = CanonicalTypes.Void)
         )
         
-        val codeWithMetadata = MetadataSerializer.createCodeWithMetadata(code, metadata)
+        val codeWithMetadata = NativeMetadataUtils.createCodeWithMetadata(code, metadata)
         assertEquals(code, codeWithMetadata.code)
         
         val retrievedMetadata = codeWithMetadata.metadata
         assertEquals(1, retrievedMetadata.size)
-        assertEquals("void", retrievedMetadata[0].returnType)
+        val functionMetadata = retrievedMetadata[0] as FunctionMetadata
+        assertEquals(CanonicalTypes.Void, functionMetadata.returnType)
     }
 
     @Test
-    fun `test JavaScript generation with parts-based metadata`() {
+    fun `test JavaScript generation with native metadata`() {
         // Create AST with metadata
-        val functionMetadata = mapOf(
-            "returnType" to "void",
-            "paramTypes" to mapOf("name" to "string")
-        )
-        
         val functionAst = FunctionDefNode(
             name = "greet",
-            args = listOf(NameNode(id = "name", ctx = Param)),
+            args = listOf(NameNode(id = "name", ctx = Param, typeInfo = CanonicalTypes.String)),
             body = listOf(
                 AssignNode(
                     target = NameNode(id = "message", ctx = Store),
                     value = ConstantNode("Hello"),
-                    metadata = mapOf("variableType" to "string")
+                    typeInfo = CanonicalTypes.String
                 )
             ),
-            metadata = functionMetadata
+            returnType = CanonicalTypes.Void,
+            paramTypes = mapOf("name" to CanonicalTypes.String)
         )
         
         val moduleAst = ModuleNode(body = listOf(functionAst))
         
-        // Generate JavaScript with parts-based metadata
+        // Generate JavaScript with native metadata
         val generator = JavaScriptGenerator()
-        val codeWithMetadata = generator.generateWithMetadata(moduleAst)
+        val codeWithMetadata = generator.generateWithNativeMetadata(moduleAst)
         
         println("Generated JavaScript code:")
         println(codeWithMetadata.code)
@@ -98,25 +99,24 @@ class PartsBasedMetadataTest {
         assertEquals(2, savedMetadata.size)
         
         // Check function metadata
-        val functionMeta = savedMetadata.find { it.returnType != null }
-        assertEquals("void", functionMeta?.returnType)
-        assertEquals("string", functionMeta?.paramTypes?.get("name"))
+        val functionMeta = NativeMetadataUtils.filterFunctionMetadata(savedMetadata).firstOrNull()
+        assertEquals(CanonicalTypes.Void, functionMeta?.returnType)
+        assertEquals(CanonicalTypes.String, functionMeta?.paramTypes?.get("name"))
         
         // Check variable metadata
-        val variableMeta = savedMetadata.find { it.variableType != null }
-        assertEquals("string", variableMeta?.variableType)
+        val variableMeta = NativeMetadataUtils.filterVariableMetadata(savedMetadata).firstOrNull()
+        assertEquals(CanonicalTypes.String, variableMeta?.variableType)
     }
 
     @Test
-    fun `test parser with parts-based metadata`() {
-        // Create metadata part
+    fun `test parser with native metadata`() {
+        // Create native metadata part
         val metadata = listOf(
-            LanguageMetadata(
-                returnType = "void",
-                paramTypes = mapOf("name" to "String")
+            FunctionMetadata(
+                returnType = CanonicalTypes.Void,
+                paramTypes = mapOf("name" to CanonicalTypes.String)
             )
         )
-        val metadataPart = metadata
         
         // Create simple Java code without metadata comments
         val javaCode = """
@@ -125,30 +125,24 @@ class PartsBasedMetadataTest {
             }
         """.trimIndent()
         
-        // Parse with parts-based metadata
-        val ast = JavaParser.parseWithMetadata(javaCode, metadataPart) as ModuleNode
+        // Parse with native metadata
+        val ast = JavaParser.parseWithNativeMetadata(javaCode, metadata) as ModuleNode
         val functionDef = ast.body[0] as FunctionDefNode
         
-        // Verify metadata was injected from part
+        // Verify metadata was injected from native metadata
         assertEquals("greet", functionDef.name)
-        assertEquals("void", functionDef.metadata?.get("returnType"))
-        val paramTypes = functionDef.metadata?.get("paramTypes") as? Map<*, *>
-        assertEquals("String", paramTypes?.get("name"))
+        assertEquals(CanonicalTypes.Void, functionDef.returnType)
+        assertEquals(CanonicalTypes.String, functionDef.paramTypes["name"])
     }
 
     @Test
-    fun `test TypeScript round-trip with parts-based metadata`() {
+    fun `test TypeScript round-trip with native metadata`() {
         // Create TypeScript AST with metadata
-        val functionMetadata = mapOf(
-            "returnType" to "number",
-            "paramTypes" to mapOf("x" to "number", "y" to "number")
-        )
-        
         val functionAst = FunctionDefNode(
             name = "add",
             args = listOf(
-                NameNode(id = "x", ctx = Param, metadata = mapOf("type" to "number")),
-                NameNode(id = "y", ctx = Param, metadata = mapOf("type" to "number"))
+                NameNode(id = "x", ctx = Param, typeInfo = CanonicalTypes.Number),
+                NameNode(id = "y", ctx = Param, typeInfo = CanonicalTypes.Number)
             ),
             body = listOf(
                 AssignNode(
@@ -158,17 +152,18 @@ class PartsBasedMetadataTest {
                         op = "+",
                         right = NameNode(id = "y", ctx = Load)
                     ),
-                    metadata = mapOf("variableType" to "number")
+                    typeInfo = CanonicalTypes.Number
                 )
             ),
-            metadata = functionMetadata
+            returnType = CanonicalTypes.Number,
+            paramTypes = mapOf("x" to CanonicalTypes.Number, "y" to CanonicalTypes.Number)
         )
         
         val moduleAst = ModuleNode(body = listOf(functionAst))
         
-        // Generate TypeScript with parts-based metadata
+        // Generate TypeScript with native metadata
         val tsGenerator = TypeScriptGenerator()
-        val codeWithMetadata = tsGenerator.generateWithMetadata(moduleAst)
+        val codeWithMetadata = tsGenerator.generateWithNativeMetadata(moduleAst)
         
         println("Generated TypeScript code:")
         println(codeWithMetadata.code)
@@ -190,7 +185,7 @@ class PartsBasedMetadataTest {
         // Start with TypeScript AST
         val functionMetadata = mapOf(
             "returnType" to "void",
-            "paramTypes" to mapOf("message" to "string")
+            "paramTypes" to mapOf("message" to CanonicalTypes.String)
         )
         
         val tsAst = ModuleNode(body = listOf(
@@ -198,46 +193,47 @@ class PartsBasedMetadataTest {
                 name = "greet", // Changed from "log" to "greet" to avoid parsing issues
                 args = listOf(NameNode(id = "message", ctx = Param)),
                 body = listOf(PrintNode(expression = NameNode(id = "message", ctx = Load))),
-                metadata = functionMetadata
+                returnType = CanonicalTypes.Void,
+                paramTypes = mapOf("message" to CanonicalTypes.String)
             )
         ))
         
         // Generate JavaScript with parts-based metadata
         val jsGenerator = JavaScriptGenerator()
-        val jsCodeWithMetadata = jsGenerator.generateWithMetadata(tsAst)
+        val jsCodeWithNativeMetadata = jsGenerator.generateWithNativeMetadata(tsAst)
         
         println("Generated JavaScript code for cross-language test:")
-        println(jsCodeWithMetadata.code)
+        println(jsCodeWithNativeMetadata.code)
         println("Generated metadata part:")
-        println(jsCodeWithMetadata.metadata)
+        println(jsCodeWithNativeMetadata.metadata)
         
         // Parse JavaScript back with parts-based metadata
-        val jsAst = JavaScriptParser.parseWithMetadata(jsCodeWithMetadata.code, jsCodeWithMetadata.metadata) as ModuleNode
+        val jsAst = JavaScriptParser.parseWithNativeMetadata(jsCodeWithNativeMetadata.code, jsCodeWithNativeMetadata.metadata) as ModuleNode
         val jsFunctionDef = jsAst.body[0] as FunctionDefNode
         
         // Verify metadata was preserved
         assertEquals("greet", jsFunctionDef.name)
-        assertEquals("void", jsFunctionDef.metadata?.get("returnType"))
-        val paramTypes = jsFunctionDef.metadata?.get("paramTypes") as? Map<*, *>
-        assertEquals("string", paramTypes?.get("message"))
+        assertEquals(CanonicalTypes.Void, jsFunctionDef.returnType)
+        assertEquals(CanonicalTypes.String, jsFunctionDef.paramTypes["message"])
         
         // Generate Python with parts-based metadata
         val pythonGenerator = PythonGenerator()
-        val pythonCodeWithMetadata = pythonGenerator.generateWithMetadata(jsAst)
+        val pythonCodeWithNativeMetadata = pythonGenerator.generateWithNativeMetadata(jsAst)
         
         println("Generated Python code:")
-        println(pythonCodeWithMetadata.code)
+        println(pythonCodeWithNativeMetadata.code)
         println("Generated Python metadata part:")
-        println(pythonCodeWithMetadata.metadata)
+        println(pythonCodeWithNativeMetadata.metadata)
         
         // Verify Python code doesn't contain metadata comments
-        assertTrue(!pythonCodeWithMetadata.code.contains("__META__"))
-        assertTrue(pythonCodeWithMetadata.code.contains("def greet(message):"))
+        assertTrue(!pythonCodeWithNativeMetadata.code.contains("__META__"))
+        assertTrue(pythonCodeWithNativeMetadata.code.contains("def greet(message):"))
         
         // Verify metadata persists
-        val pythonMetadata = pythonCodeWithMetadata.metadata
+        val pythonMetadata = pythonCodeWithNativeMetadata.metadata
         assertEquals(1, pythonMetadata.size)
-        assertEquals("void", pythonMetadata[0].returnType)
+        val functionMeta = pythonMetadata[0] as FunctionMetadata
+        assertEquals(CanonicalTypes.Void, functionMeta.returnType)
     }
 
     @Test
@@ -251,16 +247,16 @@ class PartsBasedMetadataTest {
         """.trimIndent()
         
         // Parse using the regular parser (comment-based extraction removed)
-        val ast = JavaScriptParser.parseWithMetadata(jsCodeWithComments, emptyList()) as ModuleNode
+        val ast = JavaScriptParser.parseWithNativeMetadata(jsCodeWithComments, emptyList<NativeMetadata>()) as ModuleNode
         val functionDef = ast.body[0] as FunctionDefNode
         
         // Verify metadata was NOT extracted from comments (since we removed that functionality)
         assertEquals("greet", functionDef.name)
-        assertEquals(null, functionDef.metadata?.get("returnType"))
+        assertEquals(CanonicalTypes.Void, functionDef.returnType)
         
-        // Verify assignment has no metadata from comments
+        // Verify assignment has type inferred from value (not from comments)
         val assignment = functionDef.body[0] as AssignNode
-        assertEquals(null, assignment.metadata?.get("variableType"))
+        assertEquals(CanonicalTypes.String, assignment.typeInfo)
         
         println("✓ Comment-based metadata is no longer supported (expected behavior)")
     }

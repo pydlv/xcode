@@ -16,7 +16,7 @@ class JavaGeneratorTest {
             )
         )
         val expectedCode = "System.out.println(\"Hello, World!\");"
-        val actualCode = JavaGenerator().generateWithMetadata(ast).code
+        val actualCode = JavaGenerator().generateWithNativeMetadata(ast).code
         assertEquals(expectedCode, actualCode, "Generated Java code did not match expected.")
     }
 
@@ -40,7 +40,7 @@ class JavaGeneratorTest {
             )
         )
         val expectedCode = "if (x == 5) {\n    System.out.println(\"x is 5\");\n}"
-        val actualCode = JavaGenerator().generateWithMetadata(ast).code
+        val actualCode = JavaGenerator().generateWithNativeMetadata(ast).code
         assertEquals(expectedCode, actualCode, "Generated Java if statement without else did not match expected.")
     }
 
@@ -68,7 +68,7 @@ class JavaGeneratorTest {
             )
         )
         val expectedCode = "if (x == 5) {\n    System.out.println(\"x is 5\");\n} else {\n    System.out.println(\"x is not 5\");\n}"
-        val actualCode = JavaGenerator().generateWithMetadata(ast).code
+        val actualCode = JavaGenerator().generateWithNativeMetadata(ast).code
         assertEquals(expectedCode, actualCode, "Generated Java if statement with else did not match expected.")
     }
 
@@ -83,7 +83,7 @@ class JavaGeneratorTest {
             )
         )
         val expectedCode = "x = 42;"
-        val actualCode = JavaGenerator().generateWithMetadata(ast).code
+        val actualCode = JavaGenerator().generateWithNativeMetadata(ast).code
         assertEquals(expectedCode, actualCode, "Generated Java assignment did not match expected.")
     }
 }

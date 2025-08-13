@@ -15,13 +15,13 @@ class TypeScriptParserTest {
         val expectedAst = ModuleNode(
             body = listOf(
                 PrintNode(
-                    expression = ConstantNode(value = "cookies")
+                    expression = ConstantNode(value = "cookies", typeInfo = CanonicalTypes.String)
                 )
             )
         )
 
         try {
-            val ast = TypeScriptParser.parseWithMetadata(tsCode, emptyList())
+            val ast = TypeScriptParser.parseWithNativeMetadata(tsCode, emptyList<NativeMetadata>())
             assertNotNull(ast, "AST should not be null")
             assertEquals(expectedAst, ast, "AST did not match expected structure for console.log with string.")
         } catch (e: AstParseException) {
@@ -38,13 +38,13 @@ class TypeScriptParserTest {
         val expectedAst = ModuleNode(
             body = listOf(
                 PrintNode( // ANTLR parser creates PrintNode directly
-                    expression = ConstantNode(value = customString)
+                    expression = ConstantNode(value = customString, typeInfo = CanonicalTypes.String)
                 )
             )
         )
 
         try {
-            val ast = TypeScriptParser.parseWithMetadata(tsCode, emptyList())
+            val ast = TypeScriptParser.parseWithNativeMetadata(tsCode, emptyList<NativeMetadata>())
             assertNotNull(ast, "AST should not be null")
             assertEquals(expectedAst, ast, "AST did not match expected structure for arbitrary string. \nActual: $ast\nExpected: $expectedAst")
         } catch (e: AstParseException) {
@@ -61,16 +61,16 @@ class TypeScriptParserTest {
             body = listOf(
                 PrintNode( // ANTLR parser creates PrintNode directly
                     expression = BinaryOpNode( // This will require grammar change for TS
-                        left = ConstantNode(value = 1), // Normalized to integer
+                        left = ConstantNode(value = 1, typeInfo = CanonicalTypes.Number), // Normalized to integer
                         op = "+",
-                        right = ConstantNode(value = 2) // Normalized to integer
+                        right = ConstantNode(value = 2, typeInfo = CanonicalTypes.Number) // Normalized to integer
                     )
                 )
             )
         )
 
         try {
-            val ast = TypeScriptParser.parseWithMetadata(tsCode, emptyList())
+            val ast = TypeScriptParser.parseWithNativeMetadata(tsCode, emptyList<NativeMetadata>())
             assertEquals(expectedAst, ast, "AST for console.log with addition did not match expected.")
         } catch (e: AstParseException) {
             fail("Parsing failed for console.log with addition: ${e.message}", e)
@@ -86,8 +86,8 @@ class TypeScriptParserTest {
                     call = CallNode(
                         func = NameNode(id = "fib", ctx = Load),
                         args = listOf(
-                            ConstantNode(value = 0), // Normalized to integer
-                            ConstantNode(value = 1)  // Normalized to integer
+                            ConstantNode(value = 0, typeInfo = CanonicalTypes.Number), // Normalized to integer
+                            ConstantNode(value = 1, typeInfo = CanonicalTypes.Number)  // Normalized to integer
                         ),
                         keywords = emptyList()
                     )
@@ -96,7 +96,7 @@ class TypeScriptParserTest {
         )
 
         try {
-            val ast = TypeScriptParser.parseWithMetadata(tsCode, emptyList())
+            val ast = TypeScriptParser.parseWithNativeMetadata(tsCode, emptyList<NativeMetadata>())
             assertEquals(expectedAst, ast, "AST for fib(0, 1) did not match expected.")
         } catch (e: AstParseException) {
             fail("Parsing failed for fib(0, 1): ${e.message}", e)
@@ -111,20 +111,19 @@ class TypeScriptParserTest {
             body = listOf(
                 FunctionDefNode(
                     name = "greet",
-                    args = listOf(NameNode(id = "name", ctx = Param, metadata = mapOf("type" to "string"))),
+                    args = listOf(NameNode(id = "name", ctx = Param, typeInfo = CanonicalTypes.String)),
                     body = listOf(
-                        PrintNode(expression = ConstantNode(value = "Hello"))
+                        PrintNode(expression = ConstantNode(value = "Hello", typeInfo = CanonicalTypes.String))
                     ),
                     decoratorList = emptyList(),
-                    metadata = mapOf(
-                        "paramTypes" to mapOf("name" to "string")
-                    )
+                    returnType = CanonicalTypes.Void,
+                    paramTypes = mapOf("name" to CanonicalTypes.String)
                 )
             )
         )
 
         try {
-            val ast = TypeScriptParser.parseWithMetadata(tsCode, emptyList())
+            val ast = TypeScriptParser.parseWithNativeMetadata(tsCode, emptyList<NativeMetadata>())
             assertEquals(expectedAst, ast, "AST for function declaration did not match expected.")
         } catch (e: AstParseException) {
             fail("Parsing failed for function declaration: ${e.message}", e)
@@ -139,14 +138,14 @@ class TypeScriptParserTest {
             body = listOf(
                 AssignNode(
                     target = NameNode(id = "x", ctx = Store),
-                    value = ConstantNode(value = 42),
-                    metadata = mapOf("variableType" to "number")
+                    value = ConstantNode(value = 42, typeInfo = CanonicalTypes.Number),
+                    typeInfo = CanonicalTypes.Number
                 )
             )
         )
 
         try {
-            val ast = TypeScriptParser.parseWithMetadata(tsCode, emptyList())
+            val ast = TypeScriptParser.parseWithNativeMetadata(tsCode, emptyList<NativeMetadata>())
             assertEquals(expectedAst, ast, "AST for variable assignment did not match expected.")
         } catch (e: AstParseException) {
             fail("Parsing failed for variable assignment: ${e.message}", e)

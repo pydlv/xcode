@@ -16,13 +16,13 @@ class JavaScriptParserTest {
         val expectedAst = ModuleNode(
             body = listOf(
                 PrintNode( // ANTLR parser creates PrintNode directly
-                    expression = ConstantNode(value = "Hello, World!")
+                    expression = ConstantNode(value = "Hello, World!", typeInfo = CanonicalTypes.String)
                 )
             )
         )
 
         try {
-            val ast = JavaScriptParser.parseWithMetadata(jsCode, emptyList()) // This will initially fail as JavaScriptParser doesn't exist
+            val ast = JavaScriptParser.parseWithNativeMetadata(jsCode, emptyList<NativeMetadata>()) // This will initially fail as JavaScriptParser doesn't exist
             assertNotNull(ast, "AST should not be null")
             assertEquals(expectedAst, ast, "AST did not match expected structure. \nActual: $ast\nExpected: $expectedAst")
         } catch (e: AstParseException) {
@@ -39,13 +39,13 @@ class JavaScriptParserTest {
         val expectedAst = ModuleNode(
             body = listOf(
                 PrintNode( // ANTLR parser creates PrintNode directly
-                    expression = ConstantNode(value = customString)
+                    expression = ConstantNode(value = customString, typeInfo = CanonicalTypes.String)
                 )
             )
         )
 
         try {
-            val ast = JavaScriptParser.parseWithMetadata(jsCode, emptyList())
+            val ast = JavaScriptParser.parseWithNativeMetadata(jsCode, emptyList<NativeMetadata>())
             assertNotNull(ast, "AST should not be null")
             assertEquals(expectedAst, ast, "AST did not match expected structure for arbitrary string. \nActual: $ast\nExpected: $expectedAst")
         } catch (e: AstParseException) {
@@ -61,16 +61,16 @@ class JavaScriptParserTest {
             body = listOf(
                 PrintNode( // ANTLR parser creates PrintNode directly
                     expression = BinaryOpNode( // This will require grammar change for JS
-                        left = ConstantNode(value = 1), // Normalized to integer
+                        left = ConstantNode(value = 1, typeInfo = CanonicalTypes.Number), // Normalized to integer
                         op = "+",
-                        right = ConstantNode(value = 2) // Normalized to integer
+                        right = ConstantNode(value = 2, typeInfo = CanonicalTypes.Number) // Normalized to integer
                     )
                 )
             )
         )
 
         try {
-            val ast = JavaScriptParser.parseWithMetadata(jsCode, emptyList())
+            val ast = JavaScriptParser.parseWithNativeMetadata(jsCode, emptyList<NativeMetadata>())
             assertEquals(expectedAst, ast, "AST for console.log with addition did not match expected.")
         } catch (e: AstParseException) {
             fail("Parsing failed for console.log with addition: ${e.message}", e)
@@ -86,8 +86,8 @@ class JavaScriptParserTest {
                     call = CallNode(
                         func = NameNode(id = "fib", ctx = Load),
                         args = listOf(
-                            ConstantNode(value = 0), // Normalized to integer
-                            ConstantNode(value = 1)  // Normalized to integer
+                            ConstantNode(value = 0, typeInfo = CanonicalTypes.Number), // Normalized to integer
+                            ConstantNode(value = 1, typeInfo = CanonicalTypes.Number)  // Normalized to integer
                         ),
                         keywords = emptyList()
                     )
@@ -96,7 +96,7 @@ class JavaScriptParserTest {
         )
 
         try {
-            val ast = JavaScriptParser.parseWithMetadata(jsCode, emptyList())
+            val ast = JavaScriptParser.parseWithNativeMetadata(jsCode, emptyList<NativeMetadata>())
             assertEquals(expectedAst, ast, "AST for fib(0, 1) did not match expected.")
         } catch (e: AstParseException) {
             fail("Parsing failed for fib(0, 1): ${e.message}", e)

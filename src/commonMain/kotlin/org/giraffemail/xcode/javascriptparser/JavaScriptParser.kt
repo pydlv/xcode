@@ -139,7 +139,16 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
         val valueExpr = visit(ctx.expression()) as? ExpressionNode
             ?: UnknownNode("Invalid expression in assignment")
 
-        return AssignNode(target = targetNode, value = valueExpr)
+        // Infer typeInfo from the value expression
+        val inferredType = when (valueExpr) {
+            is ConstantNode -> valueExpr.typeInfo
+            is ListNode -> valueExpr.typeInfo
+            is TupleNode -> valueExpr.typeInfo
+            is BinaryOpNode -> valueExpr.typeInfo
+            else -> CanonicalTypes.Unknown
+        }
+
+        return AssignNode(target = targetNode, value = valueExpr, typeInfo = inferredType)
     }
 
     // Handle function calls as statements
@@ -228,7 +237,7 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
     override fun visitStringLiteral(ctx: AntlrJavaScriptParser.StringLiteralContext): AstNode {
         val text = ctx.STRING_LITERAL().text // Removed !! as it's not nullable
         val content = if (text.length >= 2) text.substring(1, text.length - 1) else ""
-        return ConstantNode(content)
+        return ConstantNode(content, CanonicalTypes.String)
     }
 
     // Handle Identifier: IDENTIFIER
@@ -249,7 +258,7 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
             doubleValue
         }
         
-        return ConstantNode(normalizedValue)
+        return ConstantNode(normalizedValue, CanonicalTypes.Number)
     }
     
     override fun visitArrayLiteral(ctx: AntlrJavaScriptParser.ArrayLiteralContext): AstNode {
@@ -257,20 +266,16 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
             visit(exprCtx) as? ExpressionNode
         } ?: emptyList()
         
-        // Try to infer element type from the array contents
+        // Infer element type from the parsed elements' typeInfo
         val elementType = when {
-            elements.isEmpty() -> null
-            elements.all { it is ConstantNode && it.value is String } -> "string"
-            elements.all { it is ConstantNode && (it.value is Int || it.value is Double) } -> "number"
-            elements.all { it is ConstantNode && it.value is Boolean } -> "boolean"
-            else -> null
+            elements.isEmpty() -> CanonicalTypes.Unknown
+            elements.all { it is ConstantNode && it.typeInfo == CanonicalTypes.String } -> CanonicalTypes.String
+            elements.all { it is ConstantNode && it.typeInfo == CanonicalTypes.Number } -> CanonicalTypes.Number
+            elements.all { it is ConstantNode && it.typeInfo == CanonicalTypes.Boolean } -> CanonicalTypes.Boolean
+            else -> CanonicalTypes.Unknown
         }
         
-        val metadata = if (elementType != null) {
-            mapOf("arrayType" to elementType)  // Changed from "elementType" to "arrayType" for consistency
-        } else null
-        
-        return ListNode(elements = elements, metadata = metadata)
+        return ListNode(elements = elements, typeInfo = elementType)
     }
 
     override fun defaultResult(): AstNode {

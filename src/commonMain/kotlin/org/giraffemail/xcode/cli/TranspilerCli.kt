@@ -13,17 +13,17 @@ import org.giraffemail.xcode.typescriptparser.TypeScriptParser
 data class LanguageConfig(
     val name: String,
     val extensions: List<String>,
-    val parseWithMetadataFn: (String, List<LanguageMetadata>) -> AstNode,
-    val generateWithMetadataFn: (AstNode) -> CodeWithMetadata
+    val parseWithNativeMetadataFn: (String, List<NativeMetadata>) -> AstNode,
+    val generateWithNativeMetadataFn: (AstNode) -> CodeWithNativeMetadata
 )
 
 class TranspilerCli {
     
     private val supportedLanguages = mapOf(
-        "python" to LanguageConfig("Python", listOf("py"), PythonParser::parseWithMetadata) { ast -> PythonGenerator().generateWithMetadata(ast) },
-        "javascript" to LanguageConfig("JavaScript", listOf("js", "mjs"), JavaScriptParser::parseWithMetadata) { ast -> JavaScriptGenerator().generateWithMetadata(ast) },
-        "java" to LanguageConfig("Java", listOf("java"), JavaParser::parseWithMetadata) { ast -> JavaGenerator().generateWithMetadata(ast) },
-        "typescript" to LanguageConfig("TypeScript", listOf("ts"), TypeScriptParser::parseWithMetadata) { ast -> TypeScriptGenerator().generateWithMetadata(ast) }
+        "python" to LanguageConfig("Python", listOf("py"), PythonParser::parseWithNativeMetadata) { ast -> PythonGenerator().generateWithNativeMetadata(ast) },
+        "javascript" to LanguageConfig("JavaScript", listOf("js", "mjs"), JavaScriptParser::parseWithNativeMetadata) { ast -> JavaScriptGenerator().generateWithNativeMetadata(ast) },
+        "java" to LanguageConfig("Java", listOf("java"), JavaParser::parseWithNativeMetadata) { ast -> JavaGenerator().generateWithNativeMetadata(ast) },
+        "typescript" to LanguageConfig("TypeScript", listOf("ts"), TypeScriptParser::parseWithNativeMetadata) { ast -> TypeScriptGenerator().generateWithNativeMetadata(ast) }
     )
     
     fun run(args: Array<String>) {
@@ -133,10 +133,10 @@ class TranspilerCli {
         val sourceCode = readFileContent(inputPath)
         
         // Parse source code to AST with empty metadata
-        val ast = sourceConfig.parseWithMetadataFn(sourceCode, emptyList())
+        val ast = sourceConfig.parseWithNativeMetadataFn(sourceCode, emptyList())
         
         // Generate target code from AST and extract the code part
-        val targetCodeWithMetadata = targetConfig.generateWithMetadataFn(ast)
+        val targetCodeWithMetadata = sourceConfig.generateWithNativeMetadataFn(ast)
         val targetCode = targetCodeWithMetadata.code
         
         // Determine output path

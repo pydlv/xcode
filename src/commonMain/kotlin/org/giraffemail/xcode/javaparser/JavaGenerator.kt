@@ -83,14 +83,20 @@ class JavaGenerator : AbstractAstGenerator() {
         val targetName = node.target.id // Assuming node.target is of type NameNode
         val valueExpr = generateExpression(node.value)
         
-        // Check if we have type information from metadata
-        val variableType = node.metadata?.get("variableType") as? String
+        // Check if we have type information from unified typeInfo field
+        val variableType = when (val typeInfo = node.typeInfo) {
+            is CanonicalTypes -> {
+                if (typeInfo != CanonicalTypes.Unknown) typeInfo.name.lowercase() else null
+            }
+            is TypeDefinition -> typeInfo.toString()
+        }
         
         return if (variableType != null) {
             // Generate typed declaration with proper spacing
             val javaType = when {
-                // Check if it's a tuple type (e.g., "[string,number]")
-                variableType.startsWith("[") && variableType.contains(",") -> "Object[]"
+                // Check if it's a tuple type by examining the value node or custom type
+                node.value is TupleNode || (variableType.startsWith("[") && variableType.contains(",")) -> "Object[]"
+                variableType.startsWith("[") && variableType.endsWith("]") -> "Object[]"
                 else -> mapTypeToJava(variableType)
             }
             "$javaType $targetName = $valueExpr${getStatementTerminator()}"
@@ -135,14 +141,23 @@ class JavaGenerator : AbstractAstGenerator() {
         // Generate Java array initialization
         val elements = node.elements.joinToString(", ") { generateExpression(it) }
         
-        // Check if we have array type information from parent assignment's metadata
-        val parentMetadata = node.metadata
-        val arrayType = parentMetadata?.get("arrayType") as? String
+        // Get array type from unified typeInfo field
+        val arrayType = when (val typeInfo = node.typeInfo) {
+            is CanonicalTypes -> {
+                if (typeInfo != CanonicalTypes.Unknown) typeInfo.name.lowercase() else null
+            }
+            is TypeDefinition -> {
+                when (typeInfo) {
+                    is TypeDefinition.Array -> typeInfo.elementType.name.lowercase()
+                    is TypeDefinition.Simple -> typeInfo.type.name.lowercase()
+                    else -> null
+                }
+            }
+        }
         
-        // Infer element type from the list elements or metadata
+        // Infer element type from the explicit field or elements
         val elementType = when {
             arrayType != null -> arrayType
-            node.metadata?.containsKey("elementType") == true -> node.metadata["elementType"] as String
             node.elements.isNotEmpty() -> {
                 // Check if all elements are strings
                 if (node.elements.all { it is ConstantNode && it.value is String }) {

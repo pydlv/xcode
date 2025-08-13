@@ -25,7 +25,7 @@ class JavaScriptGeneratorTest {
             )
         )
         val expectedCode = "console.log('Hello, World!');"
-        val actualCode = JavaScriptGenerator().generateWithMetadata(ast).code
+        val actualCode = JavaScriptGenerator().generateWithNativeMetadata(ast).code
         assertEquals(expectedCode, actualCode, "Generated JavaScript code did not match expected.")
     }
 
@@ -49,7 +49,7 @@ class JavaScriptGeneratorTest {
             )
         )
         val expectedCode = "console.log('$customString');"
-        val actualCode = JavaScriptGenerator().generateWithMetadata(ast).code
+        val actualCode = JavaScriptGenerator().generateWithNativeMetadata(ast).code
         assertEquals(expectedCode, actualCode, "Generated JavaScript code with arbitrary string did not match expected.")
     }
 
@@ -63,7 +63,7 @@ class JavaScriptGeneratorTest {
         val moduleAst = ModuleNode(body = listOf(ExprNode(value = ast)))
         // For JavaScript, an expression statement ends with a semicolon.
         val expectedCode = "1 + 2;"
-        val actualCode = JavaScriptGenerator().generateWithMetadata(moduleAst).code
+        val actualCode = JavaScriptGenerator().generateWithNativeMetadata(moduleAst).code
         assertEquals(expectedCode, actualCode, "Generated JavaScript code for simple addition did not match expected.")
     }
 
@@ -94,7 +94,7 @@ class JavaScriptGeneratorTest {
             )
         )
         val expectedCode = "if (x === 5) {\n    console.log('x is 5');\n}"
-        val actualCode = JavaScriptGenerator().generateWithMetadata(ast).code
+        val actualCode = JavaScriptGenerator().generateWithNativeMetadata(ast).code
         assertEquals(expectedCode, actualCode, "Generated JavaScript if statement without else did not match expected.")
     }
 
@@ -136,7 +136,7 @@ class JavaScriptGeneratorTest {
             )
         )
         val expectedCode = "if (x === 5) {\n    console.log('x is 5');\n} else {\n    console.log('x is not 5');\n}"
-        val actualCode = JavaScriptGenerator().generateWithMetadata(ast).code
+        val actualCode = JavaScriptGenerator().generateWithNativeMetadata(ast).code
         assertEquals(expectedCode, actualCode, "Generated JavaScript if statement with else did not match expected.")
     }
 }

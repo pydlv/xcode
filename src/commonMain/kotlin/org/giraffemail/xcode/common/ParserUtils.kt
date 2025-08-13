@@ -27,45 +27,6 @@ object ParserUtils {
     }
     
     /**
-     * Extracts metadata from a metadata part and populates the metadata queue.
-     * This is the parts-based metadata extraction method.
-     * 
-     * @param code The source code (unchanged since metadata is separate)
-     * @param metadataPart The metadata part (List of LanguageMetadata objects)
-     * @param metadataQueue The queue to populate with extracted metadata
-     * @return The original source code (unchanged since metadata is separate)
-     */
-    fun extractMetadataFromPart(code: String, metadataPart: List<LanguageMetadata>, metadataQueue: MutableList<LanguageMetadata>): String {
-        metadataQueue.clear()
-        metadataQueue.addAll(metadataPart)
-        return code // Return code unchanged since metadata is separate
-    }
-    
-    /**
-     * Filters metadata queue by function-related metadata.
-     * Common pattern used across all parsers.
-     */
-    fun filterFunctionMetadata(metadataQueue: List<LanguageMetadata>): List<LanguageMetadata> {
-        return metadataQueue.filter { it.returnType != null || it.paramTypes.isNotEmpty() }
-    }
-    
-    /**
-     * Filters metadata queue by assignment-related metadata.
-     * Common pattern used across all parsers.
-     */
-    fun filterAssignmentMetadata(metadataQueue: List<LanguageMetadata>): List<LanguageMetadata> {
-        return metadataQueue.filter { it.variableType != null }
-    }
-    
-    /**
-     * Filters metadata queue by class-related metadata.
-     * Common pattern used across all parsers.
-     */
-    fun filterClassMetadata(metadataQueue: List<LanguageMetadata>): List<LanguageMetadata> {
-        return metadataQueue.filter { it.classType != null || it.classMethods.isNotEmpty() }
-    }
-    
-    /**
      * Common utility for safely casting visit results to ExpressionNode with fallback.
      * Used across multiple parsers for condition parsing.
      */
@@ -95,47 +56,118 @@ object ParserUtils {
         
         return CompareNode(left, canonicalOperator, right)
     }
-    
+
     /**
-     * Helper function to convert a ListNode to TupleNode when metadata indicates it should be a tuple.
-     * This handles the case where languages like JavaScript don't have native tuple support
-     * but the original source language (like Python) used tuples.
+     * Inject native metadata into AST without string conversion
      */
-    private fun convertListToTupleIfNeeded(listNode: ListNode, variableType: String): ExpressionNode {
-        // Check if the variableType indicates this should be a tuple
-        // Tuple types are typically represented as "[type1, type2, ...]" or similar patterns
-        val isTupleType = variableType.startsWith("[") && variableType.endsWith("]") && 
-                          variableType.contains(",") && !variableType.contains("[]")
-        
-        return if (isTupleType) {
-            // Extract individual types from the tuple type string
-            val typeContent = variableType.substring(1, variableType.length - 1).trim()
-            val individualTypes = typeContent.split(",").map { it.trim() }
-            
-            // Convert ListNode to TupleNode with appropriate metadata
-            TupleNode(
-                elements = listNode.elements,
-                metadata = mapOf("tupleTypes" to individualTypes)
-            )
-        } else {
-            // Keep as ListNode but preserve any existing metadata
-            listNode
-        }
-    }
-    
-    /**
-     * Common utility for injecting metadata into AST nodes.
-     * Used across all parsers to avoid code duplication.
-     */
-    fun injectMetadataIntoAst(ast: AstNode, metadataQueue: List<LanguageMetadata>): AstNode {
-        // Instead of using index, match metadata by type to appropriate nodes
-        val functionMetadata = filterFunctionMetadata(metadataQueue)
-        val assignmentMetadata = filterAssignmentMetadata(metadataQueue)
-        val classMetadata = filterClassMetadata(metadataQueue)
+    fun injectNativeMetadataIntoAst(ast: AstNode, metadataQueue: List<NativeMetadata>): AstNode {
+        // Filter metadata by type
+        val functionMetadata = NativeMetadataUtils.filterFunctionMetadata(metadataQueue)
+        val assignmentMetadata = NativeMetadataUtils.filterVariableMetadata(metadataQueue)
+        val classMetadata = NativeMetadataUtils.filterClassMetadata(metadataQueue)
+        val expressionMetadata = NativeMetadataUtils.filterExpressionMetadata(metadataQueue)
         
         var functionMetadataIndex = 0
         var assignmentMetadataIndex = 0
         var classMetadataIndex = 0
+        var expressionMetadataIndex = 0
+        
+        // Variable type tracking for NameNode resolution
+        val variableTypes = mutableMapOf<String, TypeInfo>()
+        
+        // Separate assignment metadata from variable reference metadata
+        val assignmentMetadataList = mutableListOf<VariableMetadata>()
+        val variableReferenceMap = mutableMapOf<String, TypeInfo>()
+        
+        // Build maps from metadata - distinguish between assignments and references
+        assignmentMetadata.forEach { metadata ->
+            if (metadata.variableName != null) {
+                // This could be either assignment or reference metadata
+                // We'll determine during traversal which ones are actually assignments
+                variableReferenceMap[metadata.variableName] = metadata.variableType
+            }
+        }
+        
+        // First pass: collect assignment nodes to build assignment metadata list
+        fun collectAssignmentNodes(node: AstNode): List<String> {
+            val assignments = mutableListOf<String>()
+            when (node) {
+                is ModuleNode -> {
+                    node.body.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                }
+                is FunctionDefNode -> {
+                    node.body.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                }
+                is ClassDefNode -> {
+                    node.body.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                }
+                is AssignNode -> {
+                    if (node.target is NameNode) {
+                        assignments.add(node.target.id)
+                    }
+                    assignments.addAll(collectAssignmentNodes(node.value))
+                }
+                is IfNode -> {
+                    assignments.addAll(collectAssignmentNodes(node.test))
+                    node.body.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                    node.orelse.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                }
+                is PrintNode -> {
+                    assignments.addAll(collectAssignmentNodes(node.expression))
+                }
+                is ReturnNode -> {
+                    node.value?.let { assignments.addAll(collectAssignmentNodes(it)) }
+                }
+                is CallStatementNode -> {
+                    assignments.addAll(collectAssignmentNodes(node.call))
+                }
+                is BinaryOpNode -> {
+                    assignments.addAll(collectAssignmentNodes(node.left))
+                    assignments.addAll(collectAssignmentNodes(node.right))
+                }
+                is CompareNode -> {
+                    assignments.addAll(collectAssignmentNodes(node.left))
+                    assignments.addAll(collectAssignmentNodes(node.right))
+                }
+                is CallNode -> {
+                    assignments.addAll(collectAssignmentNodes(node.func))
+                    node.args.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                }
+                is ListNode -> {
+                    node.elements.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                }
+                is TupleNode -> {
+                    node.elements.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                }
+                // For these node types, we don't need to traverse further for assignments
+                is ConstantNode, is NameNode, is MemberExpressionNode, is UnknownNode, is ExprNode -> {
+                    // No assignments in these node types
+                }
+            }
+            return assignments
+        }
+        
+        // Collect assignment variable names in traversal order
+        val assignmentVariableNames = collectAssignmentNodes(ast)
+        
+        // Build assignment metadata list in the same order
+        var unusedMetadataIndex = 0
+        assignmentVariableNames.forEach { varName ->
+            val metadata = assignmentMetadata.find { it.variableName == varName }
+            if (metadata != null) {
+                assignmentMetadataList.add(metadata)
+            } else {
+                // If no metadata with matching variable name, use the next unused metadata
+                // This handles cases where VariableMetadata doesn't have a variableName
+                while (unusedMetadataIndex < assignmentMetadata.size) {
+                    val unusedMetadata = assignmentMetadata[unusedMetadataIndex++]
+                    if (unusedMetadata.variableName == null) {
+                        assignmentMetadataList.add(unusedMetadata)
+                        break
+                    }
+                }
+            }
+        }
         
         fun injectIntoNode(node: AstNode): AstNode {
             return when (node) {
@@ -148,19 +180,17 @@ object ParserUtils {
                 is FunctionDefNode -> {
                     if (functionMetadataIndex < functionMetadata.size) {
                         val metadata = functionMetadata[functionMetadataIndex++]
-                        val metadataMap = mutableMapOf<String, Any>()
-                        if (metadata.returnType != null) {
-                            metadataMap["returnType"] = metadata.returnType
-                        }
-                        if (metadata.paramTypes.isNotEmpty()) {
-                            metadataMap["paramTypes"] = metadata.paramTypes
+                        
+                        // Track parameter types in variable table
+                        metadata.paramTypes.forEach { (paramName, paramType) ->
+                            variableTypes[paramName] = paramType
                         }
                         
-                        // Restore individual parameter metadata
+                        // Restore individual parameter metadata with native types
                         val updatedArgs = node.args.map { param ->
-                            val paramMetadata = metadata.individualParamMetadata[param.id]
-                            if (paramMetadata != null && paramMetadata.isNotEmpty()) {
-                                param.copy(metadata = paramMetadata)
+                            val paramType = metadata.paramTypes[param.id]
+                            if (paramType != null) {
+                                param.copy(typeInfo = paramType)
                             } else {
                                 param
                             }
@@ -174,7 +204,9 @@ object ParserUtils {
                         node.copy(
                             args = updatedArgs,
                             body = updatedBody,
-                            metadata = metadataMap.ifEmpty { null }
+                            returnType = metadata.returnType,
+                            paramTypes = metadata.paramTypes,
+                            individualParamMetadata = metadata.individualParamMetadata
                         )
                     } else {
                         // No function metadata, but still need to process body
@@ -187,13 +219,6 @@ object ParserUtils {
                 is ClassDefNode -> {
                     if (classMetadataIndex < classMetadata.size) {
                         val metadata = classMetadata[classMetadataIndex++]
-                        val metadataMap = mutableMapOf<String, Any>()
-                        if (metadata.classType != null) {
-                            metadataMap["classType"] = metadata.classType
-                        }
-                        if (metadata.classMethods.isNotEmpty()) {
-                            metadataMap["methods"] = metadata.classMethods
-                        }
                         
                         // Process class body recursively
                         val updatedBody = node.body.map { stmt ->
@@ -202,7 +227,8 @@ object ParserUtils {
                         
                         node.copy(
                             body = updatedBody,
-                            metadata = metadataMap.ifEmpty { null }
+                            typeInfo = metadata.classType,
+                            methods = metadata.methods
                         )
                     } else {
                         // No class metadata, but still need to process body
@@ -213,35 +239,137 @@ object ParserUtils {
                     }
                 }
                 is AssignNode -> {
-                    // Always process the value expression recursively
                     val processedValue = injectIntoNode(node.value) as ExpressionNode
                     
-                    if (assignmentMetadataIndex < assignmentMetadata.size) {
-                        val metadata = assignmentMetadata[assignmentMetadataIndex++]
-                        val metadataMap = mutableMapOf<String, Any>()
-                        if (metadata.variableType != null) {
-                            metadataMap["variableType"] = metadata.variableType
-                        }
+                    if (assignmentMetadataIndex < assignmentMetadataList.size) {
+                        val metadata = assignmentMetadataList[assignmentMetadataIndex++]
                         
-                        // Check if we need to convert ListNode to TupleNode based on metadata
-                        val finalValue = if (processedValue is ListNode && metadata.variableType != null) {
-                            convertListToTupleIfNeeded(processedValue, metadata.variableType)
+                        // Convert ListNode to TupleNode if needed based on native TypeInfo
+                        val finalValue = if (processedValue is ListNode && metadata.variableType is TypeDefinition.Tuple) {
+                            convertListToTupleForNativeType(processedValue, metadata.variableType)
                         } else {
                             processedValue
                         }
                         
+                        // Track the variable type for future references
+                        if (node.target is NameNode) {
+                            variableTypes[node.target.id] = metadata.variableType
+                        }
+                        
                         node.copy(
                             value = finalValue,
-                            metadata = metadataMap.ifEmpty { null }
+                            typeInfo = metadata.variableType
                         )
                     } else {
                         node.copy(value = processedValue)
                     }
+                }
+                is NameNode -> {
+                    // For variable references (Load context), try to resolve type from variable table or reference map
+                    if (node.ctx == Load) {
+                        val typeInfo = variableTypes[node.id] ?: variableReferenceMap[node.id]
+                        if (typeInfo != null) {
+                            node.copy(typeInfo = typeInfo)
+                        } else {
+                            node
+                        }
+                    } else {
+                        node
+                    }
+                }
+                is PrintNode -> {
+                    node.copy(expression = injectIntoNode(node.expression) as ExpressionNode)
+                }
+                is CallNode -> {
+                    val updatedArgs = node.args.map { arg ->
+                        injectIntoNode(arg) as ExpressionNode
+                    }
+                    node.copy(args = updatedArgs)
+                }
+                is BinaryOpNode -> {
+                    val processedLeft = injectIntoNode(node.left) as ExpressionNode
+                    val processedRight = injectIntoNode(node.right) as ExpressionNode
+                    
+                    // Try to find matching expression metadata
+                    if (expressionMetadataIndex < expressionMetadata.size) {
+                        val metadata = expressionMetadata[expressionMetadataIndex++]
+                        node.copy(
+                            left = processedLeft,
+                            right = processedRight,
+                            typeInfo = metadata.expressionType
+                        )
+                    } else {
+                        node.copy(
+                            left = processedLeft,
+                            right = processedRight
+                        )
+                    }
+                }
+                is CompareNode -> {
+                    node.copy(
+                        left = injectIntoNode(node.left) as ExpressionNode,
+                        right = injectIntoNode(node.right) as ExpressionNode
+                    )
+                }
+                is ListNode -> {
+                    val updatedElements = node.elements.map { elem ->
+                        injectIntoNode(elem) as ExpressionNode
+                    }
+                    node.copy(elements = updatedElements)
+                }
+                is TupleNode -> {
+                    val updatedElements = node.elements.map { elem ->
+                        injectIntoNode(elem) as ExpressionNode
+                    }
+                    node.copy(elements = updatedElements)
+                }
+                is IfNode -> {
+                    val updatedBody = node.body.map { stmt ->
+                        injectIntoNode(stmt) as StatementNode
+                    }
+                    val updatedOrelse = node.orelse.map { stmt ->
+                        injectIntoNode(stmt) as StatementNode
+                    }
+                    node.copy(
+                        test = injectIntoNode(node.test) as ExpressionNode,
+                        body = updatedBody,
+                        orelse = updatedOrelse
+                    )
+                }
+                is ReturnNode -> {
+                    if (node.value != null) {
+                        node.copy(value = injectIntoNode(node.value) as ExpressionNode)
+                    } else {
+                        node
+                    }
+                }
+                is CallStatementNode -> {
+                    node.copy(call = injectIntoNode(node.call) as CallNode)
+                }
+                is ExprNode -> {
+                    node.copy(value = injectIntoNode(node.value) as ExpressionNode)
+                }
+                is MemberExpressionNode -> {
+                    node.copy(
+                        obj = injectIntoNode(node.obj) as ExpressionNode,
+                        property = injectIntoNode(node.property) as ExpressionNode
+                    )
                 }
                 else -> node
             }
         }
         
         return injectIntoNode(ast)
+    }
+
+    /**
+     * Convert ListNode to TupleNode based on native TypeDefinition
+     */
+    private fun convertListToTupleForNativeType(listNode: ListNode, tupleType: TypeDefinition.Tuple): TupleNode {
+        // Create TupleNode with the same elements but tuple semantics
+        return TupleNode(
+            elements = listNode.elements,
+            typeInfo = tupleType
+        )
     }
 }

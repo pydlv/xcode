@@ -1,39 +1,91 @@
 package org.giraffemail.xcode.ast
 
 /**
- * Data classes for metadata storage
+ * Native Kotlin metadata storage - no string serialization
  */
-data class LanguageMetadata(
-    val returnType: String? = null,
-    val paramTypes: Map<String, String> = emptyMap(),
-    val variableType: String? = null,
-    val individualParamMetadata: Map<String, Map<String, String>> = emptyMap(), // param name -> metadata map
-    val classType: String? = null,
-    val classMethods: List<String> = emptyList()
-)
+sealed class NativeMetadata
 
 /**
- * Data class representing code and metadata as separate parts
- * Note: metadata is stored as Kotlin objects, not serialized strings
+ * Function metadata with native TypeInfo objects
  */
-data class CodeWithMetadata(
+data class FunctionMetadata(
+    val returnType: TypeInfo = CanonicalTypes.Void,
+    val paramTypes: Map<String, TypeInfo> = emptyMap(),
+    val individualParamMetadata: Map<String, Map<String, String>> = emptyMap() // param name -> additional metadata
+) : NativeMetadata()
+
+/**
+ * Variable assignment metadata with native TypeInfo
+ */
+data class VariableMetadata(
+    val variableType: TypeInfo = CanonicalTypes.Unknown,
+    val variableName: String? = null  // Name of the variable this metadata refers to
+) : NativeMetadata()
+
+/**
+ * Class metadata with native TypeInfo
+ */
+data class ClassMetadata(
+    val classType: TypeInfo = CanonicalTypes.Any,
+    val methods: List<String> = emptyList()
+) : NativeMetadata()
+
+/**
+ * Expression metadata with native TypeInfo (for binary operations, etc.)
+ */
+data class ExpressionMetadata(
+    val expressionType: TypeInfo = CanonicalTypes.Unknown,
+    val expressionId: String? = null  // Identifier to match expression during injection
+) : NativeMetadata()
+
+/**
+ * Code with native metadata - no string serialization involved
+ */
+data class CodeWithNativeMetadata(
     val code: String,
-    val metadata: List<LanguageMetadata>
+    val metadata: List<NativeMetadata>
 )
 
 /**
- * Utilities for metadata part handling
+ * Utilities for native metadata handling
  */
-object MetadataSerializer {
+object NativeMetadataUtils {
     
     /**
-     * Creates a CodeWithMetadata object from code and metadata parts
-     * Note: metadata is stored as Kotlin objects, not serialized
+     * Creates a CodeWithNativeMetadata object from code and native metadata
      */
-    fun createCodeWithMetadata(code: String, metadata: List<LanguageMetadata>): CodeWithMetadata {
-        return CodeWithMetadata(
+    fun createCodeWithMetadata(code: String, metadata: List<NativeMetadata>): CodeWithNativeMetadata {
+        return CodeWithNativeMetadata(
             code = code,
             metadata = metadata
         )
+    }
+    
+    /**
+     * Filter function metadata from a list of native metadata
+     */
+    fun filterFunctionMetadata(metadata: List<NativeMetadata>): List<FunctionMetadata> {
+        return metadata.filterIsInstance<FunctionMetadata>()
+    }
+    
+    /**
+     * Filter variable metadata from a list of native metadata
+     */
+    fun filterVariableMetadata(metadata: List<NativeMetadata>): List<VariableMetadata> {
+        return metadata.filterIsInstance<VariableMetadata>()
+    }
+    
+    /**
+     * Filter class metadata from a list of native metadata
+     */
+    fun filterClassMetadata(metadata: List<NativeMetadata>): List<ClassMetadata> {
+        return metadata.filterIsInstance<ClassMetadata>()
+    }
+    
+    /**
+     * Filter expression metadata from a list of native metadata
+     */
+    fun filterExpressionMetadata(metadata: List<NativeMetadata>): List<ExpressionMetadata> {
+        return metadata.filterIsInstance<ExpressionMetadata>()
     }
 }

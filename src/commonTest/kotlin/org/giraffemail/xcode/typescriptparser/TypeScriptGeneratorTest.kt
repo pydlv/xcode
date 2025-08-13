@@ -17,7 +17,7 @@ class TypeScriptGeneratorTest {
         )
 
         val expectedCode = "console.log('Hello TypeScript!');"
-        val generatedCode = generator.generateWithMetadata(ast).code
+        val generatedCode = generator.generateWithNativeMetadata(ast).code
 
         assertEquals(expectedCode, generatedCode, "Generated TypeScript code should match expected output")
     }
@@ -34,7 +34,7 @@ class TypeScriptGeneratorTest {
         )
 
         val expectedCode = "let message = 'Hello World';"
-        val generatedCode = generator.generateWithMetadata(ast).code
+        val generatedCode = generator.generateWithNativeMetadata(ast).code
 
         assertEquals(expectedCode, generatedCode, "Generated TypeScript assignment should match expected output")
     }
@@ -57,7 +57,7 @@ class TypeScriptGeneratorTest {
         )
 
         val expectedCode = "processData(42, 'test');"
-        val generatedCode = generator.generateWithMetadata(ast).code
+        val generatedCode = generator.generateWithNativeMetadata(ast).code
 
         assertEquals(expectedCode, generatedCode, "Generated TypeScript function call should match expected output")
     }
@@ -88,11 +88,11 @@ class TypeScriptGeneratorTest {
             )
         )
 
-        val expectedCode = """function add(a, b) {
+        val expectedCode = """function add(a, b): void {
     let result = a + b;
     console.log(result);
 }"""
-        val generatedCode = generator.generateWithMetadata(ast).code
+        val generatedCode = generator.generateWithNativeMetadata(ast).code
 
         assertEquals(expectedCode, generatedCode, "Generated TypeScript function should match expected output")
     }
@@ -122,7 +122,7 @@ class TypeScriptGeneratorTest {
 } else {
     console.log('lesser');
 }"""
-        val generatedCode = generator.generateWithMetadata(ast).code
+        val generatedCode = generator.generateWithNativeMetadata(ast).code
 
         assertEquals(expectedCode, generatedCode, "Generated TypeScript if statement should match expected output")
     }
@@ -142,7 +142,7 @@ class TypeScriptGeneratorTest {
         )
 
         val expectedCode = "console.log(10 + 20);"
-        val generatedCode = generator.generateWithMetadata(ast).code
+        val generatedCode = generator.generateWithNativeMetadata(ast).code
 
         assertEquals(expectedCode, generatedCode, "Generated TypeScript binary operation should match expected output")
     }
@@ -162,7 +162,7 @@ class TypeScriptGeneratorTest {
         )
 
         val expectedCode = "console.log(a === b);"
-        val generatedCode = generator.generateWithMetadata(ast).code
+        val generatedCode = generator.generateWithNativeMetadata(ast).code
 
         assertEquals(expectedCode, generatedCode, "Generated TypeScript comparison should use strict equality")
     }

@@ -9,7 +9,7 @@ import org.antlr.v4.kotlinruntime.tree.ParseTree
 import org.antlr.v4.kotlinruntime.tree.ParseTreeVisitor
 import org.giraffemail.xcode.ast.AstNode
 import org.giraffemail.xcode.ast.AstParseException
-import org.giraffemail.xcode.ast.LanguageMetadata
+import org.giraffemail.xcode.ast.NativeMetadata
 import org.giraffemail.xcode.common.ParserUtils
 
 abstract class AbstractAntlrParser<
@@ -42,35 +42,30 @@ abstract class AbstractAntlrParser<
     }
 
     /**
-     * Parse method that supports parts-based metadata.
-     * This method extracts metadata from the provided metadata part and
-     * injects it into the resulting AST.
+     * Parse method that supports native metadata without string conversion.
+     * This is the preferred approach that avoids lossy string serialization.
      */
-    open fun parseWithMetadata(code: String, metadataPart: List<LanguageMetadata>): AstNode {
+    open fun parseWithNativeMetadata(code: String, metadataPart: List<NativeMetadata>): AstNode {
         // Specific trigger for testing error handling paths
         if (code == "trigger_error_${getLanguageName().lowercase()}") {
             throw AstParseException("Simulated parsing error for 'trigger_error_${getLanguageName().lowercase()}' input in ${getLanguageName()}.")
         }
         
-        // Extract metadata using the metadata part
-        val metadataQueue = mutableListOf<LanguageMetadata>()
-        val processedCode = ParserUtils.extractMetadataFromPart(code, metadataPart, metadataQueue)
-        
-        // Apply any post-metadata preprocessing (e.g., indentation handling in Python)
-        val finalProcessedCode = postMetadataPreprocessCode(processedCode)
+        // No need to extract metadata from strings - we have native metadata
+        val processedCode = postMetadataPreprocessCode(code)
         
         // Standard parsing pipeline
-        val lexer = createLexer(CharStreams.fromString(finalProcessedCode))
+        val lexer = createLexer(CharStreams.fromString(processedCode))
         val tokens = CommonTokenStream(lexer)
         val parser = createAntlrParser(tokens)
         val parseTree = invokeEntryPoint(parser)
         val visitor = createAstBuilder()
         val ast = parseTree.accept(visitor)
         
-        // Inject metadata into the AST
-        val astWithMetadata = ParserUtils.injectMetadataIntoAst(ast, metadataQueue)
+        // Inject native metadata into the AST without string conversion
+        val astWithMetadata = ParserUtils.injectNativeMetadataIntoAst(ast, metadataPart)
         
-        // Apply any additional post-processing (but not metadata injection)
+        // Apply any additional post-processing
         return postprocessAst(astWithMetadata)
     }
 }
