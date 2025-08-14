@@ -143,17 +143,45 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
     }
 
     fun getParameter(ctx: AntlrJavaParser.ParameterContext): NameNode {
-        val paramName = ctx.IDENTIFIER(1)!!.text // Second IDENTIFIER is the name
-        val paramType = ctx.IDENTIFIER(0)!!.text.lowercase() // First IDENTIFIER is the type, normalize to lowercase
+        val paramName = ctx.IDENTIFIER().text // Single IDENTIFIER is the name
+        val paramType = ctx.type()?.accept(this) as? String ?: "Object" // Extract type from type rule
         
         // Convert to CanonicalTypes
-        val canonicalType = if (paramType != "object") {
+        val canonicalType = if (paramType.lowercase() != "object") {
             CanonicalTypes.fromString(paramType)
         } else {
             CanonicalTypes.Unknown // Changed from Any to Unknown for round-trip consistency
         }
         
         return NameNode(id = paramName, ctx = Param, typeInfo = canonicalType)
+    }
+
+    override fun visitType(ctx: AntlrJavaParser.TypeContext): AstNode {
+        // Build the type string including array brackets
+        val baseType = if (ctx.IDENTIFIER() != null) {
+            ctx.IDENTIFIER()!!.text
+        } else if (ctx.primitiveType() != null) {
+            ctx.primitiveType()!!.accept(this) as? String ?: "Object"
+        } else {
+            "Object"
+        }
+        
+        // Count the number of array brackets
+        val arrayDimensions = ctx.LBRACKET().size
+        val typeString = if (arrayDimensions > 0) {
+            baseType + "[]".repeat(arrayDimensions)
+        } else {
+            baseType
+        }
+        
+        // Return the type as a string wrapped in a ConstantNode
+        return ConstantNode(typeString)
+    }
+
+    override fun visitPrimitiveType(ctx: AntlrJavaParser.PrimitiveTypeContext): AstNode {
+        // Extract the primitive type text
+        val typeText = ctx.text // This will get 'int', 'double', etc.
+        return ConstantNode(typeText)
     }
 
     // This would be the overridden method, now returning a placeholder
@@ -166,11 +194,11 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
 
     // visitParameter is likely also an override and must return AstNode.
     override fun visitParameter(ctx: AntlrJavaParser.ParameterContext): AstNode {
-        val paramName = ctx.IDENTIFIER(1)!!.text
-        val paramType = ctx.IDENTIFIER(0)!!.text.lowercase() // First IDENTIFIER is the type, normalize to lowercase
+        val paramName = ctx.IDENTIFIER().text // Single IDENTIFIER is the name
+        val paramType = ctx.type()?.accept(this) as? String ?: "Object" // Extract type from type rule
         
         // Convert to CanonicalTypes
-        val canonicalType = if (paramType != "object") {
+        val canonicalType = if (paramType.lowercase() != "object") {
             CanonicalTypes.fromString(paramType)
         } else {
             CanonicalTypes.Unknown // Changed from Any to Unknown for round-trip consistency
@@ -246,16 +274,78 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         return IfNode(test = condition, body = ifBody, orelse = elseBody)
     }
 
-    override fun visitForStatement(ctx: AntlrJavaParser.ForStatementContext): ForLoopNode {
-        val target = NameNode(id = ctx.IDENTIFIER().text, ctx = Store)
-        val iter = ctx.expression().accept(this) as? ExpressionNode
-            ?: throw IllegalStateException("For iterable is null or not an ExpressionNode for: ${ctx.text}")
+    override fun visitForStatement(ctx: AntlrJavaParser.ForStatementContext): CStyleForLoopNode {
+        // Extract init, condition, and update from the C-style for loop
+        val init = ctx.forInit()?.accept(this)?.let { node ->
+            if (node is UnknownNode && node.description.contains("empty")) null
+            else node as? StatementNode
+        }
+        val condition = ctx.expression()?.accept(this) as? ExpressionNode
+        val update = ctx.forUpdate()?.accept(this)?.let { node ->
+            if (node is UnknownNode && node.description.contains("empty")) null
+            else node as? ExpressionNode
+        }
 
         // Get the for body (statements)
         val forBody = ctx.statement().mapNotNull { it.accept(this) as? StatementNode }
 
-        // Java for-each loops don't have else clauses
-        return ForLoopNode(target = target, iter = iter, body = forBody, orelse = emptyList())
+        return CStyleForLoopNode(init = init, condition = condition, update = update, body = forBody)
+    }
+
+    override fun visitForInit(ctx: AntlrJavaParser.ForInitContext): AstNode {
+        // Check if we have a typed declaration (type IDENTIFIER = expression)
+        return if (ctx.type() != null && ctx.IDENTIFIER() != null && ctx.ASSIGN() != null) {
+            // This is a variable declaration with initialization
+            val type = ctx.type()!!.accept(this) as? String ?: "Object"
+            val varName = ctx.IDENTIFIER()!!.text
+            val value = ctx.expression()?.accept(this) as? ExpressionNode 
+                ?: ConstantNode(0) // Default value if expression is missing
+            
+            val typeInfo = CanonicalTypes.fromString(type)
+            val target = NameNode(id = varName, ctx = Store, typeInfo = typeInfo)
+            AssignNode(target = target, value = value, typeInfo = typeInfo)
+        } else if (ctx.IDENTIFIER() != null && ctx.ASSIGN() != null) {
+            // Simple assignment (IDENTIFIER = expression)
+            val varName = ctx.IDENTIFIER()!!.text
+            val value = ctx.expression()?.accept(this) as? ExpressionNode 
+                ?: ConstantNode(0)
+            
+            val target = NameNode(id = varName, ctx = Store)
+            AssignNode(target = target, value = value)
+        } else {
+            // Empty init - return a constant to satisfy non-null requirement
+            UnknownNode("empty for init")
+        }
+    }
+
+    override fun visitForUpdate(ctx: AntlrJavaParser.ForUpdateContext): AstNode {
+        return if (ctx.IDENTIFIER() != null) {
+            val varName = ctx.IDENTIFIER()!!.text
+            val operand = NameNode(id = varName, ctx = Load)
+            
+            when {
+                ctx.INCR() != null -> UnaryOpNode(operand = operand, op = "++", prefix = false)
+                ctx.DECR() != null -> UnaryOpNode(operand = operand, op = "--", prefix = false)
+                ctx.assignmentExpression() != null -> {
+                    // Handle assignment expression in update
+                    ctx.assignmentExpression()!!.accept(this) as? ExpressionNode ?: UnknownNode("invalid assignment expression")
+                }
+                else -> UnknownNode("empty for update")
+            }
+        } else {
+            UnknownNode("empty for update")
+        }
+    }
+
+    override fun visitAssignmentExpression(ctx: AntlrJavaParser.AssignmentExpressionContext): AstNode {
+        val varName = ctx.IDENTIFIER().text
+        val value = ctx.expression().accept(this) as? ExpressionNode 
+            ?: ConstantNode(0)
+        
+        // For assignment expressions in for updates, we need to return a BinaryOpNode representing the assignment
+        // This is a bit unusual but necessary for the AST structure
+        val target = NameNode(id = varName, ctx = Load)
+        return BinaryOpNode(left = target, op = "=", right = value)
     }
 
     // Handle return statements

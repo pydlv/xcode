@@ -145,6 +145,24 @@ class JavaGenerator : AbstractAstGenerator() {
         return "for ($javaType $target : $iter) {\n$forBody\n}"
     }
 
+    override fun visitCStyleForLoopNode(node: CStyleForLoopNode): String {
+        val init = node.init?.let { generateStatement(it).removeSuffix(getStatementTerminator()) } ?: ""
+        val condition = node.condition?.let { generateExpression(it) } ?: ""
+        val update = node.update?.let { generateExpression(it) } ?: ""
+        val forBody = node.body.joinToString("\n") { "    " + generateStatement(it) }
+        
+        return "for ($init; $condition; $update) {\n$forBody\n}"
+    }
+
+    override fun visitUnaryOpNode(node: UnaryOpNode): String {
+        val operand = generateExpression(node.operand)
+        return if (node.prefix) {
+            "${node.op}$operand"
+        } else {
+            "$operand${node.op}"
+        }
+    }
+
     override fun visitCallNode(node: CallNode): String {
         val funcString = generateExpression(node.func) // func could be NameNode or MemberExpressionNode
         val args = generateArgumentList(node.args)

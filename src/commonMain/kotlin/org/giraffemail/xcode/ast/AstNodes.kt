@@ -109,6 +109,14 @@ data class ForLoopNode(
     val orelse: List<StatementNode> = emptyList()  // Optional else clause (Python only)
 ) : StatementNode
 
+// Traditional C-style for loop node (for (int i = 0; i < 10; i++))
+data class CStyleForLoopNode(
+    val init: StatementNode?,            // Initialization statement (e.g., 'int i = 0')
+    val condition: ExpressionNode?,      // Loop condition (e.g., 'i < 10')
+    val update: ExpressionNode?,         // Update expression (e.g., 'i++')
+    val body: List<StatementNode>        // Statements to execute in the loop body
+) : StatementNode
+
 data class CallNode(
     val func: ExpressionNode,
     val args: List<ExpressionNode>,
@@ -140,6 +148,14 @@ data class BinaryOpNode(
     val op: String, // e.g., "+", "-", "*", "/"
     val right: ExpressionNode,
     val typeInfo: TypeInfo = CanonicalTypes.Unknown // Unified type information for operation result
+) : ExpressionNode
+
+// New node for unary operations like 'i++', '++i', '--i'
+data class UnaryOpNode(
+    val operand: ExpressionNode,
+    val op: String, // e.g., "++", "--", "+", "-", "!"
+    val prefix: Boolean = true, // true for ++i, false for i++
+    val typeInfo: TypeInfo = CanonicalTypes.Unknown
 ) : ExpressionNode
 
 // New node for comparison operations like 'x > 5', 'a == b'

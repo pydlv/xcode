@@ -18,9 +18,13 @@ statement:
 
 expressionStatement: expression SEMI; // Changed from ';' to SEMI
 
-// Function Definition
+// Function Definition - now supports return types
 functionDefinition:
-    PUBLIC STATIC VOID IDENTIFIER LPAREN parameterList RPAREN LBRACE statement* RBRACE
+    PUBLIC STATIC returnType IDENTIFIER LPAREN parameterList RPAREN LBRACE statement* RBRACE
+    ;
+
+returnType:
+    VOID | type
     ;
 
 // Class Definition  
@@ -38,7 +42,7 @@ parameterList:
     ;
 
 parameter:
-    IDENTIFIER IDENTIFIER // Represents type and name, e.g., "Object a"
+    type IDENTIFIER // Represents type and name, e.g., "String[] args", "int x"
     ;
 
     // Assignment Statement - supports both typed and untyped
@@ -48,8 +52,8 @@ assignmentStatement:
 
 // Type declaration - supports arrays
 type:
-    IDENTIFIER ('[' ']')*  // e.g., String, String[], Object[][]
-    | primitiveType ('[' ']')*  // e.g., int, double, boolean, int[]
+    IDENTIFIER (LBRACKET RBRACKET)*  // e.g., String, String[], Object[][]
+    | primitiveType (LBRACKET RBRACKET)*  // e.g., int, double, boolean, int[]
     ;
 
 primitiveType:
@@ -66,8 +70,21 @@ ifStatement:
     IF LPAREN expression RPAREN LBRACE statement* RBRACE (ELSE LBRACE statement* RBRACE)?
     ;
 
+// Traditional C-style for loop (for (int i = 1; i <= 5; i++))
 forStatement:
-    FOR LPAREN type IDENTIFIER COLON expression RPAREN LBRACE statement* RBRACE
+    FOR LPAREN forInit SEMI expression SEMI forUpdate RPAREN LBRACE statement* RBRACE
+    ;
+
+forInit:
+    (type IDENTIFIER ASSIGN expression | IDENTIFIER ASSIGN expression)?
+    ;
+
+forUpdate:
+    (IDENTIFIER INCR | IDENTIFIER DECR | assignmentExpression)?
+    ;
+
+assignmentExpression:
+    IDENTIFIER ASSIGN expression
     ;
 
     // Return Statement
@@ -96,7 +113,7 @@ primary:
     ;
 
 arrayInitializer:
-    'new' type '[' ']' '{' arrayElements? '}'      # ArrayInit
+    'new' type LBRACKET RBRACKET LBRACE arrayElements? RBRACE      # ArrayInit
     ;
 
 arrayElements:
@@ -128,10 +145,14 @@ LPAREN: '(';
 RPAREN: ')';
 LBRACE: '{'; // Added
 RBRACE: '}'; // Added
+LBRACKET: '['; // Added for arrays
+RBRACKET: ']'; // Added for arrays
 SEMI: ';';
 DOT: '.';
 COMMA: ',';   // Added
 ASSIGN: '=';  // Added
+INCR: '++';   // Added for i++
+DECR: '--';   // Added for i--
 COLON: ':';   // Added for for loops
 
 ADD : '+';

@@ -118,6 +118,12 @@ object ParserUtils {
                     node.body.forEach { assignments.addAll(collectAssignmentNodes(it)) }
                     node.orelse.forEach { assignments.addAll(collectAssignmentNodes(it)) }
                 }
+                is CStyleForLoopNode -> {
+                    node.init?.let { assignments.addAll(collectAssignmentNodes(it)) }
+                    node.condition?.let { assignments.addAll(collectAssignmentNodes(it)) }
+                    node.update?.let { assignments.addAll(collectAssignmentNodes(it)) }
+                    node.body.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                }
                 is PrintNode -> {
                     assignments.addAll(collectAssignmentNodes(node.expression))
                 }
@@ -144,6 +150,9 @@ object ParserUtils {
                 }
                 is TupleNode -> {
                     node.elements.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                }
+                is UnaryOpNode -> {
+                    assignments.addAll(collectAssignmentNodes(node.operand))
                 }
                 // For these node types, we don't need to traverse further for assignments
                 is ConstantNode, is NameNode, is MemberExpressionNode, is UnknownNode, is ExprNode -> {
