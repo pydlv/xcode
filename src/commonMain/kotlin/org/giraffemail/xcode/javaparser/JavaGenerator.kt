@@ -8,7 +8,12 @@ class JavaGenerator : AbstractAstGenerator() {
 
     override fun getStatementTerminator(): String = ";"
 
-    override fun formatStringLiteral(value: String): String = "\"${value.replace("\"", "\\\"")}\""
+    override fun formatStringLiteral(value: String): String {
+        return "\"${value.replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t")}\""
+    }
 
     override fun formatFunctionName(name: String): String {
         // Java typically uses qualified names, so direct mapping might be less common
@@ -145,9 +150,10 @@ class JavaGenerator : AbstractAstGenerator() {
                 is String -> "String"
                 is Int -> "int"
                 is Double -> {
-                    // Check if the double value is actually a whole number
+                    // Use double for all decimal numbers, int only for whole numbers that were originally int
                     val doubleVal = node.value as Double
-                    if (doubleVal == doubleVal.toInt().toDouble()) "int" else "double"
+                    // If the value has decimals or is explicitly a floating point, use double
+                    if (doubleVal.toString().contains(".")) "double" else "int"
                 }
                 is Boolean -> "boolean"
                 else -> "Object"

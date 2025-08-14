@@ -8,26 +8,20 @@ public class BasicJavaDemo {
         System.out.println("The value of Pi is approximately: " + pi);
         boolean isJavaFun = true;
         System.out.println("Is Java fun? " + isJavaFun);
-        System.out.println("
---- 2. CONTROL FLOW: IF-ELSE STATEMENT ---
-");
+        System.out.println("\n--- 2. CONTROL FLOW: IF-ELSE STATEMENT ---\n");
         if (myAge >= 21) {
     System.out.println("You are old enough to enjoy the Las Vegas nightlife!");
 } else {
     System.out.println("Not quite old enough for the casinos yet.");
 }
-        System.out.println("
---- 3. CONTROL FLOW: FOR LOOP ---
-");
+        System.out.println("\n--- 3. CONTROL FLOW: FOR LOOP ---\n");
         System.out.println("Let\'s count to 5:");
         int i = 1;
         for (Object _while_dummy : new int[]{1}) {
     System.out.println("Count: " + i);
     int i = 1;
 }
-        System.out.println("
---- 4. METHODS ---
-");
+        System.out.println("\n--- 4. METHODS ---\n");
         int number1 = 10;
         int number2 = 20;
         int sum = addNumbers(number1, number2);
