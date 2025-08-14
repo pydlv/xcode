@@ -173,6 +173,7 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
             is CallStatementNode -> visitCallStatementNode(statement)
             is IfNode -> visitIfNode(statement)
             is ForLoopNode -> visitForLoopNode(statement)
+            is CStyleForLoopNode -> visitCStyleForLoopNode(statement)
             is ReturnNode -> visitReturnNode(statement)
             is UnknownNode -> visitUnknownNode(statement)
         }
@@ -186,6 +187,7 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
             is ConstantNode -> visitConstantNode(expression)
             is MemberExpressionNode -> visitMemberExpressionNode(expression)
             is BinaryOpNode -> visitBinaryOpNode(expression)
+            is UnaryOpNode -> visitUnaryOpNode(expression)
             is CompareNode -> visitCompareNode(expression)
             is ListNode -> visitListNode(expression)
             is TupleNode -> visitTupleNode(expression)
@@ -252,6 +254,25 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
         // Default C-style for-of loop syntax (JavaScript/TypeScript style)
         // Note: orelse clause is ignored in default implementation (Python-specific)
         return "for (let $target of $iter) {\n$forBody\n}"
+    }
+
+    override fun visitCStyleForLoopNode(node: CStyleForLoopNode): String {
+        val init = node.init?.let { generateStatement(it).removeSuffix(getStatementTerminator()) } ?: ""
+        val condition = node.condition?.let { generateExpression(it) } ?: ""
+        val update = node.update?.let { generateExpression(it) } ?: ""
+        val forBody = node.body.joinToString("\n") { "    " + generateStatement(it) }
+        
+        // Default C-style for loop syntax
+        return "for ($init; $condition; $update) {\n$forBody\n}"
+    }
+
+    override fun visitUnaryOpNode(node: UnaryOpNode): String {
+        val operand = generateExpression(node.operand)
+        return if (node.prefix) {
+            "${node.op}$operand"
+        } else {
+            "$operand${node.op}"
+        }
     }
 
     abstract override fun visitPrintNode(node: PrintNode): String
