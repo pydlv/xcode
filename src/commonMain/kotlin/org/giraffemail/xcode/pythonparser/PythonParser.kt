@@ -341,6 +341,22 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
         return ForLoopNode(target = target, iter = iter, body = forBody, orelse = elseBody)
     }
 
+    // Handle while statements
+    override fun visitWhileStatement(ctx: AntlrPythonParser.WhileStatementContext): AstNode {
+        val condition = ParserUtils.visitAsExpressionNode(visit(ctx.expression()), "Invalid condition in while statement")
+
+        // Get the while body
+        val whileBody = ctx.function_body()?.let { visit(it) as? ModuleNode }?.body ?: emptyList()
+
+        // Note: Python while supports else clause, but our AST doesn't have WhileNode yet.
+        // For now, we'll represent it as a ForLoopNode with a dummy target
+        // TODO: Add WhileNode to AST or extend ForLoopNode to handle while loops
+        val dummyTarget = NameNode(id = "_while_dummy", ctx = Load)
+        val dummyIter = ConstantNode(listOf(1), CanonicalTypes.Unknown) // Dummy iterable
+        
+        return ForLoopNode(target = dummyTarget, iter = dummyIter, body = whileBody, orelse = emptyList())
+    }
+
     // Handle return statements
     override fun visitReturnStatement(ctx: AntlrPythonParser.ReturnStatementContext): AstNode {
         val returnValue = ctx.expression()?.let { visit(it) as? ExpressionNode }
@@ -383,6 +399,13 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
         // Attempt to parse as Int, then Double, then fallback to 0
         val value = numText.toIntOrNull() ?: numText.toDoubleOrNull() ?: 0
         return ConstantNode(value, CanonicalTypes.Number)
+    }
+
+    // Handle BooleanLiteral: BOOLEAN_LITERAL  
+    override fun visitBooleanLiteral(ctx: AntlrPythonParser.BooleanLiteralContext): AstNode {
+        val boolText = ctx.BOOLEAN_LITERAL().text
+        val value = boolText == "True"
+        return ConstantNode(value, CanonicalTypes.Boolean)
     }
     
     override fun visitListLiteral(ctx: AntlrPythonParser.ListLiteralContext): AstNode {

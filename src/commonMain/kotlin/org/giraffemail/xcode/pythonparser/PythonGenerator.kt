@@ -26,8 +26,10 @@ class PythonGenerator : AbstractAstGenerator() {
     override fun visitFunctionDefNode(node: FunctionDefNode): String {
         val funcName = node.name
         val params = node.args.joinToString(", ") { it.id } // Assuming args are NameNodes for params
-        // Each statement in the body needs to be indented.
-        val body = node.body.joinToString("\n") { "    " + generateStatement(it) }
+        // Each statement in the body needs to be indented, including multi-line statements.
+        val body = node.body.joinToString("\n") { statement ->
+            indentLines(generateStatement(statement), "    ")
+        }
         
         return "def $funcName($params):\n$body"
     }

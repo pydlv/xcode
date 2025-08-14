@@ -14,13 +14,14 @@ statement:
     | ifStatement
     | forStatement
     | returnStatement
+    | statementBlock
     ;
 
 expressionStatement: expression SEMI; // Changed from ';' to SEMI
 
 // Function Definition - now supports return types
 functionDefinition:
-    PUBLIC STATIC returnType IDENTIFIER LPAREN parameterList RPAREN LBRACE statement* RBRACE
+    PUBLIC STATIC returnType IDENTIFIER LPAREN parameterList RPAREN statementBlock
     ;
 
 returnType:
@@ -29,12 +30,7 @@ returnType:
 
 // Class Definition  
 classDefinition:
-    PUBLIC CLASS IDENTIFIER (EXTENDS IDENTIFIER)? LBRACE classMember* RBRACE
-    ;
-
-classMember:
-    functionDefinition
-    | statement
+    PUBLIC CLASS IDENTIFIER (EXTENDS IDENTIFIER)? statementBlock
     ;
 
 parameterList:
@@ -67,12 +63,17 @@ callStatement:
 
     // If Statement
 ifStatement:
-    IF LPAREN expression RPAREN LBRACE statement* RBRACE (ELSE LBRACE statement* RBRACE)?
+    IF LPAREN expression RPAREN statementBlock (ELSE statementBlock)?
+    ;
+
+// Statement block (for grouping statements in braces)
+statementBlock:
+    LBRACE statement* RBRACE
     ;
 
 // Traditional C-style for loop (for (int i = 1; i <= 5; i++))
 forStatement:
-    FOR LPAREN forInit SEMI expression SEMI forUpdate RPAREN LBRACE statement* RBRACE
+    FOR LPAREN forInit SEMI expression SEMI forUpdate RPAREN statementBlock
     ;
 
 forInit:
@@ -123,6 +124,7 @@ arrayElements:
 literal:
     STRING_LITERAL // Now uses common STRING_LITERAL
     |   NUMBER         // Now uses common NUMBER (was DECIMAL_LITERAL)
+    |   BOOLEAN_LITERAL // Added boolean literals
     ;
 
     // Keywords and Operators (Lexer Rules)
@@ -156,6 +158,9 @@ DECR: '--';   // Added for i--
 COLON: ':';   // Added for for loops
 
 ADD : '+';
+
+// Boolean literal
+BOOLEAN_LITERAL: 'true' | 'false';
 
 // IDENTIFIER, NUMBER, STRING_LITERAL are expected to be in CommonLexerRules.g4
 // Whitespace and comments are defined in CommonLexerRules.g4

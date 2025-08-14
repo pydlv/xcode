@@ -20,6 +20,7 @@ statement // Basic statements
     | functionCallStatement
     | ifStatement
     | forStatement
+    | whileStatement
     | returnStatement
     ;
 
@@ -47,13 +48,15 @@ function_body // Sequence of statements within a function - MODIFIED
 parameters: parameter (',' parameter)* ;
 parameter: IDENTIFIER ;
 
-assignStatement: IDENTIFIER '=' expression ';'? ; // Optional semicolon for cross-language compatibility
+assignStatement: IDENTIFIER ('=' | '+=' | '-=' | '*=' | '/=') expression ';'? ; // Support augmented assignment and optional semicolon
 
 functionCallStatement: IDENTIFIER '(' arguments? ')' ';'? ; // Optional semicolon for cross-language compatibility
 
 ifStatement: 'if' expression ':' NEWLINE INDENT function_body? DEDENT (NEWLINE* 'else' ':' NEWLINE INDENT function_body? DEDENT)? ;
 
 forStatement: 'for' IDENTIFIER 'in' expression ':' NEWLINE INDENT function_body? DEDENT (NEWLINE* 'else' ':' NEWLINE INDENT function_body? DEDENT)? ;
+
+whileStatement: 'while' expression ':' NEWLINE INDENT function_body? DEDENT ;
 
 returnStatement: 'return' expression? ';'? ; // Optional expression and optional semicolon for cross-language compatibility
 
@@ -69,6 +72,7 @@ expression
     | STRING_LITERAL                     # StringLiteral // Uses common STRING_LITERAL
     | IDENTIFIER                         # Identifier    // Uses common IDENTIFIER
     | NUMBER                             # NumberLiteral // Uses common NUMBER
+    | BOOLEAN_LITERAL                    # BooleanLiteral // Boolean literals
     ;
 
 listElements: expression (',' expression)* ;
@@ -78,6 +82,9 @@ tupleElements: expression ',' (expression (',' expression)*)? ;  // At least one
 // Keywords/Special Tokens first - order matters for tokens that could also be identifiers
 INDENT: 'INDENT' ; // Specific to Python, keep here
 DEDENT: 'DEDENT' ; // Specific to Python, keep here
+
+// Boolean literal
+BOOLEAN_LITERAL: 'True' | 'False';
 
 // STRING_LITERAL, IDENTIFIER, NUMBER are now imported from CommonLexerRules
 

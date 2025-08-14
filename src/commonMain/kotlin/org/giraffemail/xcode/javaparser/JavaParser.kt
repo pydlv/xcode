@@ -86,7 +86,7 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         val params: List<NameNode> = ctx.parameterList()?.let { paramListCtx: AntlrJavaParser.ParameterListContext ->
             getParameters(paramListCtx)
         } ?: emptyList()
-        val body = ctx.statement().mapNotNull { it.accept(this) as? StatementNode } // Process body statements
+        val body = ctx.statementBlock()?.statement()?.mapNotNull { it.accept(this) as? StatementNode } ?: emptyList() // Process body statements from statementBlock
         return FunctionDefNode(name = name, args = params, body = body, decoratorList = emptyList())
     }
 
@@ -100,8 +100,8 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
             baseClasses.add(NameNode(id = ctx.IDENTIFIER(1)!!.text, ctx = Load))
         }
 
-        // Parse class body - process class members
-        val body = ctx.classMember().mapNotNull { visit(it) as? StatementNode }
+        // Parse class body - process statements from statementBlock
+        val body = ctx.statementBlock()?.statement()?.mapNotNull { visit(it) as? StatementNode } ?: emptyList()
 
         return ClassDefNode(
             name = name,
@@ -111,12 +111,12 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         )
     }
 
-    override fun visitClassMember(ctx: AntlrJavaParser.ClassMemberContext): AstNode {
-        return when {
-            ctx.functionDefinition() != null -> ctx.functionDefinition()?.let { visit(it) } ?: UnknownNode("Null function definition")
-            ctx.statement() != null -> ctx.statement()?.let { visit(it) } ?: UnknownNode("Null statement")
-            else -> UnknownNode("Unknown class member: ${ctx.text}")
-        }
+    // Add visitor for statementBlock
+    override fun visitStatementBlock(ctx: AntlrJavaParser.StatementBlockContext): AstNode {
+        // For statement blocks, we typically want to return the list of statements
+        // But since this must return AstNode, we'll return a ModuleNode containing the statements
+        val statements = ctx.statement()?.mapNotNull { visit(it) as? StatementNode } ?: emptyList()
+        return ModuleNode(body = statements)
     }
 
     // visitParameterList should return a List<NameNode>, but the base visitor might expect AstNode.
@@ -259,19 +259,17 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         val condition = ctx.expression().accept(this) as? ExpressionNode
             ?: throw IllegalStateException("If condition is null or not an ExpressionNode for: ${ctx.text}")
 
-        // Get the if body (first set of statements)
-        val ifBody = ctx.statement().take(ctx.statement().size / (if (ctx.ELSE() != null) 2 else 1))
-            .mapNotNull { it.accept(this) as? StatementNode }
+        // Get the if body from the first statementBlock
+        val ifBodyStatements = ctx.statementBlock(0)?.statement()?.mapNotNull { it.accept(this) as? StatementNode } ?: emptyList()
 
-        // Get the else body if present
-        val elseBody = if (ctx.ELSE() != null) {
-            ctx.statement().drop(ctx.statement().size / 2)
-                .mapNotNull { it.accept(this) as? StatementNode }
+        // Get the else body if present (second statementBlock)
+        val elseBodyStatements = if (ctx.ELSE() != null && ctx.statementBlock().size > 1) {
+            ctx.statementBlock(1)?.statement()?.mapNotNull { it.accept(this) as? StatementNode } ?: emptyList()
         } else {
             emptyList()
         }
 
-        return IfNode(test = condition, body = ifBody, orelse = elseBody)
+        return IfNode(test = condition, body = ifBodyStatements, orelse = elseBodyStatements)
     }
 
     override fun visitForStatement(ctx: AntlrJavaParser.ForStatementContext): CStyleForLoopNode {
@@ -286,8 +284,8 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
             else node as? ExpressionNode
         }
 
-        // Get the for body (statements)
-        val forBody = ctx.statement().mapNotNull { it.accept(this) as? StatementNode }
+        // Get the for body (statements from statementBlock)
+        val forBody = ctx.statementBlock()?.statement()?.mapNotNull { it.accept(this) as? StatementNode } ?: emptyList()
 
         return CStyleForLoopNode(init = init, condition = condition, update = update, body = forBody)
     }
@@ -473,6 +471,10 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
                         throw IllegalArgumentException("Could not parse number literal: '$textVal'") // Updated error message
                     }
                 }
+            }
+            ctx.BOOLEAN_LITERAL() != null -> {
+                val boolValue = ctx.BOOLEAN_LITERAL()!!.text == "true"
+                return ConstantNode(boolValue, CanonicalTypes.Boolean)
             }
             else -> throw IllegalArgumentException("Unknown literal type in LiteralContext: ${ctx.text}")
         }
