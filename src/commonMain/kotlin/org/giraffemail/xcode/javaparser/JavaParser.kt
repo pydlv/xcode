@@ -69,6 +69,7 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
             ctx.assignmentStatement() != null -> ctx.assignmentStatement()!!.accept(this) // Added !!
             ctx.callStatement() != null -> ctx.callStatement()!!.accept(this)           // Added !!
             ctx.ifStatement() != null -> ctx.ifStatement()!!.accept(this)               // Added !! for if statements
+            ctx.forStatement() != null -> ctx.forStatement()!!.accept(this)             // Added !! for for statements
             ctx.returnStatement() != null -> ctx.returnStatement()!!.accept(this)       // Added !! for return statements
             else -> {
                 // This case should ideally not be reached if the grammar is complete for 'statement' alternatives
@@ -243,6 +244,18 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         }
 
         return IfNode(test = condition, body = ifBody, orelse = elseBody)
+    }
+
+    override fun visitForStatement(ctx: AntlrJavaParser.ForStatementContext): ForLoopNode {
+        val target = NameNode(id = ctx.IDENTIFIER().text, ctx = Store)
+        val iter = ctx.expression().accept(this) as? ExpressionNode
+            ?: throw IllegalStateException("For iterable is null or not an ExpressionNode for: ${ctx.text}")
+
+        // Get the for body (statements)
+        val forBody = ctx.statement().mapNotNull { it.accept(this) as? StatementNode }
+
+        // Java for-each loops don't have else clauses
+        return ForLoopNode(target = target, iter = iter, body = forBody, orelse = emptyList())
     }
 
     // Handle return statements

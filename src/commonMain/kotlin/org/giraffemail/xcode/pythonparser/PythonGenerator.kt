@@ -128,6 +128,19 @@ class PythonGenerator : AbstractAstGenerator() {
         }
     }
 
+    override fun visitForLoopNode(node: ForLoopNode): String {
+        val target = generateExpression(node.target)
+        val iter = generateExpression(node.iter)
+        val forBody = node.body.joinToString("\n") { "    " + generateStatement(it) }
+        
+        return if (node.orelse.isNotEmpty()) {
+            val elseBody = node.orelse.joinToString("\n") { "    " + generateStatement(it) }
+            "for $target in $iter:\n$forBody\nelse:\n$elseBody"
+        } else {
+            "for $target in $iter:\n$forBody"
+        }
+    }
+
     override fun visitCompareNode(node: CompareNode): String {
         val leftStr = generateExpression(node.left)
         val rightStr = generateExpression(node.right)

@@ -11,6 +11,7 @@ statement
     | assignStatement
     | functionCallStatement
     | ifStatement
+    | forStatement
     | returnStatement
     ;
 
@@ -50,6 +51,8 @@ assignStatement: ('let' | 'var' | 'const')? IDENTIFIER typeAnnotation? '=' expre
 functionCallStatement: IDENTIFIER '(' arguments? ')' ';'? ; // Using literal chars
 
 ifStatement: 'if' '(' expression ')' '{' functionBody '}' ('else' '{' functionBody '}')? ; // Using literal chars
+
+forStatement: 'for' '(' ('let' | 'var' | 'const')? IDENTIFIER typeAnnotation? 'of' expression ')' '{' functionBody '}' ; // TypeScript for-of loop with optional type annotation
 
 returnStatement: 'return' expression? ';'? ; // Return statement with optional expression and semicolon
 

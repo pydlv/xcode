@@ -242,6 +242,17 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
         )
     }
 
+    override fun visitForStatement(ctx: AntlrTypeScriptParser.ForStatementContext): AstNode {
+        val target = NameNode(id = ctx.IDENTIFIER().text, ctx = Store)
+        val iter = ParserUtils.visitAsExpressionNode(visit(ctx.expression()), "Invalid iterable in for statement")
+
+        // Get the for body (functionBody)
+        val forBody = ctx.functionBody()?.let { visit(it) as? ModuleNode }?.body ?: emptyList()
+
+        // TypeScript for-of loops don't have else clauses
+        return ForLoopNode(target = target, iter = iter, body = forBody, orelse = emptyList())
+    }
+
     // Handle return statements
     override fun visitReturnStatement(ctx: AntlrTypeScriptParser.ReturnStatementContext): AstNode {
         val returnValue = ctx.expression()?.let { exprCtx ->

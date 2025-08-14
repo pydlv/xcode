@@ -92,6 +92,13 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
                     node.body.forEach { collectFromNode(it) }
                     node.orelse.forEach { collectFromNode(it) }
                 }
+                is ForLoopNode -> {
+                    // Recursively collect from for loop target, iterable, body and else body
+                    collectFromNode(node.target)
+                    collectFromNode(node.iter)
+                    node.body.forEach { collectFromNode(it) }
+                    node.orelse.forEach { collectFromNode(it) }
+                }
                 is PrintNode -> {
                     // Recursively collect from print expression
                     collectFromNode(node.expression)
@@ -165,6 +172,7 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
             is AssignNode -> visitAssignNode(statement)
             is CallStatementNode -> visitCallStatementNode(statement)
             is IfNode -> visitIfNode(statement)
+            is ForLoopNode -> visitForLoopNode(statement)
             is ReturnNode -> visitReturnNode(statement)
             is UnknownNode -> visitUnknownNode(statement)
         }
@@ -234,6 +242,16 @@ abstract class AbstractAstGenerator : AstGeneratorVisitor {
         } else {
             "if ($condition) {\n$ifBody\n}"
         }
+    }
+
+    override fun visitForLoopNode(node: ForLoopNode): String {
+        val target = generateExpression(node.target)
+        val iter = generateExpression(node.iter)
+        val forBody = node.body.joinToString("\n") { "    " + generateStatement(it) }
+        
+        // Default C-style for-of loop syntax (JavaScript/TypeScript style)
+        // Note: orelse clause is ignored in default implementation (Python-specific)
+        return "for (let $target of $iter) {\n$forBody\n}"
     }
 
     abstract override fun visitPrintNode(node: PrintNode): String

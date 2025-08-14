@@ -19,6 +19,7 @@ statement // Basic statements
     | assignStatement
     | functionCallStatement
     | ifStatement
+    | forStatement
     | returnStatement
     ;
 
@@ -51,6 +52,8 @@ assignStatement: IDENTIFIER '=' expression ';'? ; // Optional semicolon for cros
 functionCallStatement: IDENTIFIER '(' arguments? ')' ';'? ; // Optional semicolon for cross-language compatibility
 
 ifStatement: 'if' expression ':' NEWLINE INDENT function_body? DEDENT (NEWLINE* 'else' ':' NEWLINE INDENT function_body? DEDENT)? ;
+
+forStatement: 'for' IDENTIFIER 'in' expression ':' NEWLINE INDENT function_body? DEDENT (NEWLINE* 'else' ':' NEWLINE INDENT function_body? DEDENT)? ;
 
 returnStatement: 'return' expression? ';'? ; // Optional expression and optional semicolon for cross-language compatibility
 

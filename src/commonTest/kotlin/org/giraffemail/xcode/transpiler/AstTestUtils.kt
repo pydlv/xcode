@@ -231,6 +231,28 @@ fun createMaximalMemberExpressionNode(
 )
 
 /**
+ * Creates a ForLoopNode with maximal metadata population for testing
+ */
+fun createMaximalForLoopNode(
+    target: NameNode,
+    iter: ExpressionNode,
+    body: List<StatementNode>,
+    orelse: List<StatementNode> = emptyList()
+): ForLoopNode = ForLoopNode(
+    target = target,
+    iter = iter,
+    body = body,
+    orelse = orelse
+)
+
+/**
+ * Creates an ExprNode with maximal metadata population for testing
+ */
+fun createMaximalExprNode(
+    value: ExpressionNode
+): ExprNode = ExprNode(value = value)
+
+/**
  * Enumeration of supported AST features for selective generation
  */
 enum class AstFeature {
@@ -247,7 +269,8 @@ enum class AstFeature {
     RETURN_STATEMENTS,
     ARRAY_LITERALS,
     TUPLE_LITERALS,
-    NESTED_EXPRESSIONS
+    NESTED_EXPRESSIONS,
+    FOR_LOOPS
 }
 
 /**
@@ -272,7 +295,8 @@ object SupportedAstFeatures {
         AstFeature.RETURN_STATEMENTS,
         AstFeature.ARRAY_LITERALS,
         AstFeature.TUPLE_LITERALS,
-        AstFeature.NESTED_EXPRESSIONS
+        AstFeature.NESTED_EXPRESSIONS,
+        AstFeature.FOR_LOOPS
     )
 
     /**
@@ -621,10 +645,69 @@ object MaximalAstGenerator {
             )
         }
 
+        // Generate standalone for loop if requested
+        if (features.contains(AstFeature.FOR_LOOPS) && !features.contains(AstFeature.FUNCTION_DEFINITIONS)) {
+            // Create iterable - use array literal if available
+            val iterable = if (features.contains(AstFeature.ARRAY_LITERALS) && features.contains(AstFeature.CONSTANT_VALUES)) {
+                createMaximalListNode(
+                    elements = listOf(
+                        createMaximalConstantNode("item1", CanonicalTypes.String),
+                        createMaximalConstantNode("item2", CanonicalTypes.String),
+                        createMaximalConstantNode("item3", CanonicalTypes.String)
+                    ),
+                    arrayType = CanonicalTypes.String,
+                    isHomogeneous = true
+                )
+            } else if (features.contains(AstFeature.VARIABLE_REFERENCES)) {
+                createMaximalNameNode(id = "items", ctx = Load, type = CanonicalTypes.String)
+            } else {
+                createMaximalConstantNode("items", CanonicalTypes.String)
+            }
+
+            // Create loop body with print statement if available
+            val loopBody = if (features.contains(AstFeature.PRINT_STATEMENTS)) {
+                listOf(
+                    createMaximalPrintNode(
+                        expression = if (features.contains(AstFeature.VARIABLE_REFERENCES))
+                            createMaximalNameNode(id = "item", ctx = Load, type = CanonicalTypes.String)
+                            else createMaximalConstantNode("item", CanonicalTypes.String)
+                    )
+                )
+            } else if (features.contains(AstFeature.VARIABLE_ASSIGNMENTS)) {
+                listOf(
+                    createMaximalAssignNode(
+                        targetId = "processedItem",
+                        value = if (features.contains(AstFeature.VARIABLE_REFERENCES))
+                            createMaximalNameNode(id = "item", ctx = Load, type = CanonicalTypes.String)
+                            else createMaximalConstantNode("processed", CanonicalTypes.String),
+                        typeInfo = CanonicalTypes.String
+                    )
+                )
+            } else {
+                listOf(
+                    createMaximalExprNode(
+                        value = if (features.contains(AstFeature.VARIABLE_REFERENCES))
+                            createMaximalNameNode(id = "item", ctx = Load, type = CanonicalTypes.String)
+                            else createMaximalConstantNode("item", CanonicalTypes.String)
+                    )
+                )
+            }
+
+            bodyNodes.add(
+                createMaximalForLoopNode(
+                    target = createMaximalNameNode(id = "item", ctx = Store, type = CanonicalTypes.String),
+                    iter = iterable,
+                    body = loopBody,
+                    orelse = emptyList() // No else clause for simplicity
+                )
+            )
+        }
+
         // Generate standalone print statement if requested and not already covered
         if (features.contains(AstFeature.PRINT_STATEMENTS) &&
             !features.contains(AstFeature.FUNCTION_DEFINITIONS) &&
-            !features.contains(AstFeature.CONDITIONAL_STATEMENTS)
+            !features.contains(AstFeature.CONDITIONAL_STATEMENTS) &&
+            !features.contains(AstFeature.FOR_LOOPS)
         ) {
             bodyNodes.add(
                 createMaximalPrintNode(

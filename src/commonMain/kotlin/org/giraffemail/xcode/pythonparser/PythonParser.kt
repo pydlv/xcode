@@ -324,6 +324,23 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
         return IfNode(test = condition, body = ifBody, orelse = elseBody)
     }
 
+    override fun visitForStatement(ctx: AntlrPythonParser.ForStatementContext): AstNode {
+        val target = NameNode(id = ctx.IDENTIFIER().text, ctx = Store)
+        val iter = ParserUtils.visitAsExpressionNode(visit(ctx.expression()), "Invalid iterable in for statement")
+
+        // Get the for body (first function_body)
+        val forBody = ctx.function_body(0)?.let { visit(it) as? ModuleNode }?.body ?: emptyList()
+
+        // Get the else body if present (second function_body)
+        val elseBody = if (ctx.function_body().size > 1) {
+            ctx.function_body(1)?.let { visit(it) as? ModuleNode }?.body ?: emptyList()
+        } else {
+            emptyList()
+        }
+
+        return ForLoopNode(target = target, iter = iter, body = forBody, orelse = elseBody)
+    }
+
     // Handle return statements
     override fun visitReturnStatement(ctx: AntlrPythonParser.ReturnStatementContext): AstNode {
         val returnValue = ctx.expression()?.let { visit(it) as? ExpressionNode }

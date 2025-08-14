@@ -118,6 +118,33 @@ class JavaGenerator : AbstractAstGenerator() {
         }
     }
 
+    override fun visitForLoopNode(node: ForLoopNode): String {
+        val target = generateExpression(node.target)
+        val iter = generateExpression(node.iter)
+        val forBody = node.body.joinToString("\n") { "    " + generateStatement(it) }
+        
+        // Get type information from the target variable's metadata
+        val variableType = when (val typeInfo = node.target.typeInfo) {
+            is CanonicalTypes -> {
+                if (typeInfo != CanonicalTypes.Unknown) typeInfo.name.lowercase() else null
+            }
+            is TypeDefinition -> typeInfo.toString()
+        }
+        val javaType = if (variableType != null) {
+            when {
+                variableType.startsWith("[") && variableType.contains(",") -> "Object[]"
+                variableType.startsWith("[") && variableType.endsWith("]") -> "Object[]"
+                else -> mapTypeToJava(variableType)
+            }
+        } else {
+            "Object"
+        }
+        
+        // Java enhanced for loop syntax: for (Type variable : iterable)
+        // Note: Java doesn't have else clauses in for loops
+        return "for ($javaType $target : $iter) {\n$forBody\n}"
+    }
+
     override fun visitCallNode(node: CallNode): String {
         val funcString = generateExpression(node.func) // func could be NameNode or MemberExpressionNode
         val args = generateArgumentList(node.args)

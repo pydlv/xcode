@@ -12,6 +12,7 @@ statement:
     | assignmentStatement
     | expressionStatement
     | ifStatement
+    | forStatement
     | returnStatement
     ;
 
@@ -65,6 +66,10 @@ ifStatement:
     IF LPAREN expression RPAREN LBRACE statement* RBRACE (ELSE LBRACE statement* RBRACE)?
     ;
 
+forStatement:
+    FOR LPAREN type IDENTIFIER COLON expression RPAREN LBRACE statement* RBRACE
+    ;
+
     // Return Statement
 returnStatement:
     RETURN expression? SEMI // Return statement with optional expression
@@ -111,6 +116,7 @@ CLASS: 'class';
 EXTENDS: 'extends';
 IF: 'if';
 ELSE: 'else';
+FOR: 'for';
 RETURN: 'return'; // Added return keyword
 // INT: 'int'; // Example, not strictly needed if types are treated as IDENTIFIER
 
@@ -126,6 +132,7 @@ SEMI: ';';
 DOT: '.';
 COMMA: ',';   // Added
 ASSIGN: '=';  // Added
+COLON: ':';   // Added for for loops
 
 ADD : '+';
 

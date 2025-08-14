@@ -112,6 +112,12 @@ object ParserUtils {
                     node.body.forEach { assignments.addAll(collectAssignmentNodes(it)) }
                     node.orelse.forEach { assignments.addAll(collectAssignmentNodes(it)) }
                 }
+                is ForLoopNode -> {
+                    assignments.addAll(collectAssignmentNodes(node.target))
+                    assignments.addAll(collectAssignmentNodes(node.iter))
+                    node.body.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                    node.orelse.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                }
                 is PrintNode -> {
                     assignments.addAll(collectAssignmentNodes(node.expression))
                 }
@@ -273,6 +279,14 @@ object ParserUtils {
                         } else {
                             node
                         }
+                    } else if (node.ctx == Store) {
+                        // For variable assignments (Store context), try to resolve type from variable table or reference map
+                        val typeInfo = variableTypes[node.id] ?: variableReferenceMap[node.id]
+                        if (typeInfo != null) {
+                            node.copy(typeInfo = typeInfo)
+                        } else {
+                            node
+                        }
                     } else {
                         node
                     }
@@ -332,6 +346,20 @@ object ParserUtils {
                     }
                     node.copy(
                         test = injectIntoNode(node.test) as ExpressionNode,
+                        body = updatedBody,
+                        orelse = updatedOrelse
+                    )
+                }
+                is ForLoopNode -> {
+                    val updatedBody = node.body.map { stmt ->
+                        injectIntoNode(stmt) as StatementNode
+                    }
+                    val updatedOrelse = node.orelse.map { stmt ->
+                        injectIntoNode(stmt) as StatementNode
+                    }
+                    node.copy(
+                        target = injectIntoNode(node.target) as NameNode,
+                        iter = injectIntoNode(node.iter) as ExpressionNode,
                         body = updatedBody,
                         orelse = updatedOrelse
                     )

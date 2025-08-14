@@ -11,6 +11,7 @@ statement
     | assignStatement
     | functionCallStatement
     | ifStatement
+    | forStatement
     | returnStatement
     ;
 
@@ -38,6 +39,8 @@ assignStatement: 'let'? IDENTIFIER '=' expression ';'? ; // Using literal chars
 functionCallStatement: IDENTIFIER '(' arguments? ')' ';'? ; // Using literal chars
 
 ifStatement: 'if' '(' expression ')' '{' functionBody '}' ('else' '{' functionBody '}')? ; // Using literal chars
+
+forStatement: 'for' '(' 'let' IDENTIFIER 'of' expression ')' '{' functionBody '}' ; // for-of loop only (no else clause)
 
 returnStatement: 'return' expression? ';'? ; // Return statement with optional expression and semicolon
 
