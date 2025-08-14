@@ -125,7 +125,8 @@ class JavaGenerator : AbstractAstGenerator() {
         
         // Java enhanced for loop syntax: for (Type variable : iterable)
         // Note: Java doesn't have else clauses in for loops
-        return "for (String $target : $iter) {\n$forBody\n}"
+        // Add extra spaces to ensure proper tokenization
+        return "for ( String $target : $iter ) {\n$forBody\n}"
     }
 
     override fun visitCallNode(node: CallNode): String {
