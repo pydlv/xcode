@@ -66,11 +66,15 @@ expression
     | STRING_LITERAL            # StringLiteral // Uses common STRING_LITERAL
     | IDENTIFIER                # Identifier    // Uses common IDENTIFIER
     | NUMBER                    # NumberLiteral // Uses common NUMBER
+    | BOOLEAN_LITERAL           # BooleanLiteral // Boolean literals
     ;
 
 arrayElements: expression (',' expression)* ; // List of elements in an array
 
 // Lexer Rules - Most are now imported
+// Boolean literal
+BOOLEAN_LITERAL: 'true' | 'false';
+
 // STRING_LITERAL, IDENTIFIER, NUMBER are now imported from CommonLexerRules.
 // WS is now handled by WS_ALL from CommonLexerRules.
 // TypeScript comments (// and /* */) are handled by SL_COMMENT and ML_COMMENT from CommonLexerRules.

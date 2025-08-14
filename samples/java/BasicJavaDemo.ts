@@ -8,20 +8,26 @@ class BasicJavaDemo {
     console.log('The value of Pi is approximately: ' + pi);
     let isJavaFun: boolean = true;
     console.log('Is Java fun? ' + isJavaFun);
-    console.log('\n--- 2. CONTROL FLOW: IF-ELSE STATEMENT ---\n');
+    console.log('
+--- 2. CONTROL FLOW: IF-ELSE STATEMENT ---
+');
     if (myAge >= 21) {
     console.log('You are old enough to enjoy the Las Vegas nightlife!');
 } else {
     console.log('Not quite old enough for the casinos yet.');
 }
-    console.log('\n--- 3. CONTROL FLOW: FOR LOOP ---\n');
-    console.log('Let\\'s count to 5:');
+    console.log('
+--- 3. CONTROL FLOW: FOR LOOP ---
+');
+    console.log('Let\'s count to 5:');
     let i: number = 1;
     for (let _while_dummy of [1]) {
     console.log('Count: ' + i);
     let i: number = 1;
 }
-    console.log('\n--- 4. METHODS ---\n');
+    console.log('
+--- 4. METHODS ---
+');
     let number1: number = 10;
     let number2: number = 20;
     let sum = addNumbers(number1, number2);

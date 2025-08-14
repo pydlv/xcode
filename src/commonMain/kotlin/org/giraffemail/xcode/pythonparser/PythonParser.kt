@@ -384,7 +384,17 @@ class PythonAstBuilder : PythonBaseVisitor<AstNode>() {
     // Handle StringLiteral: STRING_LITERAL
     override fun visitStringLiteral(ctx: AntlrPythonParser.StringLiteralContext): AstNode {
         val text = ctx.STRING_LITERAL().text // Removed !!
-        val content = if (text.length >= 2) text.substring(1, text.length - 1) else ""
+        val content = if (text.length >= 2) {
+            val stripped = text.substring(1, text.length - 1)
+            // Properly unescape common escape sequences
+            stripped.replace("\\'", "'")
+                    .replace("\\\"", "\"")
+                    .replace("\\\\", "\\")
+                    .replace("\\n", "\n")
+                    .replace("\\t", "\t")
+        } else {
+            ""
+        }
         return ConstantNode(content, CanonicalTypes.String)
     }
 
