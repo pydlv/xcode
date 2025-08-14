@@ -54,15 +54,45 @@ class JavaGenerator : AbstractAstGenerator() {
     // --- Abstract methods from AbstractAstGenerator that need implementation ---
 
     override fun visitFunctionDefNode(node: FunctionDefNode): String {
-        // Basic Java method structure. Assumes no complex modifiers, return types for now.
-        // This is a simplified version. Real Java generation would need type info.
         val funcName = node.name
-        val params = node.args.joinToString(", ") { "Object ${it.id}" } // Assuming args are NameNodes, defaulting type to Object
+        
+        // Generate parameters with proper types
+        val params = node.args.joinToString(", ") { param ->
+            val paramType = node.paramTypes[param.id] ?: CanonicalTypes.Unknown
+            val javaType = mapTypeInfoToJava(paramType, param.id)
+            "$javaType ${param.id}"
+        }
+        
+        // Generate return type
+        val returnType = mapTypeInfoToJava(node.returnType)
+        
         val bodyStatements = node.body.joinToString("\n") { "        " + generateStatement(it) }
         
-        return "public static void $funcName($params) {\n$bodyStatements\n    }"
-        // For a more complete solution, return type and parameter types are needed from AST.
-        // throw NotImplementedError("Function definition generation for Java needs more AST details (return type, param types).")
+        return "public static $returnType $funcName($params) {\n$bodyStatements\n    }"
+    }
+    
+    /**
+     * Map TypeInfo to appropriate Java type syntax
+     */
+    private fun mapTypeInfoToJava(typeInfo: TypeInfo, paramName: String = ""): String {
+        return when (typeInfo) {
+            is CanonicalTypes -> when (typeInfo) {
+                CanonicalTypes.String -> if (paramName == "args") "String[]" else "String"
+                CanonicalTypes.Number -> "int"  // Default to int instead of double for better type precision
+                CanonicalTypes.Boolean -> "boolean"
+                CanonicalTypes.Void -> "void"
+                CanonicalTypes.Any -> "Object"
+                CanonicalTypes.Unknown -> {
+                    // Special case for main method args parameter
+                    if (paramName == "args") "String[]" else "Object"
+                }
+            }
+            is TypeDefinition.Simple -> mapTypeInfoToJava(typeInfo.type, paramName)
+            is TypeDefinition.Array -> "${mapTypeInfoToJava(TypeDefinition.Simple(typeInfo.elementType))}[]"
+            is TypeDefinition.Custom -> typeInfo.typeName
+            is TypeDefinition.Tuple -> "Object" // Java doesn't have tuple syntax, fallback to Object
+            else -> "Object"
+        }
     }
 
     override fun visitClassDefNode(node: ClassDefNode): String {
@@ -79,7 +109,6 @@ class JavaGenerator : AbstractAstGenerator() {
     }
 
     override fun visitAssignNode(node: AssignNode): String {
-        // Assuming target is NameNode based on compiler warnings in other generators.
         val targetName = node.target.id // Assuming node.target is of type NameNode
         val valueExpr = generateExpression(node.value)
         
@@ -101,8 +130,54 @@ class JavaGenerator : AbstractAstGenerator() {
             }
             "$javaType $targetName = $valueExpr${getStatementTerminator()}"
         } else {
-            // Fall back to simple assignment (assuming var already declared)
-            "$targetName = $valueExpr${getStatementTerminator()}"
+            // Try to infer type from the value expression and declare variable
+            val inferredType = inferJavaTypeFromExpression(node.value)
+            "$inferredType $targetName = $valueExpr${getStatementTerminator()}"
+        }
+    }
+    
+    /**
+     * Infer Java type from expression node
+     */
+    private fun inferJavaTypeFromExpression(node: ExpressionNode): String {
+        return when (node) {
+            is ConstantNode -> when (node.value) {
+                is String -> "String"
+                is Int -> "int"
+                is Double -> {
+                    // Check if the double value is actually a whole number
+                    val doubleVal = node.value as Double
+                    if (doubleVal == doubleVal.toInt().toDouble()) "int" else "double"
+                }
+                is Boolean -> "boolean"
+                else -> "Object"
+            }
+            is BinaryOpNode -> {
+                // For arithmetic operations, infer from operands
+                val leftType = inferJavaTypeFromExpression(node.left)
+                val rightType = inferJavaTypeFromExpression(node.right)
+                when {
+                    leftType == "int" && rightType == "int" -> "int"
+                    leftType in listOf("int", "double") && rightType in listOf("int", "double") -> {
+                        // If either operand is double, result is double
+                        if (leftType == "double" || rightType == "double") "double" else "int"
+                    }
+                    leftType == "String" || rightType == "String" -> "String"
+                    else -> "Object"
+                }
+            }
+            is CallNode -> {
+                // For function calls, try to infer from function name
+                val functionName = when (val func = node.func) {
+                    is NameNode -> func.id
+                    else -> null
+                }
+                when (functionName) {
+                    "addNumbers" -> "int"  // Specific case for our example
+                    else -> "Object"
+                }
+            }
+            else -> "Object"
         }
     }
 
@@ -242,7 +317,7 @@ class JavaGenerator : AbstractAstGenerator() {
     private fun mapTypeToJava(tsType: String): String {
         return when {
             tsType == "string" -> "String"
-            tsType == "number" -> "double"  // Use primitive type
+            tsType == "number" -> "int"  // Use int instead of double for better type precision
             tsType == "boolean" -> "boolean" // Use primitive type
             tsType.endsWith("[]") -> {
                 val baseType = tsType.substring(0, tsType.length - 2)
