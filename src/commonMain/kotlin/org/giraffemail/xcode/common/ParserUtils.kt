@@ -279,6 +279,14 @@ object ParserUtils {
                         } else {
                             node
                         }
+                    } else if (node.ctx == Store) {
+                        // For variable assignments (Store context), try to resolve type from variable table or reference map
+                        val typeInfo = variableTypes[node.id] ?: variableReferenceMap[node.id]
+                        if (typeInfo != null) {
+                            node.copy(typeInfo = typeInfo)
+                        } else {
+                            node
+                        }
                     } else {
                         node
                     }

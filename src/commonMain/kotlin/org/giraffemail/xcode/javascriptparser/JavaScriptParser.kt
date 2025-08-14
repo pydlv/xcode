@@ -181,6 +181,17 @@ class JavaScriptAstBuilder : JavaScriptBaseVisitor<AstNode>() {
         return IfNode(test = condition, body = ifBody, orelse = elseBody)
     }
 
+    override fun visitForStatement(ctx: AntlrJavaScriptParser.ForStatementContext): AstNode {
+        val target = NameNode(id = ctx.IDENTIFIER().text, ctx = Store)
+        val iter = ParserUtils.visitAsExpressionNode(visit(ctx.expression()), "Invalid iterable in for statement")
+
+        // Get the for body (functionBody)
+        val forBody = ctx.functionBody()?.let { visit(it) as? ModuleNode }?.body ?: emptyList()
+
+        // JavaScript for-of loops don't have else clauses
+        return ForLoopNode(target = target, iter = iter, body = forBody, orelse = emptyList())
+    }
+
     // Handle return statements
     override fun visitReturnStatement(ctx: AntlrJavaScriptParser.ReturnStatementContext): AstNode {
         val returnValue = ctx.expression()?.let { exprCtx ->

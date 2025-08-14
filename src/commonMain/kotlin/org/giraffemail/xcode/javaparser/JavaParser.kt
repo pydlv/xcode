@@ -245,6 +245,18 @@ private class JavaAstBuilderVisitor : JavaBaseVisitor<AstNode>() {
         return IfNode(test = condition, body = ifBody, orelse = elseBody)
     }
 
+    override fun visitForStatement(ctx: AntlrJavaParser.ForStatementContext): ForLoopNode {
+        val target = NameNode(id = ctx.IDENTIFIER().text, ctx = Store)
+        val iter = ctx.expression().accept(this) as? ExpressionNode
+            ?: throw IllegalStateException("For iterable is null or not an ExpressionNode for: ${ctx.text}")
+
+        // Get the for body (statements)
+        val forBody = ctx.statement().mapNotNull { it.accept(this) as? StatementNode }
+
+        // Java for-each loops don't have else clauses
+        return ForLoopNode(target = target, iter = iter, body = forBody, orelse = emptyList())
+    }
+
     // Handle return statements
     override fun visitReturnStatement(ctx: AntlrJavaParser.ReturnStatementContext): ReturnNode {
         val returnValue = ctx.expression()?.let { exprCtx ->
