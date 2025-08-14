@@ -112,6 +112,12 @@ object ParserUtils {
                     node.body.forEach { assignments.addAll(collectAssignmentNodes(it)) }
                     node.orelse.forEach { assignments.addAll(collectAssignmentNodes(it)) }
                 }
+                is ForLoopNode -> {
+                    assignments.addAll(collectAssignmentNodes(node.target))
+                    assignments.addAll(collectAssignmentNodes(node.iter))
+                    node.body.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                    node.orelse.forEach { assignments.addAll(collectAssignmentNodes(it)) }
+                }
                 is PrintNode -> {
                     assignments.addAll(collectAssignmentNodes(node.expression))
                 }
@@ -332,6 +338,20 @@ object ParserUtils {
                     }
                     node.copy(
                         test = injectIntoNode(node.test) as ExpressionNode,
+                        body = updatedBody,
+                        orelse = updatedOrelse
+                    )
+                }
+                is ForLoopNode -> {
+                    val updatedBody = node.body.map { stmt ->
+                        injectIntoNode(stmt) as StatementNode
+                    }
+                    val updatedOrelse = node.orelse.map { stmt ->
+                        injectIntoNode(stmt) as StatementNode
+                    }
+                    node.copy(
+                        target = injectIntoNode(node.target) as NameNode,
+                        iter = injectIntoNode(node.iter) as ExpressionNode,
                         body = updatedBody,
                         orelse = updatedOrelse
                     )

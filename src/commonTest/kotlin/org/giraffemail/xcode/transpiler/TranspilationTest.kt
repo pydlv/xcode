@@ -415,6 +415,16 @@ class TranspilationTest {
     }
 
     @Test
+    fun `test isolated for loop feature transpilation`() {
+        // Test only for loops to isolate this specific language feature
+        val features = setOf(AstFeature.FOR_LOOPS, AstFeature.CONSTANT_VALUES, AstFeature.ARRAY_LITERALS, AstFeature.PRINT_STATEMENTS, AstFeature.VARIABLE_REFERENCES)
+        val forLoopOnlyAst = MaximalAstGenerator.generateMaximalAst(features)
+
+        testAstRoundTrip("Isolated For Loop", forLoopOnlyAst)
+        testSequentialTranspilation("Isolated For Loop", forLoopOnlyAst)
+    }
+
+    @Test
     fun `test isolated nested expression feature transpilation`() {
         // Test only nested expressions to isolate this specific language feature
         val features = setOf(AstFeature.NESTED_EXPRESSIONS, AstFeature.CONSTANT_VALUES, AstFeature.BINARY_OPERATIONS, AstFeature.VARIABLE_ASSIGNMENTS)

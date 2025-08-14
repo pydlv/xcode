@@ -101,6 +101,14 @@ data class IfNode(
     val orelse: List<StatementNode> = emptyList()  // Statements to execute if condition is false (else clause)
 ) : StatementNode
 
+// For loop node for iteration
+data class ForLoopNode(
+    val target: NameNode,                // The loop variable (e.g., 'i' in 'for i in items')
+    val iter: ExpressionNode,            // The iterable expression (e.g., 'items' in 'for i in items') 
+    val body: List<StatementNode>,       // Statements to execute in the loop body
+    val orelse: List<StatementNode> = emptyList()  // Optional else clause (Python only)
+) : StatementNode
+
 data class CallNode(
     val func: ExpressionNode,
     val args: List<ExpressionNode>,
