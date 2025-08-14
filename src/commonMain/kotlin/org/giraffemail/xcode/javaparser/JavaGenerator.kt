@@ -123,10 +123,26 @@ class JavaGenerator : AbstractAstGenerator() {
         val iter = generateExpression(node.iter)
         val forBody = node.body.joinToString("\n") { "    " + generateStatement(it) }
         
+        // Get type information from the target variable's metadata
+        val variableType = when (val typeInfo = node.target.typeInfo) {
+            is CanonicalTypes -> {
+                if (typeInfo != CanonicalTypes.Unknown) typeInfo.name.lowercase() else null
+            }
+            is TypeDefinition -> typeInfo.toString()
+        }
+        val javaType = if (variableType != null) {
+            when {
+                variableType.startsWith("[") && variableType.contains(",") -> "Object[]"
+                variableType.startsWith("[") && variableType.endsWith("]") -> "Object[]"
+                else -> mapTypeToJava(variableType)
+            }
+        } else {
+            "Object"
+        }
+        
         // Java enhanced for loop syntax: for (Type variable : iterable)
         // Note: Java doesn't have else clauses in for loops
-        // Add extra spaces to ensure proper tokenization
-        return "for ( String $target : $iter ) {\n$forBody\n}"
+        return "for ($javaType $target : $iter) {\n$forBody\n}"
     }
 
     override fun visitCallNode(node: CallNode): String {
