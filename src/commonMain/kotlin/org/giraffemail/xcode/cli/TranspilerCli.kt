@@ -136,7 +136,7 @@ class TranspilerCli {
         val ast = sourceConfig.parseWithNativeMetadataFn(sourceCode, emptyList())
         
         // Generate target code from AST and extract the code part
-        val targetCodeWithMetadata = sourceConfig.generateWithNativeMetadataFn(ast)
+        val targetCodeWithMetadata = targetConfig.generateWithNativeMetadataFn(ast)
         val targetCode = targetCodeWithMetadata.code
         
         // Determine output path

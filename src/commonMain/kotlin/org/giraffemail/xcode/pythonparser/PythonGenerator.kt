@@ -26,8 +26,10 @@ class PythonGenerator : AbstractAstGenerator() {
     override fun visitFunctionDefNode(node: FunctionDefNode): String {
         val funcName = node.name
         val params = node.args.joinToString(", ") { it.id } // Assuming args are NameNodes for params
-        // Each statement in the body needs to be indented.
-        val body = node.body.joinToString("\n") { "    " + generateStatement(it) }
+        // Each statement in the body needs to be indented, including multi-line statements.
+        val body = node.body.joinToString("\n") { statement ->
+            indentLines(generateStatement(statement), "    ")
+        }
         
         return "def $funcName($params):\n$body"
     }
@@ -138,6 +140,50 @@ class PythonGenerator : AbstractAstGenerator() {
             "for $target in $iter:\n$forBody\nelse:\n$elseBody"
         } else {
             "for $target in $iter:\n$forBody"
+        }
+    }
+
+    override fun visitCStyleForLoopNode(node: CStyleForLoopNode): String {
+        // Convert C-style for loop to Python while loop
+        // for (int i = 0; i < 10; i++) becomes:
+        // i = 0
+        // while i < 10:
+        //     <body>
+        //     i += 1
+        
+        val initCode = node.init?.let { generateStatement(it) } ?: ""
+        val condition = node.condition?.let { generateExpression(it) } ?: "True"
+        val updateCode = node.update?.let { 
+            when (it) {
+                is UnaryOpNode -> {
+                    val operand = generateExpression(it.operand)
+                    when (it.op) {
+                        "++" -> "$operand += 1"
+                        "--" -> "$operand -= 1"
+                        else -> generateExpression(it)
+                    }
+                }
+                else -> generateExpression(it)
+            }
+        } ?: ""
+        
+        val forBody = node.body.joinToString("\n") { "    " + generateStatement(it) }
+        val indentedUpdate = if (updateCode.isNotEmpty()) "\n    $updateCode" else ""
+        
+        return if (initCode.isNotEmpty()) {
+            "$initCode\nwhile $condition:\n$forBody$indentedUpdate"
+        } else {
+            "while $condition:\n$forBody$indentedUpdate"
+        }
+    }
+
+    override fun visitUnaryOpNode(node: UnaryOpNode): String {
+        val operand = generateExpression(node.operand)
+        // Python doesn't have ++ and -- operators, so we use += and -= instead
+        return when (node.op) {
+            "++" -> if (node.prefix) "$operand + 1" else "$operand + 1"  // These are expressions, not statements
+            "--" -> if (node.prefix) "$operand - 1" else "$operand - 1"
+            else -> if (node.prefix) "${node.op}$operand" else "$operand${node.op}"
         }
     }
 

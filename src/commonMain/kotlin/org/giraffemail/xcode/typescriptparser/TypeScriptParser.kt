@@ -316,6 +316,15 @@ class TypeScriptAstBuilder : TypeScriptBaseVisitor<AstNode>() {
         return NameNode(ctx.IDENTIFIER().text, Load)
     }
 
+    override fun visitBooleanLiteral(ctx: AntlrTypeScriptParser.BooleanLiteralContext): AstNode {
+        val value = when (ctx.BOOLEAN_LITERAL().text.lowercase()) {
+            "true" -> true
+            "false" -> false
+            else -> throw IllegalArgumentException("Invalid boolean literal: ${ctx.BOOLEAN_LITERAL().text}")
+        }
+        return ConstantNode(value, CanonicalTypes.Boolean)
+    }
+
     override fun visitArrayLiteral(ctx: AntlrTypeScriptParser.ArrayLiteralContext): AstNode {
         val elements = ctx.arrayElements()?.expression()?.mapNotNull { exprCtx ->
             visit(exprCtx) as? ExpressionNode
